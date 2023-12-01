@@ -95,40 +95,6 @@ vs, ps, ts = simulate_sequence(mechanics, 0, 2, (_, _) -> "nohit", 8)
 # ╔═╡ 6fc7e195-fb68-4544-a952-7fb3dc76fd94
 every_frames = 10
 
-# ╔═╡ a6413925-620b-4b3a-be7d-940c983a6b14
-#=╠═╡
-animation = call(() -> begin
-	pmax = maximum(ps)
-	tmax = maximum(ts)
-	vmin = minimum(vs)
-	vmax = maximum(vs)
-	layout = @layout [a b]
-	animation = @animate for (i, _) in enumerate(ts)
-		p1 = plot(ts[1:i], ps[1:i],
-				  xlims=(0, tmax), 
-				  ylims=(0, pmax),
-				  xlabel="t",
-				  ylabel="p",
-				  color=colors.WET_ASPHALT,
-			  	  linewidth=2)
-		hline!([ps[i]], color=colors.NEPHRITIS)
-		p2 = plot(vs[1:i], ps[1:i],
-				  xlims=(vmin, vmax), 
-				  ylims=(0, pmax),
-				  xlabel="v",
-				  ylabel="p",
-				  color=colors.WET_ASPHALT,
-			  	  linewidth=2)
-		hline!([ps[i]], color=colors.NEPHRITIS)
-		plot(p2, p1, 
-			layout=layout, 
-			size=(800, 400), 
-			legend=nothing)
-	end every every_frames
-	animation
-end)
-  ╠═╡ =#
-
 # ╔═╡ 03adbb0e-f5aa-40e9-a5bd-84eb5f1e6268
 fps = (1/mechanics.t_hit) / every_frames
 
@@ -156,23 +122,47 @@ function draw(policy::Function, x_min, x_max, y_min, y_max, G; plotargs...)
 			plotargs...)
 end
 
+# ╔═╡ c1a7ffdd-767d-418d-96af-f13b357e980e
+@bind gradient Select([[:black, :deepskyblue, :white], :heat, :matter, :curl, :dense, :phase, :algae])
+
 # ╔═╡ 490abcb1-80ea-4bbe-9b4f-b8133d22d9dd
-draw((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
-	color=cgrad([:black, :deepskyblue, :white], 10, categorical=true),
+p1 = draw((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
+	color=cgrad(gradient, 10, categorical=true),
 	xlabel="Velocity (m/s)",
 	ylabel="Position (m)",
 	colorbar_title="Mechanical Energy (J)")
 
 # ╔═╡ cad96c13-e9fa-45ae-b046-f976ae2ee901
-draw((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
-	color=cgrad([:black, :deepskyblue, :white], 10, categorical=false),
+p2 = draw((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
+	color=cgrad(gradient, 10, categorical=false),
 	xlabel="Velocity (m/s)",
 	ylabel="Position (m)",
 	colorbar_title="Mechanical Energy (J)")
 
-# ╔═╡ 0bdc05aa-c1df-4cd0-92d3-0aee2d145414
-draw((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
-	color=cgrad([:black, :deepskyblue, :white], 10, categorical=false))
+# ╔═╡ 00c40a94-4165-4fec-b7f4-edd531b3044c
+p3 = draw((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
+		color=cgrad(gradient, 10, categorical=true))
+
+# ╔═╡ 6b442e46-afc3-4b01-9205-7826f192f5c8
+ p4 = begin 
+	 draw((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
+		color=cgrad(gradient, 10, categorical=true),
+		xlabel="Velocity (m/s)",
+		ylabel="Position (m)",
+		colorbar_title="Mechanical Energy (J)");
+	 plot!(Shape([(-4, 4), (-4, 10), (15, 10), (15, 4)]), alpha=0.3, color=colors.EMERALD, label="Possible to hit")
+ end
+
+# ╔═╡ 2556f5de-5e22-4f88-b4bf-f3f4c87d06be
+p1, p2, p3, p4; @bind ExportButton CounterButton("Export")
+
+# ╔═╡ 3cfe65d2-7f6b-47c9-9c5f-ebc09229a2e6
+if ExportButton > 0 let
+	png(p1, "BB Mechanical Energy Grouped.png")
+	png(p2, "BB Mechanical Energy Smooth.png")
+	png(p4, "Possible to Hit.png")
+	png(p3, "BB Mechanical Energy Grouped - No Axis Labels.png")
+end end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1291,12 +1281,15 @@ version = "1.4.1+1"
 # ╠═5a251063-64e8-4ced-8e28-34cb4812f931
 # ╠═52b72834-46ea-44de-8b44-013c4574f2d2
 # ╠═6fc7e195-fb68-4544-a952-7fb3dc76fd94
-# ╠═a6413925-620b-4b3a-be7d-940c983a6b14
 # ╠═03adbb0e-f5aa-40e9-a5bd-84eb5f1e6268
 # ╟─1401350b-3107-459c-8e80-ecc3fbb05739
 # ╠═b60a9495-7d59-4faa-a399-ac83a83d934d
+# ╠═c1a7ffdd-767d-418d-96af-f13b357e980e
 # ╠═490abcb1-80ea-4bbe-9b4f-b8133d22d9dd
 # ╠═cad96c13-e9fa-45ae-b046-f976ae2ee901
-# ╠═0bdc05aa-c1df-4cd0-92d3-0aee2d145414
+# ╠═2556f5de-5e22-4f88-b4bf-f3f4c87d06be
+# ╠═3cfe65d2-7f6b-47c9-9c5f-ebc09229a2e6
+# ╠═00c40a94-4165-4fec-b7f4-edd531b3044c
+# ╠═6b442e46-afc3-4b01-9205-7826f192f5c8
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
