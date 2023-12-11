@@ -4,7 +4,7 @@
 
 This set of experiments was created from the idea that observations computed from physical equations might provide a superior signal to learning algorithms, compared to the raw state of the system. For example, the total mechanical energy contained in a physical system is
 
-$ E_"mek" = E_"pot" E_"kin" = m g h + 1/2 m v^2 $ <EMek>
+$ E_"mek" = E_"pot" + E_"kin" = m g h + 1/2 m v^2 $ <EMek>
 
 which might work better for learning a strategy for the bouncing ball, compared to just observing $v$ and $p$.
 
