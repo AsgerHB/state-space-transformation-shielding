@@ -154,12 +154,41 @@ p3 = draw((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
 # ╔═╡ 2556f5de-5e22-4f88-b4bf-f3f4c87d06be
 p1, p2, p3, p4; @bind ExportButton CounterButton("Export")
 
+# ╔═╡ bea36ed0-d222-4067-9e56-8f6f46767195
+function delta_e_mek(mechanics, g, v, p)
+	e_mek_before = e_mek(g, v, p)
+	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
+	if p >= p_hit # Hitting the ball changes the velocity
+        if v < 0
+            v = min(v, v_hit)
+        else
+			v = -(β2 - ϵ2)*v + v_hit
+        end
+    end
+	e_mek_after = e_mek(g, v, p)
+	e_mek_after - e_mek_before
+end
+
+# ╔═╡ 45b4458a-5ffe-42ec-a018-15810b242af0
+p5 = let
+	function delta_e_mek′(vp)
+		delta_e_mek(bbmechanics, g, vp...)
+	end
+	
+	draw(delta_e_mek′, -15, 15, 0, 10, 0.05,
+		color=cgrad(gradient, 10, categorical=false),
+		xlabel="Velocity (m/s)",
+		ylabel="Position (m)",
+		colorbar_title="Energy gain on swing (J)");
+end
+
 # ╔═╡ 3cfe65d2-7f6b-47c9-9c5f-ebc09229a2e6
 if ExportButton > 0 let
-	png(p1, "BB Mechanical Energy Grouped.png")
-	png(p2, "BB Mechanical Energy Smooth.png")
-	png(p4, "Possible to Hit.png")
-	png(p3, "BB Mechanical Energy Grouped - No Axis Labels.png")
+	png(p1, "Graphics/BB Mechanical Energy Grouped.png")
+	png(p2, "Graphics/BB Mechanical Energy Smooth.png")
+	png(p3, "Graphics/BB Mechanical Energy Grouped - No Axis Labels.png")
+	png(p4, "Graphics/Possible to Hit.png")
+	png(p5, "Graphics/Energy Gain on Swing.png")
 end end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1289,5 +1318,7 @@ version = "1.4.1+1"
 # ╠═3cfe65d2-7f6b-47c9-9c5f-ebc09229a2e6
 # ╠═00c40a94-4165-4fec-b7f4-edd531b3044c
 # ╠═6b442e46-afc3-4b01-9205-7826f192f5c8
+# ╠═bea36ed0-d222-4067-9e56-8f6f46767195
+# ╠═45b4458a-5ffe-42ec-a018-15810b242af0
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
