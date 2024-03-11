@@ -12,23 +12,30 @@ $ E_mek = E_pot + E_kin = m g h + 1/2 m v^2 $ <EMek>
 
 which might work better for learning a strategy for the bouncing ball, compared to just observing $v$ and $p$.
 
-The full set of learning queries is seen in @BBQueries. 
-
 == Experiments on the Bouncing Ball
 
-Strategies were learned using observations of either the full state, $(v, p)$, or the mechanical energy formula in @EMek. Or some combination of the two.
+Note the difference between swings and hits. The agent can swing at the ball at any time, but will only hit the ball if $4 < v and -4 < p$. This area is illustated in @PossibleToHit. Both values are included here because not all sets of observatiotns make it possible to deduce whether a swing will actually be hit in the given state.
 
-The learner was either trained to minimize the number of "swings" or the number of "hits."  This is because the mechanical energy is not enough to determine whether it is possible to hit the ball at the given state. This forces the strategy to take a lot of unnecessary swings in order to be sure to hit the ball. Looking instead only at how often the ball was hit may be more "fair."
+The data from @tab:LearningOutcomes can be found in the appendix, @BBQueries.
+The table shows learning outcomes from strategies trained with different sets of observations. Each strategy was trained once with 3000 episodes.
 
-Training a strategy to hit the bouncing ball by observing the full state $(v, p)$ yields an average performance of 39 swings per 120 seconds. Unfortunately, observing only $E_mek$ uses 150 swings per 120 seconds. This is because the outcome of hitting the ball depends on $v$ and $p$, which leads to a lot of useless swings from the strategy. 
+The observation $Delta E_mek$ represents the mechanical energy gained from hitting the ball in the current state. This value is computed by the function `delta_e_mek`.
+ 
+#figure(caption: [Learning outcomes based on different observations. Scores are expected outcome of a 120 second trace.],
+  table(columns: 3,
+    strong[Observations], strong[Swings], strong[Hits],
+    $v, p$, [43], [39],
+    $E_mek$, [157], [44],
+    $E_mek, p$, [202], [42],
+    $E_mek, p, v$, [41], [40],
+    $E_mek, Delta E_mek$, [39], [37],
+    $E_kin, E_pot$, [214], [40],
+  )
+)<tab:LearningOutcomes>
 
-Observing $E_mek$ in addition to $(v, p)$ leads to 39 hits.
+NB: Since training is stochastic, a difference from e.g. 38 to 44 is not statistically significant.
 
-Since the hit#footnote([This is slightly confusing because choosing the "hit" action does not necesarily hit the ball. It just swings at it. Only if $-4 < v and 4 < p$ does the ball actually get hit. See @PossibleToHit]) will only connect for certain values of $v$ and $p$, I chose to also count the number of times the hits actually connected. This meant that the strategy observing just $E_mek$ would not be penalised for all the unnecesary swings that had no effect. By this criterion, $E_mek$ strategy then achieved a decent performance of 39 hits per 120 seconds. Which is close to the strategy observing $(v, p)$. 
-
-Running the queries once, there does not seem to be any significant difference between the learning outcomes, except that $E_mek$ alone is not enough to efficiently control the ball, useless only hits are counted.
-
-The queries would have to be repeated multiple times with a set number of training runs to discover if there is any difference.
+Observing just $E_mek$ is not enough to determine if a swing will hit, and so the performance suffers. Observing $E_mek$ in addition to $p$ and $v$ has no significant impact on performance. Observing $E_mek$ and $Delta E_mek$ is almost as good as observing $v$ and $p$ directly.
 
 == Visualisations for the Bouncing Ball
 
@@ -50,7 +57,10 @@ Visualisations showing the mechanical energy of the bouncing ball for different 
   ) <PossibleToHit>]
 )
 
-It is not very scientific, but I made sure the axis matched a visualisation of the safety strategy for the bouncing ball, and then I used a graphics editing program to overlay one with the other, which is shown in @BBShieldOverlaidMechanicalEnergy. Thus, the visualisation is not guaranteed to be pixel perfect, but it is very nearly correct.
+@BBShieldOverlaidMechanicalEnergy shows the shield for the bouncing ball overlaid with this mechanical energy plot.
+It is not very scientific, but I made sure the axis matched a visualisation of the safety strategy for the bouncing ball, and then I used a graphics editing program to overlay one with the other. Thus, the visualisation is not guaranteed to be pixel perfect, but it is very nearly correct.
+
+@PossibleToHit shows the area where it is possible to hit the ball. Note that it is not known whether the ball will be hit simply from observing $E_mek$.
 
 #pagebreak()
 
