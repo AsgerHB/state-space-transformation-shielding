@@ -16,7 +16,7 @@ which might work better for learning a strategy for the bouncing ball, compared 
 
 Training a strategy to hit the bouncing ball by observing the full state $(v, p)$ yields an average performance of 40 swings per 120 seconds. Unfortunately, observing only $E_mek$ uses 146 swings per 120 seconds. This is because the outcome of hitting the ball depends on $v$ and $p$, which leads to a lot of useless swings from the strategy. 
 
-Observing $E_mek$ in addition to $(v, p)$ leads to [data missing]
+Observing $E_mek$ in addition to $(v, p)$ leads to 37 hits.
 
 Since the hit#footnote([This is slightly confusing because choosing the "hit" action does not necesarily hit the ball. It just swings at it. Only if $-4 < v and p > 4$ does the ball actually get hit. See @PossibleToHit]) will only connect for certain values of $v$ and $p$, I chose to also count the number of times the hits actually connected. This meant that the strategy observing just $E_mek$ would not be penalised for all the unnecesary swings that had no effect. By this criterion, $E_mek$ strategy then achieved a decent performance of 41 hits per 120 seconds. Which is close to the strategy observing $(v, p)$. 
 
