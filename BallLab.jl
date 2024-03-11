@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.32
+# v0.19.36
 
 using Markdown
 using InteractiveUtils
@@ -99,9 +99,7 @@ every_frames = 10
 fps = (1/mechanics.t_hit) / every_frames
 
 # ╔═╡ 1401350b-3107-459c-8e80-ecc3fbb05739
-#=╠═╡
 gif(animation, "bouncingball.gif", fps = fps)
-  ╠═╡ =#
 
 # ╔═╡ b60a9495-7d59-4faa-a399-ac83a83d934d
 function draw(policy::Function, x_min, x_max, y_min, y_max, G; plotargs...)
