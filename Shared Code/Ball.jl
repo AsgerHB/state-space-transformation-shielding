@@ -118,7 +118,7 @@ function animate_trace!(vs, ps, ts; fps=10, plotargs...)
 			size=(800, 400), 
 			legend=nothing
 			;plotargs...)
-	end every every_frames
+	end every 1
 	
 	gif(animation, joinpath(tempdir(), "trace.gif"), fps = fps)
 end
