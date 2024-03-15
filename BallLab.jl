@@ -330,6 +330,11 @@ end
 # ╔═╡ 7802329e-9ef1-40a5-8d5f-79010fa6ac1f
 BB.simulate_point(m, (v_0, p_0), action)
 
+# ╔═╡ 94ced2a5-7ad8-49e3-b1d1-e1d5b8ee9868
+md"""
+## Synthesize a Shield
+"""
+
 # ╔═╡ 080a4374-104e-4c30-b946-313475fb0c11
 any_action, no_action = actions_to_int([BB.hit BB.nohit]), actions_to_int([])
 
@@ -817,7 +822,6 @@ p = shielded_trace[2][i]
 # ╟─87651747-c606-4f15-b335-649492faedd9
 # ╟─937afb55-7775-482d-8674-260c8de29614
 # ╟─aad4b9e6-2fbb-46a9-9311-f9e534a17002
-# ╟─670639a2-dc12-45af-bb38-5d197ff41fd4
 # ╠═f363e7ad-ad45-4fca-83c3-7b04ffdf48eb
 # ╠═8f0f7850-c149-4735-a2d5-f58182251d34
 # ╠═26092473-69d3-4777-9890-48fa928ccc94
@@ -827,13 +831,16 @@ p = shielded_trace[2][i]
 # ╠═2408a96c-8634-4fe9-91aa-af32ac2c7dec
 # ╠═814e17fe-4824-410d-a46f-da73729d6e8c
 # ╠═3e00e758-2e2e-42da-9152-fff188f75875
+# ╟─670639a2-dc12-45af-bb38-5d197ff41fd4
 # ╠═22d05a23-bcad-4281-8303-5082a3d8e785
 # ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
 # ╠═8790b998-d96e-4437-b9bb-d77571d4bd1b
 # ╠═60401048-7e4a-45c8-a0aa-4fb9338714ab
 # ╠═a31a8a05-c145-43a9-b844-ccfaf9f49645
 # ╟─1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
+# ╟─443301cb-ef1c-40b3-a552-f86e46e0cbe8
 # ╠═b1f375d5-79f4-4330-8468-2e5a4ec54e80
+# ╟─94ced2a5-7ad8-49e3-b1d1-e1d5b8ee9868
 # ╠═7dad96ac-3c70-4b75-86a1-3ab374d631fa
 # ╠═e762cebe-cea0-48ea-952b-55d14fbba5bb
 # ╠═af696d4b-aa09-4339-b471-d9c91f065364
@@ -841,7 +848,6 @@ p = shielded_trace[2][i]
 # ╠═24350838-772a-4357-b4fd-5275d6a70393
 # ╠═d3775766-0e1a-4e85-9c6f-43f5f917b213
 # ╠═f8646ca0-c8d0-46eb-8ea5-4886288aa1fe
-# ╟─443301cb-ef1c-40b3-a552-f86e46e0cbe8
 # ╠═a3e566e8-6b31-4d07-a2b9-b3b90f178d63
 # ╟─021e2fb4-1760-4421-916b-fb2ef306cb13
 # ╟─a566b33b-7005-43c3-afce-b8793447f615
