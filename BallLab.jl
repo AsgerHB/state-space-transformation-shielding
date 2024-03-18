@@ -130,15 +130,10 @@ p1 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
 	colorbar_title="Mechanical Energy (J)")
 
 # ╔═╡ 00c40a94-4165-4fec-b7f4-edd531b3044c
-# ╠═╡ disabled = true
-#=╠═╡
 p3 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
 		color=cgrad(gradient, 10, categorical=true))
-  ╠═╡ =#
 
 # ╔═╡ 6b442e46-afc3-4b01-9205-7826f192f5c8
-# ╠═╡ disabled = true
-#=╠═╡
  p4 = begin 
 	 draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
 		color=cgrad(gradient, 10, categorical=true),
@@ -147,12 +142,9 @@ p3 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
 		colorbar_title="Mechanical Energy (J)");
 	 plot!(Shape([(-4, 4), (-4, 10), (15, 10), (15, 4)]), alpha=0.3, color=colors.EMERALD, label="Possible to hit")
  end
-  ╠═╡ =#
 
 # ╔═╡ 2556f5de-5e22-4f88-b4bf-f3f4c87d06be
-#=╠═╡
 p1, p2, p3, p4; @bind ExportButton CounterButton("Export")
-  ╠═╡ =#
 
 # ╔═╡ 03797c50-6bd0-46d3-ba4b-dd01781388dd
 md"""
@@ -205,7 +197,6 @@ p5 = let
 end
 
 # ╔═╡ 3cfe65d2-7f6b-47c9-9c5f-ebc09229a2e6
-#=╠═╡
 if ExportButton > 0 let
 	png(p1, "Graphics/BB Mechanical Energy Grouped.png")
 	png(p2, "Graphics/BB Mechanical Energy Smooth.png")
@@ -213,7 +204,6 @@ if ExportButton > 0 let
 	png(p4, "Graphics/Possible to Hit.png")
 	png(p5, "Graphics/Energy Gain on Swing.png")
 end end
-  ╠═╡ =#
 
 # ╔═╡ b527f190-ff38-48d3-97ae-aeeed8fdd273
 md"""
@@ -321,6 +311,61 @@ function π(v, p)
 	return delta_e_mek(m, g, v, p), e_mek(g, v, p), (v > 0 ? 1 : 0)
 end
 
+# ╔═╡ 2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
+@bind p NumberField(0:0.1:8)
+
+# ╔═╡ 8790b998-d96e-4437-b9bb-d77571d4bd1b
+# ╠═╡ disabled = true
+#=╠═╡
+@bind i NumberField(1:length(shielded_trace[1]), default=21)
+  ╠═╡ =#
+
+# ╔═╡ a31a8a05-c145-43a9-b844-ccfaf9f49645
+#=╠═╡
+p = shielded_trace[2][i]
+  ╠═╡ =#
+
+# ╔═╡ b1f375d5-79f4-4330-8468-2e5a4ec54e80
+# ╠═╡ disabled = true
+#=╠═╡
+let
+	bounds = Bounds(box(vp_grid, v, p))
+
+	vp_slice::Vector{Any} = box(vp_grid, v, p).indices
+	vp_slice[1] = vp_slice[2] = Colon()
+	
+	p1 = draw(vp_grid, 
+		show_grid=true,
+		xlabel="v",
+		ylabel="p",
+		colors=bbshieldcolors, 
+		color_labels=bbshieldlabels,)
+	
+	plot!(bounds, label="Partition containing (v,p)", color=colors.ALIZARIN)
+	
+	bounds = Bounds(box(π_grid, π(v, p)))
+
+	π_slice::Vector{Any} = box(π_grid, π(v, p)).indices
+	π_slice[1] = π_slice[2] = Colon()
+	
+	p2 = draw(π_grid, π_slice,
+		xlabel="\$\\Delta E_{mek}\$",
+		ylabel="\$E_{mek}\$",
+		show_grid=true,
+		colors=bbshieldcolors, 
+		color_labels=bbshieldlabels,)
+	
+	plot!(bounds, label="Partition containing (v,p)", color=colors.ALIZARIN)
+
+	plot(p1, p2, size=(800, 300), margin=4mm)
+end
+  ╠═╡ =#
+
+# ╔═╡ 94ced2a5-7ad8-49e3-b1d1-e1d5b8ee9868
+md"""
+## Synthesize a Shield
+"""
+
 # ╔═╡ 7dad96ac-3c70-4b75-86a1-3ab374d631fa
 @bind max_steps NumberField(0:1000, default=1000)
 
@@ -329,11 +374,6 @@ end
 
 # ╔═╡ 7802329e-9ef1-40a5-8d5f-79010fa6ac1f
 BB.simulate_point(m, (v_0, p_0), action)
-
-# ╔═╡ 94ced2a5-7ad8-49e3-b1d1-e1d5b8ee9868
-md"""
-## Synthesize a Shield
-"""
 
 # ╔═╡ 080a4374-104e-4c30-b946-313475fb0c11
 any_action, no_action = actions_to_int([BB.hit BB.nohit]), actions_to_int([])
@@ -542,6 +582,9 @@ reachability_function_precomputed =
 # ╔═╡ af696d4b-aa09-4339-b471-d9c91f065364
 shield, max_steps_reached = make_shield(reachability_function_precomputed, BB.Action, π_grid; max_steps)
 
+# ╔═╡ 40475aba-0ef9-4c04-a504-c3ff3ac3d98f
+length(shield)
+
 # ╔═╡ a3e566e8-6b31-4d07-a2b9-b3b90f178d63
 Bounds(box(shield, π(7, 0)))
 
@@ -616,12 +659,6 @@ runs = 1000
 # ╔═╡ b2a050b0-2548-4a34-80ae-89f3a0bcb056
 deaths, shielded_trace = check_safety(m, shielded_random, 120; runs)
 
-# ╔═╡ 8790b998-d96e-4437-b9bb-d77571d4bd1b
-# ╠═╡ disabled = true
-#=╠═╡
-@bind i NumberField(1:length(shielded_trace[1]), default=21)
-  ╠═╡ =#
-
 # ╔═╡ 1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
 let
 	plot(vp_grid.bounds, 
@@ -645,42 +682,6 @@ let
 	)
 	scatter!([v], [p], label="(v,p)")
 end
-
-# ╔═╡ b1f375d5-79f4-4330-8468-2e5a4ec54e80
-# ╠═╡ disabled = true
-#=╠═╡
-let
-	bounds = Bounds(box(vp_grid, v, p))
-
-	vp_slice::Vector{Any} = box(vp_grid, v, p).indices
-	vp_slice[1] = vp_slice[2] = Colon()
-	
-	p1 = draw(vp_grid, 
-		show_grid=true,
-		xlabel="v",
-		ylabel="p",
-		colors=bbshieldcolors, 
-		color_labels=bbshieldlabels,)
-	
-	plot!(bounds, label="Partition containing (v,p)", color=colors.ALIZARIN)
-	
-	bounds = Bounds(box(π_grid, π(v, p)))
-
-	π_slice::Vector{Any} = box(π_grid, π(v, p)).indices
-	π_slice[1] = π_slice[2] = Colon()
-	
-	p2 = draw(π_grid, π_slice,
-		xlabel="\$\\Delta E_{mek}\$",
-		ylabel="\$E_{mek}\$",
-		show_grid=true,
-		colors=bbshieldcolors, 
-		color_labels=bbshieldlabels,)
-	
-	plot!(bounds, label="Partition containing (v,p)", color=colors.ALIZARIN)
-
-	plot(p1, p2, size=(800, 300), margin=4mm)
-end
-  ╠═╡ =#
 
 # ╔═╡ 021e2fb4-1760-4421-916b-fb2ef306cb13
 let
@@ -766,21 +767,14 @@ animate_trace((shielded_trace[1][1:300],
 	shielded_trace[2][1:300],
 	shielded_trace[3][1:300]), shield)
 
-# ╔═╡ 2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
-@bind p NumberField(0:0.1:8)
+# ╔═╡ 22d05a23-bcad-4281-8303-5082a3d8e785
+@bind v NumberField(-15:0.2:15)
 
 # ╔═╡ 60401048-7e4a-45c8-a0aa-4fb9338714ab
+# ╠═╡ disabled = true
 #=╠═╡
 v = shielded_trace[1][i]
   ╠═╡ =#
-
-# ╔═╡ a31a8a05-c145-43a9-b844-ccfaf9f49645
-#=╠═╡
-p = shielded_trace[2][i]
-  ╠═╡ =#
-
-# ╔═╡ 22d05a23-bcad-4281-8303-5082a3d8e785
-@bind v NumberField(-15:0.2:15)
 
 # ╔═╡ Cell order:
 # ╟─c663a860-4562-4de0-9b08-edc041cde9e6
@@ -818,7 +812,7 @@ p = shielded_trace[2][i]
 # ╟─45b4458a-5ffe-42ec-a018-15810b242af0
 # ╟─b527f190-ff38-48d3-97ae-aeeed8fdd273
 # ╠═ff60b015-12cf-478b-9a60-93a9b93d0f5f
-# ╠═d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
+# ╟─d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
 # ╟─87651747-c606-4f15-b335-649492faedd9
 # ╟─937afb55-7775-482d-8674-260c8de29614
 # ╟─aad4b9e6-2fbb-46a9-9311-f9e534a17002
@@ -832,6 +826,7 @@ p = shielded_trace[2][i]
 # ╠═814e17fe-4824-410d-a46f-da73729d6e8c
 # ╠═3e00e758-2e2e-42da-9152-fff188f75875
 # ╟─670639a2-dc12-45af-bb38-5d197ff41fd4
+# ╠═40475aba-0ef9-4c04-a504-c3ff3ac3d98f
 # ╠═22d05a23-bcad-4281-8303-5082a3d8e785
 # ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
 # ╠═8790b998-d96e-4437-b9bb-d77571d4bd1b
