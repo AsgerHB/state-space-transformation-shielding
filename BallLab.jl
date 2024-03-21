@@ -229,6 +229,23 @@ bbshieldlabels = 	[
 # ╔═╡ 8f0f7850-c149-4735-a2d5-f58182251d34
 bbshieldcolors = [colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS];
 
+# ╔═╡ 5c3ed2b7-81c0-42e5-b157-d65e25537791
+vp_bounds = Bounds((-20, 0), (20, 13))
+
+# ╔═╡ 78cb48d3-bedf-48e9-9479-8c71bcc10f6f
+function π(v, p) 
+	
+	return e_mek(g, v, p), v, (p > 4 ? 1 : 0)
+	
+end
+
+# ╔═╡ d30c6363-75e6-42f8-b3a0-4a032df063ef
+begin
+	π_xlabel = "\$E_{mek}\$"
+	π_ylabel = "v"
+	π_zlabel = "p > 4"
+end
+
 # ╔═╡ d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
 function animate_trace(trace, shield::Union{Nothing,Grid}=nothing)
 	vs, ps, ts = trace
@@ -236,11 +253,12 @@ function animate_trace(trace, shield::Union{Nothing,Grid}=nothing)
 	e_pots = [e_pot(g, p) for (v, p) in zip(vs, ps)]
 	e_meks = [e_pot(g, p) + e_kin(g, v) for (v, p) in zip(vs, ps)]
 	Δ_e_meks = [delta_e_mek(m, g, v, p) for (v, p) in zip(vs, ps)]
+	πs = [π(v, p) for (v, p) in zip(vs, ps)]
 	layout = 2
 	
-	x1, y1 = Δ_e_meks, e_meks
-	x1label="ΔE_mek"
-	y1label="E_mek"
+	x1, y1 = [s[1] for s in πs], [s[2] for s in πs]
+	x1label=π_xlabel
+	y1label=π_ylabel
 
 	if isnothing(shield)
 		x1lims=(minimum(x1) - 3, maximum(x1) + 3)
@@ -261,7 +279,7 @@ function animate_trace(trace, shield::Union{Nothing,Grid}=nothing)
 		p1 = if isnothing(shield)
 			plot()
 		else
-			p1 = draw(shield, vs[i] < 0 ? [:, :, 2] : [:, :, 1], 
+			p1 = draw(shield, πs[i][3] == 1 ? [:, :, 2] : [:, :, 1], 
 				colors=bbshieldcolors, color_labels=bbshieldlabels)
 		end
 		
@@ -305,110 +323,28 @@ end
 # ╔═╡ 937afb55-7775-482d-8674-260c8de29614
 animate_trace(trace)
 
-# ╔═╡ 78cb48d3-bedf-48e9-9479-8c71bcc10f6f
-# Projection function that converts the (v,p) state into mechanical energy
-function π(v, p) 
-	return delta_e_mek(m, g, v, p), e_mek(g, v, p), (v > 0 ? 1 : 0)
+# ╔═╡ 2408a96c-8634-4fe9-91aa-af32ac2c7dec
+const π_bounds = let
+	e_mek_upper = e_mek(g, vp_bounds.upper...)
+	v_lower, v_upper = vp_bounds.lower[1], vp_bounds.upper[1]
+	
+	Bounds((0., v_lower, 0.), ceil.((e_mek_upper, v_upper, 2.0)))
 end
 
-# ╔═╡ 2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
-@bind p NumberField(0:0.1:8)
-
-# ╔═╡ 8790b998-d96e-4437-b9bb-d77571d4bd1b
-# ╠═╡ disabled = true
-#=╠═╡
-@bind i NumberField(1:length(shielded_trace[1]), default=21)
-  ╠═╡ =#
-
-# ╔═╡ a31a8a05-c145-43a9-b844-ccfaf9f49645
-#=╠═╡
-p = shielded_trace[2][i]
-  ╠═╡ =#
-
-# ╔═╡ b1f375d5-79f4-4330-8468-2e5a4ec54e80
-# ╠═╡ disabled = true
-#=╠═╡
-let
-	bounds = Bounds(box(vp_grid, v, p))
-
-	vp_slice::Vector{Any} = box(vp_grid, v, p).indices
-	vp_slice[1] = vp_slice[2] = Colon()
-	
-	p1 = draw(vp_grid, 
-		show_grid=true,
-		xlabel="v",
-		ylabel="p",
-		colors=bbshieldcolors, 
-		color_labels=bbshieldlabels,)
-	
-	plot!(bounds, label="Partition containing (v,p)", color=colors.ALIZARIN)
-	
-	bounds = Bounds(box(π_grid, π(v, p)))
-
-	π_slice::Vector{Any} = box(π_grid, π(v, p)).indices
-	π_slice[1] = π_slice[2] = Colon()
-	
-	p2 = draw(π_grid, π_slice,
-		xlabel="\$\\Delta E_{mek}\$",
-		ylabel="\$E_{mek}\$",
-		show_grid=true,
-		colors=bbshieldcolors, 
-		color_labels=bbshieldlabels,)
-	
-	plot!(bounds, label="Partition containing (v,p)", color=colors.ALIZARIN)
-
-	plot(p1, p2, size=(800, 300), margin=4mm)
-end
-  ╠═╡ =#
-
-# ╔═╡ 94ced2a5-7ad8-49e3-b1d1-e1d5b8ee9868
+# ╔═╡ 898fcb77-2f6d-42b9-93c7-dce396664174
 md"""
-## Synthesize a Shield
+## Reachability Function
 """
 
-# ╔═╡ 7dad96ac-3c70-4b75-86a1-3ab374d631fa
-@bind max_steps NumberField(0:1000, default=1000)
+# ╔═╡ 206a65db-e953-4216-9689-31966739c88d
+const samples_per_random_axis = [1]
 
-# ╔═╡ fd928206-accf-44fc-8762-599fe34c26b6
-@bind action Select(BB.Action |> instances |> collect, default="nohit")
+# ╔═╡ 6327ed76-cf69-4389-8ce2-e0e9c42eb11f
+md"""
+### Brute-force sampling
 
-# ╔═╡ 7802329e-9ef1-40a5-8d5f-79010fa6ac1f
-BB.simulate_point(m, (v_0, p_0), action)
-
-# ╔═╡ 080a4374-104e-4c30-b946-313475fb0c11
-any_action, no_action = actions_to_int([BB.hit BB.nohit]), actions_to_int([])
-
-# ╔═╡ 26092473-69d3-4777-9890-48fa928ccc94
-function initial_value_of_vp_partition(bounds::Bounds)
-	vl, pl = bounds.lower
-	vu, pu = bounds.upper
-
-	if e_mek(g, vl, pl) < 0.5 || e_mek(g, vu, pl) < 0.5
-		no_action
-	else
-		any_action
-	end
-end
-
-# ╔═╡ fc8619b5-8dbc-47b3-b66e-24ceeeb45f7f
-begin
-	vp_grid = Grid(1, Bounds((-20, 0), (20, 8)))
-	initialize!(vp_grid, initial_value_of_vp_partition)
-	vp_grid
-end
-
-# ╔═╡ 5c3ed2b7-81c0-42e5-b157-d65e25537791
-const vp_bounds = vp_grid.bounds
-
-# ╔═╡ 814e17fe-4824-410d-a46f-da73729d6e8c
-function initial_value_of_π_partition(bounds::Bounds)::Int64
-	Δ_e_mek_lower, e_mek_lower, _ = bounds.lower
-	if e_mek_lower < 0.5
-		no_action
-	else
-		any_action
-	end
-end
+Solving these constraints can be quite tedious so what I do instead is just iterate through samplese that cover the whole state space and check for every sample if it is a member of the π-partition. Horribly inefficient, but it works for this example.
+"""
 
 # ╔═╡ 01190c0f-b8bb-403f-8eed-57d683ad302a
 # Number of samples per unit
@@ -421,54 +357,13 @@ global_supporting_points::Vector{Tuple{Float64, Float64}} = SupportingPoints([
 	], 
 	vp_bounds) |> collect;
 
-# ╔═╡ 2408a96c-8634-4fe9-91aa-af32ac2c7dec
-const π_bounds = let
-	e_mek_upper = e_mek(g, vp_bounds.upper...)
-	Δ_e_mek_upper = maximum(vp -> delta_e_mek(m, g, vp...), global_supporting_points)
-	
-	Bounds((0., 0., 0.), ceil.((Δ_e_mek_upper, e_mek_upper, 2.0)))
-end
-
-# ╔═╡ 3e00e758-2e2e-42da-9152-fff188f75875
-begin
-	π_grid = Grid([2, 10, 1], π_bounds)
-	initialize!(π_grid, initial_value_of_π_partition)
-	π_grid
-end
-
-# ╔═╡ 670639a2-dc12-45af-bb38-5d197ff41fd4
-let	
-	p1 = draw(π_grid, [:, :, 2],
-		title="v > 0",
-		xlabel="\$\\Delta E_{mek}\$",
-		ylabel="\$E_{mek}\$",
-		colors=[:white, :white], 
-		#color_labels=bbshieldlabels,
-		margin=4mm,
-		show_grid=true,
-		legend=:topright)
-
-	p2 = draw(π_grid, [:, :, 1],
-		title="v < 0",
-		xlabel="\$\\Delta E_{mek}\$",
-		ylabel="\$E_{mek}\$",
-		colors=[:white, :white], 
-		#color_labels=bbshieldlabels,
-		margin=4mm,
-		show_grid=true,
-		legend=:topright)
-
-	plot(p1, p2, size=(600, 300))
-end
-
-# ╔═╡ 24350838-772a-4357-b4fd-5275d6a70393
-length(π_grid)
-
-# ╔═╡ f8646ca0-c8d0-46eb-8ea5-4886288aa1fe
-for partition in π_grid
-	@show Bounds(partition)
-	break
-end
+# ╔═╡ f9fbc97a-3b7d-45f4-a784-45d2cf515fa1
+scatter(global_supporting_points,
+	marker=(2, :red, :circle),
+	markerstrokewidth=0,
+	xlabel="v",
+	ylabel="p",
+	label="global supporting points")
 
 # ╔═╡ f351c1ed-89d0-495c-8720-7f1ffa9ddd93
 begin
@@ -481,7 +376,6 @@ begin
 	end
 
 	
-	reactivity_1 = "Just for reactivity"
 	Base.IteratorSize(::BruteForceSampler) = Base.SizeUnknown()
 	
 	Base.iterate(sampler::BruteForceSampler) = begin
@@ -501,27 +395,146 @@ begin
 	end
 end
 
-# ╔═╡ d3775766-0e1a-4e85-9c6f-43f5f917b213
-valid_partitions = let
-	result = Partition[]
-	for partition in π_grid
-		points = BruteForceSampler(partition, global_supporting_points) |> collect
-		if length(points) > 0
-			push!(result, partition)
+# ╔═╡ f4364c08-d09b-4dcc-89ea-e3a58490d901
+function reachability_function(partition, action)::Vector{Vector{Int64}}
+	result = Vector{Int64}[]
+	grid = partition.grid
+	for point::Tuple{Float64, Float64} in 
+			BruteForceSampler(partition, global_supporting_points)
+
+		for r in SupportingPoints(samples_per_random_axis, Bounds((-1,), (1,)))
+			point′ = BB.simulate_point(m, point, r, action)
+			π_point′ = π(point′...)
+			if π_point′ ∉ grid
+				continue
+			end
+			partition′ = box(grid, π_point′)
+			if partition′.indices ∈ result
+				continue
+			end
+			push!(result, partition′.indices)
 		end
 	end
 	result
-end;
+end
+
+# ╔═╡ 94ced2a5-7ad8-49e3-b1d1-e1d5b8ee9868
+md"""
+## Synthesize a Shield
+"""
+
+# ╔═╡ 7dad96ac-3c70-4b75-86a1-3ab374d631fa
+@bind max_steps NumberField(0:1000, default=1000)
+
+# ╔═╡ 3f4d6c5b-b4a9-42c2-909e-569061590af7
+@bind show_point CheckBox()
+
+# ╔═╡ fd928206-accf-44fc-8762-599fe34c26b6
+@bind action Select(BB.Action |> instances |> collect, default="nohit")
+
+# ╔═╡ 7802329e-9ef1-40a5-8d5f-79010fa6ac1f
+BB.simulate_point(m, (v_0, p_0), action)
+
+# ╔═╡ 22d05a23-bcad-4281-8303-5082a3d8e785
+# ╠═╡ disabled = true
+#=╠═╡
+@bind v NumberField(-15:0.2:15)
+  ╠═╡ =#
+
+# ╔═╡ 2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
+# ╠═╡ disabled = true
+#=╠═╡
+@bind p NumberField(0:0.1:8)
+  ╠═╡ =#
+
+# ╔═╡ 080a4374-104e-4c30-b946-313475fb0c11
+any_action, no_action = actions_to_int([BB.hit BB.nohit]), actions_to_int([])
+
+# ╔═╡ 26092473-69d3-4777-9890-48fa928ccc94
+function initial_value_of_vp_partition(bounds::Bounds)
+	vl, pl = bounds.lower
+	vu, pu = bounds.upper
+
+	if e_mek(g, vl, pl) < 0.5 || e_mek(g, vu, pl) < 0.5
+		no_action
+	else
+		any_action
+	end
+end
+
+# ╔═╡ fc8619b5-8dbc-47b3-b66e-24ceeeb45f7f
+begin
+	vp_grid = Grid(1, vp_bounds)
+	initialize!(vp_grid, initial_value_of_vp_partition)
+	vp_grid
+end
+
+# ╔═╡ 814e17fe-4824-410d-a46f-da73729d6e8c
+function initial_value_of_π_partition(bounds::Bounds)::Int64
+	e_mek_lower, _, _ = bounds.lower
+	if e_mek_lower < 0.5
+		no_action
+	else
+		any_action
+	end
+end
+
+# ╔═╡ 3e00e758-2e2e-42da-9152-fff188f75875
+begin
+	π_grid = Grid([4, 2, 1], π_bounds)
+	initialize!(π_grid, initial_value_of_π_partition)
+	π_grid
+end
+
+# ╔═╡ cc239362-e3a9-4e7b-bef7-737233e2d338
+size(π_grid), length(π_grid)
+
+# ╔═╡ 670639a2-dc12-45af-bb38-5d197ff41fd4
+let	
+	p1 = draw(π_grid, [:, :, 2],
+		title=π_zlabel,
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
+		colors=[:white, :white], 
+		#color_labels=bbshieldlabels,
+		margin=4mm,
+		show_grid=true,
+		legend=:topright)
+
+	p2 = draw(π_grid, [:, :, 1],
+		title="not $π_zlabel",
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
+		colors=[:white, :white], 
+		#color_labels=bbshieldlabels,
+		margin=4mm,
+		show_grid=true,
+		legend=:topright)
+
+	plot(p1, p2, size=(600, 300))
+end
 
 # ╔═╡ 443301cb-ef1c-40b3-a552-f86e46e0cbe8
 let
+	valid_partitions = let
+		result = Partition[]
+		for partition in π_grid
+			points = BruteForceSampler(partition, global_supporting_points) |> collect
+			if length(points) > 0
+				push!(result, partition)
+			end
+		end
+		result
+	end;
+	
+	# This is the plot of reachable partitions. It's super slow.
 	p1 = plot([], 
-		title="v > 0",
+		title=π_zlabel,
 		seriestype=:shape, 
 		color=colors.PETER_RIVER, 
-		xlabel="\$\\Delta E_{mek}\$",
-		ylabel="\$E_{mek}\$",
-		label="Reachable")
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
+		label=nothing)
 	
 	plot!(π_bounds, color=:white, linecolor=:white, label=nothing)
 
@@ -534,11 +547,11 @@ let
 
 	p2 = plot([], 
 		seriestype=:shape, 
-		title="v < 0",
+		title="not $π_zlabel",
 		color=colors.PETER_RIVER, 
-		xlabel="\$\\Delta E_{mek}\$",
-		ylabel="\$E_{mek}\$",
-		label="Reachable")
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
+		label="Ball can actually have this state")
 
 	
 	plot!(π_bounds, color=:white, linecolor=:white, label=nothing)
@@ -553,56 +566,23 @@ let
 	plot(p1, p2, size=(800, 400))
 end
 
-# ╔═╡ f4364c08-d09b-4dcc-89ea-e3a58490d901
-function reachability_function(partition, action)::Vector{Vector{Int64}}
-	result = Vector{Int64}[]
-	grid = partition.grid
-	for point::Tuple{Float64, Float64} in BruteForceSampler(
-			partition, 
-			global_supporting_points)
-		
-		point′ = BB.simulate_point(m, point, action)
-		π_point′ = π(point′...)
-		if π_point′ ∉ grid
-			continue
-		end
-		partition′ = box(grid, π_point′)
-		if partition′.indices ∈ result
-			continue
-		end
-		push!(result, partition′.indices)
-	end
-	result
-end
+# ╔═╡ 77750ddb-f774-4c95-8963-a4fd45806bb6
+π; π_grid; @bind do_it_button CounterButton("Do it")
 
 # ╔═╡ e762cebe-cea0-48ea-952b-55d14fbba5bb
-reachability_function_precomputed = 
-	get_transitions(reachability_function, BB.Action, π_grid);
+if do_it_button >= 0
+	reachability_function_precomputed = 
+		get_transitions(reachability_function, BB.Action, π_grid);
+end
 
 # ╔═╡ af696d4b-aa09-4339-b471-d9c91f065364
 shield, max_steps_reached = make_shield(reachability_function_precomputed, BB.Action, π_grid; max_steps)
 
-# ╔═╡ 40475aba-0ef9-4c04-a504-c3ff3ac3d98f
-length(shield)
-
 # ╔═╡ a3e566e8-6b31-4d07-a2b9-b3b90f178d63
 Bounds(box(shield, π(7, 0)))
 
-# ╔═╡ a566b33b-7005-43c3-afce-b8793447f615
-let
-	draw_function(s -> box(shield, π(s...)) |> get_value, -15, 15, 0, 10, 0.02,
-		color=cgrad([colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS], 10, categorical=true),
-		xlabel="Velocity (m/s)",
-		ylabel="Position (m)",
-		colorbar=nothing)
-
-	plot!([], seriestype=:shape, color=colors.WET_ASPHALT, label="{}")
-	plot!([], seriestype=:shape, color=colors.AMETHYST, label="{hit}")
-	plot!([], seriestype=:shape, color=colors.CLOUDS, label="{hit, nohit}")
-end
-
-# ╔═╡ 3961c068-f268-48c5-926c-99cd5c501018
-π_grid
+# ╔═╡ 24350838-772a-4357-b4fd-5275d6a70393
+length(π_grid)
 
 # ╔═╡ e494556c-1106-49ce-85b4-729136b9b0b3
 md"""
@@ -659,16 +639,49 @@ runs = 1000
 # ╔═╡ b2a050b0-2548-4a34-80ae-89f3a0bcb056
 deaths, shielded_trace = check_safety(m, shielded_random, 120; runs)
 
+# ╔═╡ 8790b998-d96e-4437-b9bb-d77571d4bd1b
+@bind i NumberField(1:length(shielded_trace[1]), default=21)
+
+# ╔═╡ 60401048-7e4a-45c8-a0aa-4fb9338714ab
+v = shielded_trace[1][i]
+
+# ╔═╡ a31a8a05-c145-43a9-b844-ccfaf9f49645
+p = shielded_trace[2][i]
+
 # ╔═╡ 1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
 let
-	plot(vp_grid.bounds, 
-		title="Projecting partition\nof π_grid back to vp_grid",
-		color=:white, 
+	p1  = plot(π_grid.bounds,
+		color=:white,
 		line=nothing,
 		label=nothing,
+		legend=:outertop,
+		xlabel="\$E_{mek}\$",
+		ylabel="v",)
+
+	π_point = π(v, p)
+
+	π_partition = box(π_grid, π_point)
+	bounds = Bounds(π_partition)
+	bounds = Bounds(bounds.lower[1:2], bounds.upper[1:2])
+
+	plot!(bounds, 
+		linewidth=0,
+		color=:red, 
+		label="partition")
+
+	scatter!([π_point[1]], [π_point[2]], 
+		title=π_point[3] == 1 ? π_zlabel : "not $π_zlabel",
+		marker=(4, :green, :circle),
+		markerstrokewidth=1,
+		label="π(v, p)")
+	
+	p2 = plot(vp_grid.bounds,
+		color=:white,
+		line=nothing,
+		label=nothing,
+		legend=:outertop,
 		xlabel="v",
-		ylabel="p",
-		legend=:outerright)
+		ylabel="p")
 	
 	π_partition = box(π_grid, π(v, p))
 	sp = global_supporting_points
@@ -678,9 +691,14 @@ let
 	scatter!(sp, 
 		marker=(2, :red, :circle),
 		markerstrokewidth=0,
-		label="Element of partition"
-	)
-	scatter!([v], [p], label="(v,p)")
+		label="Element of partition")
+	
+	scatter!([v], [p], 
+		label="(v,p)",
+		marker=(4, :green, :circle),
+		markerstrokewidth=1,)
+
+	plot(p1, p2, size=(800, 400), margin=3mm)
 end
 
 # ╔═╡ 021e2fb4-1760-4421-916b-fb2ef306cb13
@@ -692,46 +710,128 @@ let
 	slice[1] = slice[2] = Colon()
 	
 	p1 = draw(shield, [:, :, 2],
-		title="v > 0",
-		xlabel="\$\\Delta E_{mek}\$",
-		ylabel="\$E_{mek}\$",
+		title=π_zlabel,
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
 		colors=bbshieldcolors, 
 		color_labels=bbshieldlabels,
-		legend=:topright)
-
-	#=
-	reachable = reachability_function(partition, action)
-	reachable = [Partition(shield, r) for r in reachable]
-	reachable = [Bounds(r) for r in reachable]
-	partition = Bounds(partition)
-
-	plot!(partition, 
-		color=colors.PETER_RIVER, 
-		linewidth=3,
-		linecolor=colors.PETER_RIVER,
-		label="initial")
-	
-	first_iteration = true
-	for r in reachable
-		plot!(r, 
-			linewidth=0,
-			color=colors.EMERALD, 
-			alpha=0.8,
-			label=(first_iteration ? "reachable" : nothing))
-
-		first_iteration = false
-	end
-	plot!()=#
+		legend=nothing)
 
 	p2 = draw(shield, [:, :, 1],
-		title="v < 0",
-		xlabel="\$\\Delta E_{mek}\$",
-		ylabel="\$E_{mek}\$",
+		title="not $π_zlabel",
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
 		colors=bbshieldcolors, 
 		color_labels=bbshieldlabels,
 		legend=:topright)
 
+	if show_point
+		## Reachable partitions ##
+		π_point = π(v, p)
+
+		reachable = 
+			reachability_function_precomputed[action][box(shield, π_point).indices...]
+
+		for indices in reachable
+			partition = Partition(shield, indices)
+			bounds = Bounds(partition)
+			
+			if bounds.lower[3] == 1 p1 = plot(p1) else p2 = plot(p2) end
+			plot!(bounds,
+				color=colors.PETER_RIVER,
+				opacity=0.3,
+				label=nothing)
+		end
+		p2 = plot(p2)
+		plot!([], seriestype=:shape, 
+			color=colors.PETER_RIVER,
+			opacity=0.3,
+			label="reachable")
+
+		## Barbaric sampling endpoints ##
+		points = BruteForceSampler(partition, global_supporting_points)
+		left = []
+		right = []
+		for p in points
+			for r in SupportingPoints(samples_per_random_axis, Bounds((0,), (1,)))
+				p′ = π(BB.simulate_point(m, p, r, action)...)
+				if p′[3] == 1
+					push!(left, (p′[1], p′[2]))
+				else
+					push!(right, (p′[1], p′[2]))
+				end
+			end
+		end
+		if length(left) > 0
+			p1 = plot(p1)
+			
+			scatter!(left |> unzip,
+				marker=(1, colors.PETER_RIVER, :circle),
+				markerstrokewidth=0,
+				label="Barbaric sample endpoints")
+		end
+
+		if length(right) > 0
+			p2 = plot(p2)
+			
+			scatter!(right |> unzip,
+				marker=(1, colors.PETER_RIVER, :circle),
+				markerstrokewidth=0,
+				label="Barbaric sample endpoints")
+		end
+
+		## The actual point ##
+		if π(v, p)[3] == 1 p1 = plot(p1) else p2 = plot(p2) end
+		
+		scatter!([π_point[1]], [π_point[2]],
+			marker=(5, colors.EMERALD, :circle),
+			markerstrokewidth=0,
+			label="(v, p)")
+	end
+
 	plot(p1, p2, size=(800, 400))
+end
+
+# ╔═╡ 702172e9-59d7-4a77-b663-a89f66132a1f
+partition = box(shield, π(v, p))
+
+# ╔═╡ a566b33b-7005-43c3-afce-b8793447f615
+let
+	draw_function(s -> box(shield, π(s...)) |> get_value, -15, 15, 0, 10, 0.05,
+		color=cgrad([colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS], 10, categorical=true),
+		xlabel="Velocity (m/s)",
+		ylabel="Position (m)",
+		colorbar=nothing)
+
+	plot!([], seriestype=:shape, color=colors.WET_ASPHALT, label="{}")
+	plot!([], seriestype=:shape, color=colors.AMETHYST, label="{hit}")
+	plot!([], seriestype=:shape, color=colors.CLOUDS, label="{hit, nohit}")
+
+	if show_point
+		points = BruteForceSampler(partition, global_supporting_points)
+		barbaric_sample_endpoints = []
+		for p in points
+			for r in SupportingPoints(samples_per_random_axis, Bounds((0,), (1,)))
+				push!(barbaric_sample_endpoints, BB.simulate_point(m, p, r, action))
+			end
+		end
+		scatter!(barbaric_sample_endpoints |> unzip,
+			marker=(1, colors.PETER_RIVER, :circle),
+			markerstrokewidth=0,
+			label="Barbaric sample endpoints")
+		
+		scatter!([v], [p],
+			marker=(5, colors.EMERALD, :circle),
+			markerstrokewidth=0,
+			label="(v, p)")
+	end
+	plot!()
+end
+
+# ╔═╡ 3961c068-f268-48c5-926c-99cd5c501018
+let
+	partition = box(π_grid, π(v, p))
+	reachability_function(partition, action)
 end
 
 # ╔═╡ d4cbae79-3a44-4f1f-839e-3b652bf83a42
@@ -762,19 +862,25 @@ let
 	""")
 end
 
+# ╔═╡ a6796796-6f4f-470f-ad47-1b655d332905
+shielded_trace
+
+# ╔═╡ 4f238ba9-035c-4046-ba45-604bf514be67
+begin
+	trace_to = findfirst(==((0,0)),  # first unsafe state
+		zip(shielded_trace[1], shielded_trace[2]) |> collect)
+
+	trace_to = something(trace_to, length(shielded_trace[1]))
+	trace_to = min(trace_to - 100, length(shielded_trace[1]))
+
+	trace_to = something(trace_to, length(shielded_trace[1]))
+	trace_from = max(1, trace_to - 250)
+end
+
 # ╔═╡ b097e128-a1df-44f0-8fb7-347d9317abfc
-animate_trace((shielded_trace[1][1:300],
-	shielded_trace[2][1:300],
-	shielded_trace[3][1:300]), shield)
-
-# ╔═╡ 22d05a23-bcad-4281-8303-5082a3d8e785
-@bind v NumberField(-15:0.2:15)
-
-# ╔═╡ 60401048-7e4a-45c8-a0aa-4fb9338714ab
-# ╠═╡ disabled = true
-#=╠═╡
-v = shielded_trace[1][i]
-  ╠═╡ =#
+animate_trace((shielded_trace[1][trace_from:trace_to],
+	shielded_trace[2][trace_from:trace_to],
+	shielded_trace[3][trace_from:trace_to]), shield)
 
 # ╔═╡ Cell order:
 # ╟─c663a860-4562-4de0-9b08-edc041cde9e6
@@ -812,45 +918,50 @@ v = shielded_trace[1][i]
 # ╟─45b4458a-5ffe-42ec-a018-15810b242af0
 # ╟─b527f190-ff38-48d3-97ae-aeeed8fdd273
 # ╠═ff60b015-12cf-478b-9a60-93a9b93d0f5f
-# ╟─d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
+# ╠═d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
 # ╟─87651747-c606-4f15-b335-649492faedd9
 # ╟─937afb55-7775-482d-8674-260c8de29614
 # ╟─aad4b9e6-2fbb-46a9-9311-f9e534a17002
 # ╠═f363e7ad-ad45-4fca-83c3-7b04ffdf48eb
 # ╠═8f0f7850-c149-4735-a2d5-f58182251d34
 # ╠═26092473-69d3-4777-9890-48fa928ccc94
-# ╠═fc8619b5-8dbc-47b3-b66e-24ceeeb45f7f
 # ╠═5c3ed2b7-81c0-42e5-b157-d65e25537791
+# ╠═fc8619b5-8dbc-47b3-b66e-24ceeeb45f7f
 # ╠═78cb48d3-bedf-48e9-9479-8c71bcc10f6f
+# ╠═d30c6363-75e6-42f8-b3a0-4a032df063ef
 # ╠═2408a96c-8634-4fe9-91aa-af32ac2c7dec
 # ╠═814e17fe-4824-410d-a46f-da73729d6e8c
 # ╠═3e00e758-2e2e-42da-9152-fff188f75875
+# ╠═cc239362-e3a9-4e7b-bef7-737233e2d338
 # ╟─670639a2-dc12-45af-bb38-5d197ff41fd4
-# ╠═40475aba-0ef9-4c04-a504-c3ff3ac3d98f
-# ╠═22d05a23-bcad-4281-8303-5082a3d8e785
-# ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
-# ╠═8790b998-d96e-4437-b9bb-d77571d4bd1b
-# ╠═60401048-7e4a-45c8-a0aa-4fb9338714ab
-# ╠═a31a8a05-c145-43a9-b844-ccfaf9f49645
 # ╟─1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
 # ╟─443301cb-ef1c-40b3-a552-f86e46e0cbe8
-# ╠═b1f375d5-79f4-4330-8468-2e5a4ec54e80
-# ╟─94ced2a5-7ad8-49e3-b1d1-e1d5b8ee9868
-# ╠═7dad96ac-3c70-4b75-86a1-3ab374d631fa
-# ╠═e762cebe-cea0-48ea-952b-55d14fbba5bb
-# ╠═af696d4b-aa09-4339-b471-d9c91f065364
-# ╠═fd928206-accf-44fc-8762-599fe34c26b6
-# ╠═24350838-772a-4357-b4fd-5275d6a70393
-# ╠═d3775766-0e1a-4e85-9c6f-43f5f917b213
-# ╠═f8646ca0-c8d0-46eb-8ea5-4886288aa1fe
-# ╠═a3e566e8-6b31-4d07-a2b9-b3b90f178d63
-# ╟─021e2fb4-1760-4421-916b-fb2ef306cb13
-# ╟─a566b33b-7005-43c3-afce-b8793447f615
-# ╠═080a4374-104e-4c30-b946-313475fb0c11
+# ╟─898fcb77-2f6d-42b9-93c7-dce396664174
+# ╠═206a65db-e953-4216-9689-31966739c88d
+# ╠═f4364c08-d09b-4dcc-89ea-e3a58490d901
+# ╟─6327ed76-cf69-4389-8ce2-e0e9c42eb11f
 # ╠═01190c0f-b8bb-403f-8eed-57d683ad302a
 # ╠═c98583c9-3105-46b3-80b4-06b84d6e1db6
-# ╠═f4364c08-d09b-4dcc-89ea-e3a58490d901
+# ╟─f9fbc97a-3b7d-45f4-a784-45d2cf515fa1
 # ╠═f351c1ed-89d0-495c-8720-7f1ffa9ddd93
+# ╟─94ced2a5-7ad8-49e3-b1d1-e1d5b8ee9868
+# ╠═7dad96ac-3c70-4b75-86a1-3ab374d631fa
+# ╠═77750ddb-f774-4c95-8963-a4fd45806bb6
+# ╠═e762cebe-cea0-48ea-952b-55d14fbba5bb
+# ╠═af696d4b-aa09-4339-b471-d9c91f065364
+# ╠═24350838-772a-4357-b4fd-5275d6a70393
+# ╠═a3e566e8-6b31-4d07-a2b9-b3b90f178d63
+# ╠═3f4d6c5b-b4a9-42c2-909e-569061590af7
+# ╠═60401048-7e4a-45c8-a0aa-4fb9338714ab
+# ╠═a31a8a05-c145-43a9-b844-ccfaf9f49645
+# ╠═8790b998-d96e-4437-b9bb-d77571d4bd1b
+# ╟─021e2fb4-1760-4421-916b-fb2ef306cb13
+# ╠═a566b33b-7005-43c3-afce-b8793447f615
+# ╠═702172e9-59d7-4a77-b663-a89f66132a1f
+# ╠═fd928206-accf-44fc-8762-599fe34c26b6
+# ╠═22d05a23-bcad-4281-8303-5082a3d8e785
+# ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
+# ╠═080a4374-104e-4c30-b946-313475fb0c11
 # ╠═3961c068-f268-48c5-926c-99cd5c501018
 # ╟─e494556c-1106-49ce-85b4-729136b9b0b3
 # ╠═efef17e1-8cd7-4d5b-a805-3d4a7345cf9d
@@ -863,4 +974,6 @@ v = shielded_trace[1][i]
 # ╠═c995f805-fc9b-47c1-bfa9-5dbcc9400806
 # ╠═568bbecc-0726-43d2-ba8e-cc2c468c44b2
 # ╟─976cb35a-2274-4378-94d7-6276d000c6d8
+# ╠═a6796796-6f4f-470f-ad47-1b655d332905
+# ╠═4f238ba9-035c-4046-ba45-604bf514be67
 # ╠═b097e128-a1df-44f0-8fb7-347d9317abfc
