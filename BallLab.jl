@@ -146,56 +146,6 @@ p3 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
 # ╔═╡ 2556f5de-5e22-4f88-b4bf-f3f4c87d06be
 p1, p2, p3, p4; @bind ExportButton CounterButton("Export")
 
-# ╔═╡ 03797c50-6bd0-46d3-ba4b-dd01781388dd
-md"""
-## $\Delta E_{mek}$, Mechanical Energy Gained by Hit
-![image](https://i.imgur.com/sSDmwMO.png)
-
-IF we decide to hit the ball, how much is gained?
-"""
-
-# ╔═╡ bea36ed0-d222-4067-9e56-8f6f46767195
-function delta_e_mek(mechanics, g, v, p)
-	e_mek_before = e_mek(g, v, p)
-	if p >= 4 # Hitting the ball changes the velocity
-        if v < 0
-            v = min(v, -4)
-        else
-			v = -(0.95 - 0.05)*v - 4
-        end
-    end
-	e_mek_after = e_mek(g, v, p)
-	e_mek_after - e_mek_before
-end
-
-# ╔═╡ 57799dd4-b7dc-493a-ac10-33d727231807
-#
-# TODO:	mechanics argument ignored in delta_e_mek. 
-# Values are currently hard-coded for readability.
-#
-
-# ╔═╡ 6a5f9f41-a59d-4521-a697-1b312ca3d80a
-@bind vv NumberField(-5:40)
-
-# ╔═╡ e5a9742f-cd34-464c-9892-272cc680069b
-delta_e_mek(m, g, vv, 10)
-
-# ╔═╡ bea36c92-d8eb-428b-842a-5cc958d5ec82
-e_mek(g, vv, 10)
-
-# ╔═╡ 45b4458a-5ffe-42ec-a018-15810b242af0
-p5 = let
-	function delta_e_mek′(vp)
-		delta_e_mek(m, g, vp...)
-	end
-	
-	draw_function(delta_e_mek′, -40, 40, 0, 10, 0.05,
-		color=cgrad(gradient, 10, categorical=false),
-		xlabel="Velocity (m/s)",
-		ylabel="Position (m)",
-		colorbar_title="Energy gain on swing (J)");
-end
-
 # ╔═╡ 3cfe65d2-7f6b-47c9-9c5f-ebc09229a2e6
 if ExportButton > 0 let
 	png(p1, "Graphics/BB Mechanical Energy Grouped.png")
@@ -252,7 +202,6 @@ function animate_trace(trace, shield::Union{Nothing,Grid}=nothing)
 	e_kins = [e_kin(g, v) for v in vs]
 	e_pots = [e_pot(g, p) for (v, p) in zip(vs, ps)]
 	e_meks = [e_pot(g, p) + e_kin(g, v) for (v, p) in zip(vs, ps)]
-	Δ_e_meks = [delta_e_mek(m, g, v, p) for (v, p) in zip(vs, ps)]
 	πs = [π(v, p) for (v, p) in zip(vs, ps)]
 	layout = 2
 	
@@ -909,13 +858,6 @@ animate_trace((shielded_trace[1][trace_from:trace_to],
 # ╠═3cfe65d2-7f6b-47c9-9c5f-ebc09229a2e6
 # ╠═00c40a94-4165-4fec-b7f4-edd531b3044c
 # ╠═6b442e46-afc3-4b01-9205-7826f192f5c8
-# ╟─03797c50-6bd0-46d3-ba4b-dd01781388dd
-# ╠═bea36ed0-d222-4067-9e56-8f6f46767195
-# ╠═57799dd4-b7dc-493a-ac10-33d727231807
-# ╠═6a5f9f41-a59d-4521-a697-1b312ca3d80a
-# ╠═e5a9742f-cd34-464c-9892-272cc680069b
-# ╠═bea36c92-d8eb-428b-842a-5cc958d5ec82
-# ╟─45b4458a-5ffe-42ec-a018-15810b242af0
 # ╟─b527f190-ff38-48d3-97ae-aeeed8fdd273
 # ╠═ff60b015-12cf-478b-9a60-93a9b93d0f5f
 # ╠═d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
