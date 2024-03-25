@@ -299,7 +299,7 @@ Solving these constraints can be quite tedious so what I do instead is just iter
 
 # ╔═╡ 01190c0f-b8bb-403f-8eed-57d683ad302a
 # Number of samples per unit
-const global_sampling_resolution = 5
+const global_sampling_resolution = 10
 
 # ╔═╡ c98583c9-3105-46b3-80b4-06b84d6e1db6
 global_supporting_points::Vector{Tuple{Float64, Float64}} = SupportingPoints([
@@ -685,7 +685,7 @@ partition = box(shield, π(v, p))
 
 # ╔═╡ a566b33b-7005-43c3-afce-b8793447f615
 shield_plot_old_statespace = let
-	draw_function(s -> box(shield, π(s...)) |> get_value, -15, 15, 0, 10, 0.01,
+	draw_function(s -> box(shield, π(s...)) |> get_value, -15, 15, 0, 10, 0.02,
 		color=cgrad([colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS], 10, categorical=true),
 		xlabel="Velocity (m/s)",
 		ylabel="Position (m)",
@@ -949,6 +949,192 @@ open(joinpath(target_dir, "meta.json"), write=true, create=true) do 🗋
 	JSON.print(🗋, meta_info)
 end
 
+# ╔═╡ 700c196c-dafe-4116-bac8-1024acee9642
+md"""
+# Analyze safety violation in UPPAAL
+"""
+
+# ╔═╡ aefb7e86-276d-4536-9ea0-33487a5015a8
+⨝ = joinpath
+
+# ╔═╡ 3071c7f7-4d77-45fb-866f-a27f76270284
+function multiline(str)
+	HTML("""
+	<pre style='max-height:30em; margin:8pt 0 8pt 0; overflow-y:scroll'>
+	$str
+	</pre>
+	""")
+end
+
+# ╔═╡ a29a9de0-0fee-4887-bf9a-3780725e418f
+← = push!
+
+# ╔═╡ a683c891-05bf-4119-af89-002f6def9ef9
+function parse_pair(str)
+	left = match(r"\(([-0-9.e]+),", str)
+	if isnothing(left) error("left side of pair not found in $str") end
+	left = left[1]
+	left = parse(Float64, left)
+	right = match(r",([-0-9.e]+)\)", str)
+	if isnothing(right) error("right side of pair not found in $str") end
+	right = right[1]
+	right = parse(Float64, right)
+	(left, right)
+end
+
+# ╔═╡ 8a7697e1-ef70-40b0-9432-4fe2bc302bad
+function parse_pairs(str)
+	[parse_pair(s) for s in split(str, " ") if s != ""]
+end
+
+# ╔═╡ 4f368fec-9cca-4236-99fe-ffd35cc9335d
+function get_pairs_for_array(output::String, keyword::String)::Vector{Tuple{Float64, Float64}}
+	re_trace = Regex("\\Q$keyword\\E:\\n\\[0\\]:(?<values>.*)", "m")
+	m = match(re_trace, output)
+	return parse_pairs(m[:values])
+end
+
+# ╔═╡ 60d97a5b-27d7-4c21-9444-256e2ccf3984
+
+
+# ╔═╡ 877d8fe0-dc38-4a1c-997d-bb58514b7b86
+function value_at_time(trace::T, time::S) where T <: AbstractVector{Tuple{Float64, Float64}} where S <: Number
+	
+	time_before, value_before = last([(t, v) 
+		for (t, v) in trace if t <= time])
+
+	time_after, value_after = first([(t, v) 
+		for (t, v) in trace if t >= time])
+
+	Δt = time_after - time_before
+	if Δt == 0 # Happens if there is an exact match
+		return value_after
+	end
+	fraction = (time - time_before)/Δt
+	return value_before + fraction*(value_after - value_before)
+end
+
+# ╔═╡ a833bed7-8f79-4163-b601-6370a337c944
+function at_regular_intervals(trace::T, interval::S) where T <: 
+		AbstractVector{Tuple{Float64, Float64}} where S <: Number
+
+	t_max = trace[end][1]
+	return [ value_at_time(trace, i) for i in 0:interval:prevfloat(t_max) ]
+end
+
+# ╔═╡ 43f7a7c3-df0d-4862-9f3c-9fba64c1eb2f
+function parse_trace(output, Δt, keywords...)
+	result = Dict{String, Vector{Float64}}()
+	
+	for keyword in keywords
+		trace = get_pairs_for_array(output, keyword)
+		result[keyword] = at_regular_intervals(trace, Δt)
+	end
+	result
+end
+
+# ╔═╡ 7ee88060-754f-488d-9341-633bf54c2318
+# ╠═╡ disabled = true
+#=╠═╡
+@bind model_file TextField(80, default=pwd() ⨝ "asdf/bb_mech_shielded.xml")
+  ╠═╡ =#
+
+# ╔═╡ 80f08a4c-ba20-4408-853e-a694df474a02
+@bind query TextField((95, 6), default="""
+	simulate[<=100;1] { v, p }
+""")
+
+# ╔═╡ eadf88fa-1290-4e08-9af4-53e0f613dc17
+function remove_single_line_breaks(str)
+	line_break_placeholder = "¤NEWLINE¤"
+	str= replace(str, r"\n\s*\n" => line_break_placeholder)
+	str = replace(str, r"\n\s*" => " ")
+	str = replace(str, line_break_placeholder => "\n")
+end
+
+# ╔═╡ ecfea12e-c933-49a0-b117-88658fd5723a
+query |> remove_single_line_breaks |> multiline
+
+# ╔═╡ 5bcb6ce0-4ed0-44ae-86d3-a810fca004e2
+
+
+# ╔═╡ 9733a667-964a-4007-9e51-f656c3838954
+@bind verifyta TextField(80, default=homedir() ⨝ "opt/uppaal-5.0.0-linux64/bin/verifyta")
+
+# ╔═╡ 7efc9685-1031-4882-8202-2fcd83a728d8
+@bind working_dir TextField(80, default=mktempdir())
+
+# ╔═╡ b703f5a3-e869-4051-83a7-64d53f446000
+query_file = let
+	query_file = working_dir ⨝ "queries.q"
+	write(query_file, remove_single_line_breaks(query))
+	query_file
+end
+
+# ╔═╡ c2fad765-52d9-479e-a494-faf38736d58c
+#=╠═╡
+if isfile(query_file) && isfile(model_file)
+	output = Cmd([
+		verifyta,
+		"-s",
+		model_file,
+		query_file
+	]) |> read |> String
+end;
+  ╠═╡ =#
+
+# ╔═╡ ab63a35f-b674-4de1-bb6c-04f45f034a1d
+#=╠═╡
+output[1:min(10000, length(output))] |> multiline
+  ╠═╡ =#
+
+# ╔═╡ 6f1a76ea-5eb7-4908-9edf-c47b7595f913
+#=╠═╡
+tt = parse_trace(output, 0.1, "v", "p", "HIT_REQUIRED")
+  ╠═╡ =#
+
+# ╔═╡ 465f5546-e9a1-4ea6-98e9-75436240dd86
+@bind i NumberField(1:10000)
+
+# ╔═╡ 0038f63a-d7fc-4e48-a487-6aa97df100c5
+#=╠═╡
+let
+	plot(shield_plot_old_statespace)
+	#plot!(tt["v"], tt["p"])
+	scatter!([tt["v"][i]], [tt["p"][i]])
+end
+  ╠═╡ =#
+
+# ╔═╡ 78f6195a-c9fc-4d42-9e96-58a79d4fa06e
+#=╠═╡
+tt["p"][i]
+  ╠═╡ =#
+
+# ╔═╡ bc9a89bd-6b93-4ff9-8326-b24f8d3c54d1
+#=╠═╡
+tt["HIT_REQUIRED"][i]
+  ╠═╡ =#
+
+# ╔═╡ b4849f98-2174-4e55-9070-61b5bded79a4
+#=╠═╡
+vv, pp = tt["v"][i], tt["p"][i]
+  ╠═╡ =#
+
+# ╔═╡ eb6cb789-6d91-4f96-bedb-b92ba5d1d69a
+#=╠═╡
+get_value(box(shield, π(vv, pp)))
+  ╠═╡ =#
+
+# ╔═╡ 2896b900-df7c-4fee-a62c-8ea64f9ffddc
+#=╠═╡
+BB.simulate_point(m, (vv, pp), BB.nohit)
+  ╠═╡ =#
+
+# ╔═╡ 1cd28cd7-c3d7-4599-9f7b-b1d68bc094a0
+#=╠═╡
+tt["v"][i + 1], tt["p"][i + 1]
+  ╠═╡ =#
+
 # ╔═╡ Cell order:
 # ╟─c663a860-4562-4de0-9b08-edc041cde9e6
 # ╠═9c8abfbc-a5f0-11ec-3a9b-9bfd0b447638
@@ -1018,7 +1204,7 @@ end
 # ╠═60401048-7e4a-45c8-a0aa-4fb9338714ab
 # ╠═a31a8a05-c145-43a9-b844-ccfaf9f49645
 # ╠═8790b998-d96e-4437-b9bb-d77571d4bd1b
-# ╠═021e2fb4-1760-4421-916b-fb2ef306cb13
+# ╟─021e2fb4-1760-4421-916b-fb2ef306cb13
 # ╟─a566b33b-7005-43c3-afce-b8793447f615
 # ╠═702172e9-59d7-4a77-b663-a89f66132a1f
 # ╠═fd928206-accf-44fc-8762-599fe34c26b6
@@ -1056,3 +1242,33 @@ end
 # ╠═4f08ee6b-4b91-4581-9a75-738ee38185af
 # ╠═59808c45-c387-4a4b-a898-08e216e67df4
 # ╠═0196bdae-8f32-4a23-be1b-c3b53fe86740
+# ╟─700c196c-dafe-4116-bac8-1024acee9642
+# ╠═aefb7e86-276d-4536-9ea0-33487a5015a8
+# ╠═3071c7f7-4d77-45fb-866f-a27f76270284
+# ╠═a29a9de0-0fee-4887-bf9a-3780725e418f
+# ╠═a683c891-05bf-4119-af89-002f6def9ef9
+# ╠═8a7697e1-ef70-40b0-9432-4fe2bc302bad
+# ╠═4f368fec-9cca-4236-99fe-ffd35cc9335d
+# ╠═60d97a5b-27d7-4c21-9444-256e2ccf3984
+# ╠═877d8fe0-dc38-4a1c-997d-bb58514b7b86
+# ╠═a833bed7-8f79-4163-b601-6370a337c944
+# ╠═43f7a7c3-df0d-4862-9f3c-9fba64c1eb2f
+# ╠═7ee88060-754f-488d-9341-633bf54c2318
+# ╠═80f08a4c-ba20-4408-853e-a694df474a02
+# ╠═eadf88fa-1290-4e08-9af4-53e0f613dc17
+# ╠═ecfea12e-c933-49a0-b117-88658fd5723a
+# ╠═5bcb6ce0-4ed0-44ae-86d3-a810fca004e2
+# ╠═b703f5a3-e869-4051-83a7-64d53f446000
+# ╠═9733a667-964a-4007-9e51-f656c3838954
+# ╠═c2fad765-52d9-479e-a494-faf38736d58c
+# ╠═7efc9685-1031-4882-8202-2fcd83a728d8
+# ╠═ab63a35f-b674-4de1-bb6c-04f45f034a1d
+# ╠═6f1a76ea-5eb7-4908-9edf-c47b7595f913
+# ╠═0038f63a-d7fc-4e48-a487-6aa97df100c5
+# ╠═465f5546-e9a1-4ea6-98e9-75436240dd86
+# ╠═78f6195a-c9fc-4d42-9e96-58a79d4fa06e
+# ╠═bc9a89bd-6b93-4ff9-8326-b24f8d3c54d1
+# ╠═b4849f98-2174-4e55-9070-61b5bded79a4
+# ╠═eb6cb789-6d91-4f96-bedb-b92ba5d1d69a
+# ╠═2896b900-df7c-4fee-a62c-8ea64f9ffddc
+# ╠═1cd28cd7-c3d7-4599-9f7b-b1d68bc094a0
