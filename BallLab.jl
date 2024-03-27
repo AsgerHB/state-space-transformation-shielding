@@ -188,6 +188,14 @@ function π(v, p)
 	
 end
 
+# ╔═╡ 236497fd-670b-45b1-8ca3-41b204a4d287
+function π⁻¹(e_mek, v, p_gt_4)
+	p = (e_mek - 1/2*v^2)/-g
+	#if p < 0 return nothing end
+	if  !(p_gt_4 == 1 ? p > 4 : p < 4) return nothing end
+	return v, p
+end
+
 # ╔═╡ d30c6363-75e6-42f8-b3a0-4a032df063ef
 begin
 	π_xlabel = "\$E_{mek}\$"
@@ -276,253 +284,9 @@ const π_bounds = let
 	Bounds((0., v_lower, 0.), ceil.((e_mek_upper, v_upper, 2.0)))
 end
 
-# ╔═╡ 22d05a23-bcad-4281-8303-5082a3d8e785
-@bind v NumberField(-15:0.2:15)
-
-# ╔═╡ 2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
-@bind p NumberField(0:0.1:8)
-
-# ╔═╡ 898fcb77-2f6d-42b9-93c7-dce396664174
-md"""
-## Reachability Function
-"""
-
-# ╔═╡ 206a65db-e953-4216-9689-31966739c88d
-const samples_per_random_axis = [1]
-
-# ╔═╡ 6327ed76-cf69-4389-8ce2-e0e9c42eb11f
-md"""
-### Brute-force sampling
-
-Solving these constraints can be quite tedious so what I do instead is just iterate through samplese that cover the whole state space and check for every sample if it is a member of the π-partition. Horribly inefficient, but it works for this example.
-"""
-
-# ╔═╡ 01190c0f-b8bb-403f-8eed-57d683ad302a
-# Number of samples per unit
-const global_sampling_resolution = 10
-
-# ╔═╡ c98583c9-3105-46b3-80b4-06b84d6e1db6
-global_supporting_points::Vector{Tuple{Float64, Float64}} = SupportingPoints([
-		(u - l)*global_sampling_resolution
-		for (l, u) in zip(vp_bounds.lower, vp_bounds.upper)
-	], 
-	vp_bounds) |> collect;
-
-# ╔═╡ f9fbc97a-3b7d-45f4-a784-45d2cf515fa1
-scatter(global_supporting_points,
-	marker=(2, :red, :circle),
-	markerstrokewidth=0,
-	xlabel="v",
-	ylabel="p",
-	label="global supporting points")
-
-# ╔═╡ f351c1ed-89d0-495c-8720-7f1ffa9ddd93
-begin
-	# Brute-force approach to sample generation
-	# by checking membership of every single sample in the state space
-	# for some resolution of samples
-	struct BruteForceSampler
-		partition::Partition
-		points::Vector{Tuple{Float64, Float64}}
-	end
-
-	
-	Base.IteratorSize(::BruteForceSampler) = Base.SizeUnknown()
-	
-	Base.iterate(sampler::BruteForceSampler) = begin
-		Base.iterate(sampler, 1)
-	end
-
-	Base.iterate(sampler::BruteForceSampler, i::Int64) = begin
-		l = length(sampler.points)
-		while π(sampler.points[i]...) ∉ sampler.partition && i < l
-			i += 1
-		end
-		if i == l
-			nothing
-		else
-			(sampler.points[i], i + 1)
-		end
-	end
-end
-
-# ╔═╡ f4364c08-d09b-4dcc-89ea-e3a58490d901
-function reachability_function(partition, action)::Vector{Vector{Int64}}
-	result = Vector{Int64}[]
-	grid = partition.grid
-	for point::Tuple{Float64, Float64} in 
-			BruteForceSampler(partition, global_supporting_points)
-
-		for r in SupportingPoints(samples_per_random_axis, Bounds((-1,), (1,)))
-			point′ = BB.simulate_point(m, point, r, action)
-			π_point′ = π(point′...)
-			if π_point′ ∉ grid
-				continue
-			end
-			partition′ = box(grid, π_point′)
-			if partition′.indices ∈ result
-				continue
-			end
-			push!(result, partition′.indices)
-		end
-	end
-	result
-end
-
-# ╔═╡ 94ced2a5-7ad8-49e3-b1d1-e1d5b8ee9868
-md"""
-## Synthesize a Shield
-"""
-
-# ╔═╡ 7dad96ac-3c70-4b75-86a1-3ab374d631fa
-@bind max_steps NumberField(0:1000, default=1000)
-
-# ╔═╡ 3f4d6c5b-b4a9-42c2-909e-569061590af7
-@bind show_point CheckBox()
-
-# ╔═╡ 60401048-7e4a-45c8-a0aa-4fb9338714ab
-#=╠═╡
-v = shielded_trace[1][i]
-  ╠═╡ =#
-
-# ╔═╡ a31a8a05-c145-43a9-b844-ccfaf9f49645
-#=╠═╡
-p = shielded_trace[2][i]
-  ╠═╡ =#
-
-# ╔═╡ 8790b998-d96e-4437-b9bb-d77571d4bd1b
+# ╔═╡ 443301cb-ef1c-40b3-a552-f86e46e0cbe8
 # ╠═╡ disabled = true
 #=╠═╡
-@bind i NumberField(1:length(shielded_trace[1]), default=21)
-  ╠═╡ =#
-
-# ╔═╡ fd928206-accf-44fc-8762-599fe34c26b6
-@bind action Select(BB.Action |> instances |> collect, default="nohit")
-
-# ╔═╡ 7802329e-9ef1-40a5-8d5f-79010fa6ac1f
-BB.simulate_point(m, (v_0, p_0), action)
-
-# ╔═╡ 080a4374-104e-4c30-b946-313475fb0c11
-any_action, no_action = actions_to_int([BB.hit BB.nohit]), actions_to_int([])
-
-# ╔═╡ 26092473-69d3-4777-9890-48fa928ccc94
-function initial_value_of_vp_partition(bounds::Bounds)
-	vl, pl = bounds.lower
-	vu, pu = bounds.upper
-
-	if e_mek(g, vl, pl) < 0.5 || e_mek(g, vu, pl) < 0.5
-		no_action
-	else
-		any_action
-	end
-end
-
-# ╔═╡ fc8619b5-8dbc-47b3-b66e-24ceeeb45f7f
-begin
-	vp_grid = Grid(1, vp_bounds)
-	initialize!(vp_grid, initial_value_of_vp_partition)
-	vp_grid
-end
-
-# ╔═╡ 814e17fe-4824-410d-a46f-da73729d6e8c
-function initial_value_of_π_partition(bounds::Bounds)::Int64
-	e_mek_lower, _, _ = bounds.lower
-	if e_mek_lower < 0.5
-		no_action
-	else
-		any_action
-	end
-end
-
-# ╔═╡ 3e00e758-2e2e-42da-9152-fff188f75875
-begin
-	π_grid = Grid([4, 2, 1], π_bounds)
-	initialize!(π_grid, initial_value_of_π_partition)
-	π_grid
-end
-
-# ╔═╡ cc239362-e3a9-4e7b-bef7-737233e2d338
-size(π_grid), length(π_grid)
-
-# ╔═╡ 670639a2-dc12-45af-bb38-5d197ff41fd4
-let	
-	p1 = draw(π_grid, [:, :, 2],
-		title=π_zlabel,
-		xlabel=π_xlabel,
-		ylabel=π_ylabel,
-		colors=[:white, :white], 
-		#color_labels=bbshieldlabels,
-		margin=4mm,
-		show_grid=true,
-		legend=:topright)
-
-	p2 = draw(π_grid, [:, :, 1],
-		title="not $π_zlabel",
-		xlabel=π_xlabel,
-		ylabel=π_ylabel,
-		colors=[:white, :white], 
-		#color_labels=bbshieldlabels,
-		margin=4mm,
-		show_grid=true,
-		legend=:topright)
-
-	plot(p1, p2, size=(600, 300))
-end
-
-# ╔═╡ 1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
-let
-	p1  = plot(π_grid.bounds,
-		color=:white,
-		line=nothing,
-		label=nothing,
-		legend=:outertop,
-		xlabel="\$E_{mek}\$",
-		ylabel="v",)
-
-	π_point = π(v, p)
-
-	π_partition = box(π_grid, π_point)
-	bounds = Bounds(π_partition)
-	bounds = Bounds(bounds.lower[1:2], bounds.upper[1:2])
-
-	plot!(bounds, 
-		linewidth=0,
-		color=:red, 
-		label="partition")
-
-	scatter!([π_point[1]], [π_point[2]], 
-		title=π_point[3] == 1 ? π_zlabel : "not $π_zlabel",
-		marker=(4, :green, :circle),
-		markerstrokewidth=1,
-		label="π(v, p)")
-	
-	p2 = plot(vp_grid.bounds,
-		color=:white,
-		line=nothing,
-		label=nothing,
-		legend=:outertop,
-		xlabel="v",
-		ylabel="p")
-	
-	π_partition = box(π_grid, π(v, p))
-	sp = global_supporting_points
-		
-	sp = BruteForceSampler(box(π_grid, π(v, p)), global_supporting_points) |> collect |> unzip
-	
-	scatter!(sp, 
-		marker=(2, :red, :circle),
-		markerstrokewidth=0,
-		label="Element of partition")
-	
-	scatter!([v], [p], 
-		label="(v,p)",
-		marker=(4, :green, :circle),
-		markerstrokewidth=1,)
-
-	plot(p1, p2, size=(800, 400), margin=3mm)
-end
-
-# ╔═╡ 443301cb-ef1c-40b3-a552-f86e46e0cbe8
 let
 	valid_partitions = let
 		result = Partition[]
@@ -573,6 +337,219 @@ let
 
 	plot(p1, p2, size=(800, 400))
 end
+  ╠═╡ =#
+
+# ╔═╡ 898fcb77-2f6d-42b9-93c7-dce396664174
+md"""
+## Reachability Function
+"""
+
+# ╔═╡ 206a65db-e953-4216-9689-31966739c88d
+const samples_per_random_axis = [3]
+
+# ╔═╡ c2d118ff-daaa-4649-8937-76f6f4de684b
+samples_per_axis = [10, 10, 1]
+
+# ╔═╡ f0612487-06c4-4330-a0f0-fc4dd367d083
+prod([samples_per_axis..., samples_per_random_axis...])
+
+# ╔═╡ 6327ed76-cf69-4389-8ce2-e0e9c42eb11f
+md"""
+### Brute-force sampling
+
+Solving these constraints can be quite tedious so what I do instead is just iterate through samplese that cover the whole state space and check for every sample if it is a member of the π-partition. Horribly inefficient, but it works for this example.
+"""
+
+# ╔═╡ 01190c0f-b8bb-403f-8eed-57d683ad302a
+# Number of samples per unit
+const global_sampling_resolution = 5
+
+# ╔═╡ c98583c9-3105-46b3-80b4-06b84d6e1db6
+global_supporting_points::Vector{Tuple{Float64, Float64}} = SupportingPoints([
+		(u - l)*global_sampling_resolution
+		for (l, u) in zip(vp_bounds.lower, vp_bounds.upper)
+	], 
+	vp_bounds) |> collect;
+
+# ╔═╡ f9fbc97a-3b7d-45f4-a784-45d2cf515fa1
+scatter(global_supporting_points,
+	marker=(2, :red, :circle),
+	markerstrokewidth=0,
+	xlabel="v",
+	ylabel="p",
+	label="global supporting points")
+
+# ╔═╡ f351c1ed-89d0-495c-8720-7f1ffa9ddd93
+begin
+	# Brute-force approach to sample generation
+	# by checking membership of every single sample in the state space
+	# for some resolution of samples
+	struct BruteForceSampler
+		partition::Partition
+		points::Vector{Tuple{Float64, Float64}}
+	end
+
+	
+	Base.IteratorSize(::BruteForceSampler) = Base.SizeUnknown()
+	
+	Base.iterate(sampler::BruteForceSampler) = begin
+		Base.iterate(sampler, 1)
+	end
+
+	Base.iterate(sampler::BruteForceSampler, i::Int64) = begin
+		l = length(sampler.points)
+		while π(sampler.points[i]...) ∉ sampler.partition && i < l
+			i += 1
+		end
+		if i == l
+			nothing
+		else
+			(sampler.points[i], i + 1)
+		end
+	end
+end
+
+# ╔═╡ 94ced2a5-7ad8-49e3-b1d1-e1d5b8ee9868
+md"""
+## Synthesize a Shield
+"""
+
+# ╔═╡ 7dad96ac-3c70-4b75-86a1-3ab374d631fa
+@bind max_steps NumberField(0:1000, default=1000)
+
+# ╔═╡ 3f4d6c5b-b4a9-42c2-909e-569061590af7
+@bind show_point CheckBox()
+
+# ╔═╡ fd928206-accf-44fc-8762-599fe34c26b6
+@bind action Select(BB.Action |> instances |> collect, default="nohit")
+
+# ╔═╡ 7802329e-9ef1-40a5-8d5f-79010fa6ac1f
+BB.simulate_point(m, (v_0, p_0), action)
+
+# ╔═╡ 080a4374-104e-4c30-b946-313475fb0c11
+any_action, no_action = actions_to_int([BB.hit BB.nohit]), actions_to_int([])
+
+# ╔═╡ 26092473-69d3-4777-9890-48fa928ccc94
+function initial_value_of_vp_partition(bounds::Bounds)
+	vl, pl = bounds.lower
+	vu, pu = bounds.upper
+
+	if e_mek(g, vl, pl) < 0.5 || e_mek(g, vu, pl) < 0.5
+		no_action
+	else
+		any_action
+	end
+end
+
+# ╔═╡ fc8619b5-8dbc-47b3-b66e-24ceeeb45f7f
+begin
+	vp_grid = Grid(1, vp_bounds)
+	initialize!(vp_grid, initial_value_of_vp_partition)
+	vp_grid
+end
+
+# ╔═╡ f4364c08-d09b-4dcc-89ea-e3a58490d901
+function reachability_function(partition, action)::Vector{Vector{Int64}}
+	result = Vector{Int64}[]
+	grid = partition.grid
+	for π_point in SupportingPoints(samples_per_axis, partition)
+		if π_point ∉ Bounds(partition) continue end
+		point = π⁻¹(π_point...)
+		if isnothing(point) continue end
+		if point ∉ vp_grid.bounds continue end
+		for r in SupportingPoints(samples_per_random_axis, Bounds((-1,), (1,)))
+			point′ = BB.simulate_point(m, point, r, action)
+			π_point′ = π(point′...)
+			if π_point′ ∉ grid
+				continue
+			end
+			partition′ = box(grid, π_point′)
+			if partition′.indices ∈ result
+				continue
+			end
+			push!(result, partition′.indices)
+		end
+	end
+	result
+end
+
+# ╔═╡ 814e17fe-4824-410d-a46f-da73729d6e8c
+function initial_value_of_π_partition(bounds::Bounds)::Int64
+	e_mek_lower, _, _ = bounds.lower
+	if e_mek_lower < 0.5
+		no_action
+	else
+		any_action
+	end
+end
+
+# ╔═╡ 3e00e758-2e2e-42da-9152-fff188f75875
+begin
+	π_grid = Grid([0.5, 0.5, 1], π_bounds)
+	initialize!(π_grid, initial_value_of_π_partition)
+	π_grid
+end
+
+# ╔═╡ c2c5207f-ee2e-46fa-877a-18a9bc691e11
+let
+	π_points = [p for p in SupportingPoints([20, 20, 3], π_grid.bounds) 
+		if p ∈ π_grid.bounds]
+	
+	# π_points = [p for p in π_points if p[3] == 0]
+	
+	vp_points = [π⁻¹(p...) for p in π_points]
+	vp_points = [p for p in vp_points if !isnothing(p)]
+
+	
+	
+	p1 = scatter(π_points |> unzip,
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
+		zlabel=π_zlabel,
+		label="samples")
+	
+	p2 = scatter(vp_points |> unzip,
+		xlabel="v",
+		ylabel="p",
+		label="translated samples")
+	
+	plot!(vp_grid.bounds,
+		label="bounds of (v,p) grid",
+		alpha=0.8)
+
+	plot(p1, p2, legend=:outertop)
+end
+
+# ╔═╡ d9e38cab-da45-4367-ad44-0c02ced097b7
+π_grid.bounds
+
+# ╔═╡ cc239362-e3a9-4e7b-bef7-737233e2d338
+size(π_grid), length(π_grid)
+
+# ╔═╡ 670639a2-dc12-45af-bb38-5d197ff41fd4
+let	
+	p1 = draw(π_grid, [:, :, 2],
+		title=π_zlabel,
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
+		colors=[:white, :white], 
+		#color_labels=bbshieldlabels,
+		margin=4mm,
+		show_grid=true,
+		legend=:topright)
+
+	p2 = draw(π_grid, [:, :, 1],
+		title="not $π_zlabel",
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
+		colors=[:white, :white], 
+		#color_labels=bbshieldlabels,
+		margin=4mm,
+		show_grid=true,
+		legend=:topright)
+
+	plot(p1, p2, size=(600, 300))
+end
 
 # ╔═╡ 77750ddb-f774-4c95-8963-a4fd45806bb6
 π; π_grid; @bind do_it_button CounterButton("Do it")
@@ -588,6 +565,166 @@ shield, max_steps_reached = make_shield(reachability_function_precomputed, BB.Ac
 
 # ╔═╡ a3e566e8-6b31-4d07-a2b9-b3b90f178d63
 Bounds(box(shield, π(7, 0)))
+
+# ╔═╡ e247dfa7-6000-4df1-8a28-328463e32c49
+length(shield)
+
+# ╔═╡ 24350838-772a-4357-b4fd-5275d6a70393
+length(π_grid)
+
+# ╔═╡ e494556c-1106-49ce-85b4-729136b9b0b3
+md"""
+## Apply the shield
+"""
+
+# ╔═╡ efef17e1-8cd7-4d5b-a805-3d4a7345cf9d
+function apply_shield(shield::Grid, policy)
+    return (s) -> begin
+		a = policy(s)
+		if π(s...) ∉ shield
+			return a
+		end
+        allowed = int_to_actions(BB.Action, get_value(box(shield, π(s...))))
+        if a ∈ allowed
+            return a
+        elseif length(allowed) > 0
+			a′ = rand(allowed)
+            return a′
+        else
+            return a
+        end
+    end
+end
+
+# ╔═╡ f5bd346f-ba38-42c5-8920-7ec127f8c547
+random(s...) = if (rand(1:10) == 1) BB.hit else BB.nohit end
+
+# ╔═╡ ff60b015-12cf-478b-9a60-93a9b93d0f5f
+trace = BB.simulate_sequence(m, (0, 10), random, 20)
+
+# ╔═╡ 87651747-c606-4f15-b335-649492faedd9
+plot(); BB.animate_trace(trace...)
+
+# ╔═╡ 937afb55-7775-482d-8674-260c8de29614
+animate_trace(trace)
+
+# ╔═╡ 087cbfb4-9f42-4f9a-85cd-e92ff2004cc8
+shielded_random = apply_shield(shield, random)
+
+# ╔═╡ 92f2f097-02e7-4c7b-a8f0-9d0be416444f
+length(shield)
+
+# ╔═╡ d7b1d3d3-4ced-47f0-918a-3c3aa8cae5ed
+md"""
+# Evaluation
+"""
+
+# ╔═╡ 76af8821-a3ae-41ce-9859-363f5ef4711c
+function check_safety(mechanics, policy, duration; runs=1000)
+	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
+	deaths = 0
+	example_trace = nothing
+	for run in 1:runs
+		trace = BB.simulate_sequence(m, (0, 10), policy, duration)
+		for (v, p) in zip(trace...)
+			if abs(v) < 1 && p == 0
+				deaths += 1
+				example_trace = trace
+				break
+			end
+		end
+		example_trace = something(example_trace, trace)
+	end
+	deaths, example_trace
+end
+
+# ╔═╡ 05b5e4d4-9bea-49b5-ae51-0daa2fb8478d
+runs = 10000
+
+# ╔═╡ c995f805-fc9b-47c1-bfa9-5dbcc9400806
+lazy(_...) = BB.nohit
+
+# ╔═╡ 568bbecc-0726-43d2-ba8e-cc2c468c44b2
+shielded_lazy = apply_shield(shield, lazy)
+
+# ╔═╡ b2a050b0-2548-4a34-80ae-89f3a0bcb056
+deaths, shielded_trace = check_safety(m, shielded_lazy, 120; runs)
+
+# ╔═╡ 8790b998-d96e-4437-b9bb-d77571d4bd1b
+# ╠═╡ disabled = true
+#=╠═╡
+@bind i NumberField(1:length(shielded_trace[1]), default=21)
+  ╠═╡ =#
+
+# ╔═╡ 1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
+let
+	π_grid = Grid([6, 6, 1], π_grid.bounds)
+	
+	p1  = plot(π_grid.bounds,
+		color=:white,
+		line=nothing,
+		label=nothing,
+		legend=:outertop,
+		xlabel="\$E_{mek}\$",
+		ylabel="v",)
+
+	π_point = π(v, p)
+
+	π_partition = box(π_grid, π_point)
+	bounds = Bounds(π_partition)
+	bounds = Bounds(bounds.lower[1:2], bounds.upper[1:2])
+
+	plot!(bounds, 
+		linewidth=0,
+		color=:red, 
+		label="partition")
+
+	scatter!([π_point[1]], [π_point[2]], 
+		title=π_point[3] == 1 ? π_zlabel : "not $π_zlabel",
+		marker=(4, :green, :circle),
+		markerstrokewidth=1,
+		label="π(v, p)")
+	
+	p2 = plot(vp_grid.bounds,
+		color=:white,
+		line=nothing,
+		label=nothing,
+		legend=:outertop,
+		xlabel="v",
+		ylabel="p")
+	
+	π_partition = box(π_grid, π(v, p))
+	sp = global_supporting_points
+		
+	sp = BruteForceSampler(box(π_grid, π(v, p)), global_supporting_points) |> collect 
+	if length(sp) > 0
+		scatter!(sp |> unzip, 
+			marker=(2, :red, :circle),
+			markerstrokewidth=0,
+			label="BruteForce sampled")
+	else
+		@info "???"
+	end
+
+	sp = SupportingPoints([8, 8, 3], π_partition)
+	sp = [p for p in sp if p ∈ π_grid.bounds]
+	sp = [π⁻¹(p...) for p in sp]
+	sp = [p for p in sp if !isnothing(p)]
+	sp = [p for p in sp if p ∈ vp_grid.bounds]
+	
+	scatter!(sp, 
+		marker=(2, :blue, :circle),
+		markerstrokewidth=0,
+		label="π⁻¹ sampled",
+		alpha=0.1)
+	
+	scatter!([v], [p], 
+		label="(v,p)",
+		marker=(4, :green, :circle),
+		markerstrokewidth=1,)
+
+	plot(p1, p2, size=(800, 400), margin=3mm)
+end
 
 # ╔═╡ 021e2fb4-1760-4421-916b-fb2ef306cb13
 shield_plot_new_statespace = let
@@ -617,19 +754,6 @@ shield_plot_new_statespace = let
 		## Reachable partitions ##
 		π_point = π(v, p)
 
-		reachable = 
-			reachability_function_precomputed[action][box(shield, π_point).indices...]
-
-		for indices in reachable
-			partition = Partition(shield, indices)
-			bounds = Bounds(partition)
-			
-			if bounds.lower[3] == 1 p1 = plot(p1) else p2 = plot(p2) end
-			plot!(bounds,
-				color=colors.PETER_RIVER,
-				opacity=0.3,
-				label=nothing)
-		end
 		p2 = plot(p2)
 		plot!([], seriestype=:shape, 
 			color=colors.PETER_RIVER,
@@ -683,9 +807,20 @@ end
 # ╔═╡ 702172e9-59d7-4a77-b663-a89f66132a1f
 partition = box(shield, π(v, p))
 
+# ╔═╡ c1878b2b-8902-4d4d-ac9d-9f8f89896af8
+for π_point in SupportingPoints(samples_per_axis, partition)
+	if π_point ∉ Bounds(partition) continue end
+	point = π⁻¹(π_point...)
+	if isnothing(point) continue end
+
+	if π(point...) ∉ partition
+		@show point
+	end
+end
+
 # ╔═╡ a566b33b-7005-43c3-afce-b8793447f615
 shield_plot_old_statespace = let
-	draw_function(s -> box(shield, π(s...)) |> get_value, -15, 15, 0, 10, 0.02,
+	draw_function(s -> box(shield, π(s...)) |> get_value, -15, 15, 0, 10, 0.05,
 		color=cgrad([colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS], 10, categorical=true),
 		xlabel="Velocity (m/s)",
 		ylabel="Position (m)",
@@ -716,95 +851,14 @@ shield_plot_old_statespace = let
 	plot!()
 end
 
-# ╔═╡ 24350838-772a-4357-b4fd-5275d6a70393
-length(π_grid)
-
 # ╔═╡ 3961c068-f268-48c5-926c-99cd5c501018
 let
 	partition = box(π_grid, π(v, p))
 	reachability_function(partition, action)
 end
 
-# ╔═╡ e494556c-1106-49ce-85b4-729136b9b0b3
-md"""
-## Apply the shield
-"""
-
-# ╔═╡ efef17e1-8cd7-4d5b-a805-3d4a7345cf9d
-function apply_shield(shield::Grid, policy)
-    return (s) -> begin
-		a = policy(s)
-		if π(s...) ∉ shield
-			return a
-		end
-        allowed = int_to_actions(BB.Action, get_value(box(shield, π(s...))))
-        if a ∈ allowed
-            return a
-        elseif length(allowed) > 0
-			a′ = rand(allowed)
-            return a′
-        else
-            return a
-        end
-    end
-end
-
-# ╔═╡ f5bd346f-ba38-42c5-8920-7ec127f8c547
-random(s...) = if (rand(1:10) == 1) BB.hit else BB.nohit end
-
-# ╔═╡ ff60b015-12cf-478b-9a60-93a9b93d0f5f
-trace = BB.simulate_sequence(m, (0, 10), random, 20)
-
-# ╔═╡ 87651747-c606-4f15-b335-649492faedd9
-plot(); BB.animate_trace(trace...)
-
-# ╔═╡ 937afb55-7775-482d-8674-260c8de29614
-animate_trace(trace)
-
-# ╔═╡ 087cbfb4-9f42-4f9a-85cd-e92ff2004cc8
-shielded_random = apply_shield(shield, random)
-
 # ╔═╡ d4cbae79-3a44-4f1f-839e-3b652bf83a42
 shielded_random((v, p))
-
-# ╔═╡ 92f2f097-02e7-4c7b-a8f0-9d0be416444f
-length(shield)
-
-# ╔═╡ d7b1d3d3-4ced-47f0-918a-3c3aa8cae5ed
-md"""
-# Evaluation
-"""
-
-# ╔═╡ 76af8821-a3ae-41ce-9859-363f5ef4711c
-function check_safety(mechanics, policy, duration; runs=1000)
-	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
-	deaths = 0
-	example_trace = nothing
-	for run in 1:runs
-		trace = BB.simulate_sequence(m, (0, 10), policy, duration)
-		for (v, p) in zip(trace...)
-			if abs(v) < 1 && p == 0
-				deaths += 1
-				example_trace = trace
-				break
-			end
-		end
-		example_trace = something(example_trace, trace)
-	end
-	deaths, example_trace
-end
-
-# ╔═╡ 05b5e4d4-9bea-49b5-ae51-0daa2fb8478d
-runs = 1000
-
-# ╔═╡ c995f805-fc9b-47c1-bfa9-5dbcc9400806
-lazy(_...) = BB.nohit
-
-# ╔═╡ 568bbecc-0726-43d2-ba8e-cc2c468c44b2
-shielded_lazy = apply_shield(shield, lazy)
-
-# ╔═╡ b2a050b0-2548-4a34-80ae-89f3a0bcb056
-deaths, shielded_trace = check_safety(m, shielded_lazy, 120; runs)
 
 # ╔═╡ cf85b021-ab85-4926-86c4-16854fbbe545
 let
@@ -879,11 +933,14 @@ md"""
 @bind open_folder_button CounterButton("Open Folder")
 
 # ╔═╡ 5789cc7e-4a58-4a83-9f3a-87c982028c59
+#=╠═╡
 if open_folder_button > 0
 	run(`nautilus $target_dir`, wait=false)
 end; "This cell opens `$target_dir` in nautilus"
+  ╠═╡ =#
 
 # ╔═╡ 86b27da4-a999-41b0-ba2a-b3af68d48491
+#=╠═╡
 begin
 	png(shield_plot_new_statespace, 
 		joinpath(target_dir, "Shield Drawn Onto New Statespace.png"))
@@ -891,6 +948,7 @@ begin
 	png(shield_plot_old_statespace, 
 		joinpath(target_dir, "Shield Drawn Onto Old Statespace"))
 end
+  ╠═╡ =#
 
 # ╔═╡ 52096738-62d6-48ce-a050-7cc2744e19f3
 md"""
@@ -904,9 +962,11 @@ np = pyimport("numpy")
 pyshield = np.array(shield.array)
 
 # ╔═╡ 5c3325bd-a1a6-411b-a556-48fe7c5c3f72
+#=╠═╡
 open(joinpath(target_dir, "grid.npy"), write=true, create=true) do 🗋
 	np.save(🗋, pyshield)
 end
+  ╠═╡ =#
 
 # ╔═╡ 3ce06a3d-64de-4643-a6fb-f231df6f4d86
 shield
@@ -945,9 +1005,11 @@ meta_info = get_meta_info(shield,
 	env_id="E_mek Bouncgng Ball")
 
 # ╔═╡ 0196bdae-8f32-4a23-be1b-c3b53fe86740
+#=╠═╡
 open(joinpath(target_dir, "meta.json"), write=true, create=true) do 🗋
 	JSON.print(🗋, meta_info)
 end
+  ╠═╡ =#
 
 # ╔═╡ 700c196c-dafe-4116-bac8-1024acee9642
 md"""
@@ -994,9 +1056,6 @@ function get_pairs_for_array(output::String, keyword::String)::Vector{Tuple{Floa
 	return parse_pairs(m[:values])
 end
 
-# ╔═╡ 60d97a5b-27d7-4c21-9444-256e2ccf3984
-
-
 # ╔═╡ 877d8fe0-dc38-4a1c-997d-bb58514b7b86
 function value_at_time(trace::T, time::S) where T <: AbstractVector{Tuple{Float64, Float64}} where S <: Number
 	
@@ -1034,14 +1093,11 @@ function parse_trace(output, Δt, keywords...)
 end
 
 # ╔═╡ 7ee88060-754f-488d-9341-633bf54c2318
-# ╠═╡ disabled = true
-#=╠═╡
 @bind model_file TextField(80, default=pwd() ⨝ "asdf/bb_mech_shielded.xml")
-  ╠═╡ =#
 
 # ╔═╡ 80f08a4c-ba20-4408-853e-a694df474a02
 @bind query TextField((95, 6), default="""
-	simulate[<=100;1] { v, p }
+	simulate[<=100;1] { v, p, HIT_REQUIRED }
 """)
 
 # ╔═╡ eadf88fa-1290-4e08-9af4-53e0f613dc17
@@ -1054,9 +1110,6 @@ end
 
 # ╔═╡ ecfea12e-c933-49a0-b117-88658fd5723a
 query |> remove_single_line_breaks |> multiline
-
-# ╔═╡ 5bcb6ce0-4ed0-44ae-86d3-a810fca004e2
-
 
 # ╔═╡ 9733a667-964a-4007-9e51-f656c3838954
 @bind verifyta TextField(80, default=homedir() ⨝ "opt/uppaal-5.0.0-linux64/bin/verifyta")
@@ -1072,7 +1125,6 @@ query_file = let
 end
 
 # ╔═╡ c2fad765-52d9-479e-a494-faf38736d58c
-#=╠═╡
 if isfile(query_file) && isfile(model_file)
 	output = Cmd([
 		verifyta,
@@ -1081,59 +1133,56 @@ if isfile(query_file) && isfile(model_file)
 		query_file
 	]) |> read |> String
 end;
-  ╠═╡ =#
 
 # ╔═╡ ab63a35f-b674-4de1-bb6c-04f45f034a1d
-#=╠═╡
 output[1:min(10000, length(output))] |> multiline
-  ╠═╡ =#
 
 # ╔═╡ 6f1a76ea-5eb7-4908-9edf-c47b7595f913
-#=╠═╡
 tt = parse_trace(output, 0.1, "v", "p", "HIT_REQUIRED")
-  ╠═╡ =#
 
 # ╔═╡ 465f5546-e9a1-4ea6-98e9-75436240dd86
-@bind i NumberField(1:10000)
+@bind ii NumberField(1:10000)
 
 # ╔═╡ 0038f63a-d7fc-4e48-a487-6aa97df100c5
-#=╠═╡
 let
 	plot(shield_plot_old_statespace)
-	#plot!(tt["v"], tt["p"])
-	scatter!([tt["v"][i]], [tt["p"][i]])
+	plot!(tt["v"], tt["p"])
+	scatter!([tt["v"][ii]], [tt["p"][ii]])
 end
-  ╠═╡ =#
 
 # ╔═╡ 78f6195a-c9fc-4d42-9e96-58a79d4fa06e
-#=╠═╡
-tt["p"][i]
-  ╠═╡ =#
+tt["p"][ii]
 
 # ╔═╡ bc9a89bd-6b93-4ff9-8326-b24f8d3c54d1
-#=╠═╡
-tt["HIT_REQUIRED"][i]
-  ╠═╡ =#
+tt["HIT_REQUIRED"][ii]
 
 # ╔═╡ b4849f98-2174-4e55-9070-61b5bded79a4
-#=╠═╡
-vv, pp = tt["v"][i], tt["p"][i]
-  ╠═╡ =#
+vv, pp = tt["v"][ii], tt["p"][ii]
 
 # ╔═╡ eb6cb789-6d91-4f96-bedb-b92ba5d1d69a
-#=╠═╡
 get_value(box(shield, π(vv, pp)))
-  ╠═╡ =#
 
 # ╔═╡ 2896b900-df7c-4fee-a62c-8ea64f9ffddc
-#=╠═╡
 BB.simulate_point(m, (vv, pp), BB.nohit)
-  ╠═╡ =#
 
 # ╔═╡ 1cd28cd7-c3d7-4599-9f7b-b1d68bc094a0
+tt["v"][ii + 1], tt["p"][ii + 1]
+
+# ╔═╡ a31a8a05-c145-43a9-b844-ccfaf9f49645
 #=╠═╡
-tt["v"][i + 1], tt["p"][i + 1]
+p = shielded_trace[2][i]
   ╠═╡ =#
+
+# ╔═╡ 22d05a23-bcad-4281-8303-5082a3d8e785
+@bind v NumberField(-15:0.2:15)
+
+# ╔═╡ 60401048-7e4a-45c8-a0aa-4fb9338714ab
+#=╠═╡
+v = shielded_trace[1][i]
+  ╠═╡ =#
+
+# ╔═╡ 2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
+@bind p NumberField(0:0.1:8)
 
 # ╔═╡ Cell order:
 # ╟─c663a860-4562-4de0-9b08-edc041cde9e6
@@ -1175,19 +1224,23 @@ tt["v"][i + 1], tt["p"][i + 1]
 # ╠═5c3ed2b7-81c0-42e5-b157-d65e25537791
 # ╠═fc8619b5-8dbc-47b3-b66e-24ceeeb45f7f
 # ╠═78cb48d3-bedf-48e9-9479-8c71bcc10f6f
+# ╠═236497fd-670b-45b1-8ca3-41b204a4d287
+# ╠═c2c5207f-ee2e-46fa-877a-18a9bc691e11
+# ╠═d9e38cab-da45-4367-ad44-0c02ced097b7
 # ╠═d30c6363-75e6-42f8-b3a0-4a032df063ef
 # ╠═2408a96c-8634-4fe9-91aa-af32ac2c7dec
 # ╠═814e17fe-4824-410d-a46f-da73729d6e8c
 # ╠═3e00e758-2e2e-42da-9152-fff188f75875
 # ╠═cc239362-e3a9-4e7b-bef7-737233e2d338
 # ╟─670639a2-dc12-45af-bb38-5d197ff41fd4
-# ╠═22d05a23-bcad-4281-8303-5082a3d8e785
-# ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
-# ╟─1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
+# ╠═1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
 # ╟─443301cb-ef1c-40b3-a552-f86e46e0cbe8
 # ╟─898fcb77-2f6d-42b9-93c7-dce396664174
 # ╠═206a65db-e953-4216-9689-31966739c88d
+# ╠═c2d118ff-daaa-4649-8937-76f6f4de684b
+# ╠═f0612487-06c4-4330-a0f0-fc4dd367d083
 # ╠═f4364c08-d09b-4dcc-89ea-e3a58490d901
+# ╠═c1878b2b-8902-4d4d-ac9d-9f8f89896af8
 # ╟─6327ed76-cf69-4389-8ce2-e0e9c42eb11f
 # ╠═01190c0f-b8bb-403f-8eed-57d683ad302a
 # ╠═c98583c9-3105-46b3-80b4-06b84d6e1db6
@@ -1204,10 +1257,13 @@ tt["v"][i + 1], tt["p"][i + 1]
 # ╠═60401048-7e4a-45c8-a0aa-4fb9338714ab
 # ╠═a31a8a05-c145-43a9-b844-ccfaf9f49645
 # ╠═8790b998-d96e-4437-b9bb-d77571d4bd1b
+# ╠═22d05a23-bcad-4281-8303-5082a3d8e785
+# ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
+# ╠═fd928206-accf-44fc-8762-599fe34c26b6
 # ╟─021e2fb4-1760-4421-916b-fb2ef306cb13
 # ╟─a566b33b-7005-43c3-afce-b8793447f615
+# ╠═e247dfa7-6000-4df1-8a28-328463e32c49
 # ╠═702172e9-59d7-4a77-b663-a89f66132a1f
-# ╠═fd928206-accf-44fc-8762-599fe34c26b6
 # ╠═080a4374-104e-4c30-b946-313475fb0c11
 # ╠═3961c068-f268-48c5-926c-99cd5c501018
 # ╟─e494556c-1106-49ce-85b4-729136b9b0b3
@@ -1230,7 +1286,7 @@ tt["v"][i + 1], tt["p"][i + 1]
 # ╟─048a3a18-64c5-4ef3-9b25-23306e100dd2
 # ╠═9b4e88ad-2de3-4b8d-8a69-bbb8660cc293
 # ╟─1a3ebfb8-47b8-41a3-b63d-875b03187a4e
-# ╟─5789cc7e-4a58-4a83-9f3a-87c982028c59
+# ╠═5789cc7e-4a58-4a83-9f3a-87c982028c59
 # ╠═86b27da4-a999-41b0-ba2a-b3af68d48491
 # ╟─52096738-62d6-48ce-a050-7cc2744e19f3
 # ╠═c619212a-cf96-4d2d-ba07-1dcc1bcf9aa3
@@ -1249,7 +1305,6 @@ tt["v"][i + 1], tt["p"][i + 1]
 # ╠═a683c891-05bf-4119-af89-002f6def9ef9
 # ╠═8a7697e1-ef70-40b0-9432-4fe2bc302bad
 # ╠═4f368fec-9cca-4236-99fe-ffd35cc9335d
-# ╠═60d97a5b-27d7-4c21-9444-256e2ccf3984
 # ╠═877d8fe0-dc38-4a1c-997d-bb58514b7b86
 # ╠═a833bed7-8f79-4163-b601-6370a337c944
 # ╠═43f7a7c3-df0d-4862-9f3c-9fba64c1eb2f
@@ -1257,7 +1312,6 @@ tt["v"][i + 1], tt["p"][i + 1]
 # ╠═80f08a4c-ba20-4408-853e-a694df474a02
 # ╠═eadf88fa-1290-4e08-9af4-53e0f613dc17
 # ╠═ecfea12e-c933-49a0-b117-88658fd5723a
-# ╠═5bcb6ce0-4ed0-44ae-86d3-a810fca004e2
 # ╠═b703f5a3-e869-4051-83a7-64d53f446000
 # ╠═9733a667-964a-4007-9e51-f656c3838954
 # ╠═c2fad765-52d9-479e-a494-faf38736d58c
