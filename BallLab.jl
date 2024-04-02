@@ -26,16 +26,17 @@ begin
 	using Unzip
 	using PyCall
 	using JSON
+	using ProgressLogging
 	include("Shared Code/FlatUI.jl")
 end
-
-# ╔═╡ af1f9e02-7ed4-476b-a01e-6a83fb850e2a
-Pkg.add("JSON")
 
 # ╔═╡ c663a860-4562-4de0-9b08-edc041cde9e6
 md"""
 # Preamble
 """
+
+# ╔═╡ af1f9e02-7ed4-476b-a01e-6a83fb850e2a
+#Pkg.add("ProgressLogging")
 
 # ╔═╡ bffbac67-8a3b-4155-a665-0c39f93d3dd7
 TableOfContents()
@@ -348,10 +349,28 @@ md"""
 const samples_per_random_axis = [3]
 
 # ╔═╡ c2d118ff-daaa-4649-8937-76f6f4de684b
-samples_per_axis = [10, 10, 1]
+samples_per_axis = [6, 6, 1]
 
 # ╔═╡ f0612487-06c4-4330-a0f0-fc4dd367d083
 prod([samples_per_axis..., samples_per_random_axis...])
+
+# ╔═╡ 5bf69f54-8ec2-4561-b696-7199ce83c839
+round_8(x) = round(x, digits=8)
+
+# ╔═╡ 104f1f24-44c8-4ea8-9d6a-732984a96e91
+@bind spa NumberField(1:1000, default=samples_per_axis[1])
+
+# ╔═╡ fd928206-accf-44fc-8762-599fe34c26b6
+@bind action Select(BB.Action |> instances |> collect, default=BB.nohit)
+
+# ╔═╡ 7802329e-9ef1-40a5-8d5f-79010fa6ac1f
+BB.simulate_point(m, (v_0, p_0), action)
+
+# ╔═╡ 22d05a23-bcad-4281-8303-5082a3d8e785
+@bind v NumberField(-15:0.2:15)
+
+# ╔═╡ 2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
+@bind p NumberField(0:0.1:8)
 
 # ╔═╡ 6327ed76-cf69-4389-8ce2-e0e9c42eb11f
 md"""
@@ -420,11 +439,21 @@ md"""
 # ╔═╡ 3f4d6c5b-b4a9-42c2-909e-569061590af7
 @bind show_point CheckBox()
 
-# ╔═╡ fd928206-accf-44fc-8762-599fe34c26b6
-@bind action Select(BB.Action |> instances |> collect, default="nohit")
+# ╔═╡ 60401048-7e4a-45c8-a0aa-4fb9338714ab
+#=╠═╡
+v = shielded_trace[1][i]
+  ╠═╡ =#
 
-# ╔═╡ 7802329e-9ef1-40a5-8d5f-79010fa6ac1f
-BB.simulate_point(m, (v_0, p_0), action)
+# ╔═╡ a31a8a05-c145-43a9-b844-ccfaf9f49645
+#=╠═╡
+p = shielded_trace[2][i]
+  ╠═╡ =#
+
+# ╔═╡ 8790b998-d96e-4437-b9bb-d77571d4bd1b
+# ╠═╡ disabled = true
+#=╠═╡
+@bind i NumberField(1:length(shielded_trace[1]), default=21)
+  ╠═╡ =#
 
 # ╔═╡ 080a4374-104e-4c30-b946-313475fb0c11
 any_action, no_action = actions_to_int([BB.hit BB.nohit]), actions_to_int([])
@@ -456,6 +485,32 @@ function reachability_function(partition, action)::Vector{Vector{Int64}}
 		if π_point ∉ Bounds(partition) continue end
 		point = π⁻¹(π_point...)
 		if isnothing(point) continue end
+		for r in SupportingPoints(samples_per_random_axis, Bounds((-1,), (1,)))
+			point′ = BB.simulate_point(m, point, r, action)
+			if point′ ∉ vp_grid.bounds continue end
+			π_point′ = π(point′...)
+			if π_point′ ∉ grid
+				continue
+			end
+			π_point′ = round_8.(π_point′)
+			partition′ = box(grid, π_point′)
+			if partition′.indices ∈ result
+				continue
+			end
+			push!(result, partition′.indices)
+		end
+	end
+	result
+end
+
+# ╔═╡ 0335457d-5081-4f34-b086-7f597413c9f7
+function reachability_function′(partition, action)::Vector{Vector{Int64}}
+	result = Vector{Int64}[]
+	grid = partition.grid
+	for π_point in SupportingPoints([spa, spa, 3], partition)
+		#if π_point ∉ Bounds(partition) continue end
+		point = π⁻¹(π_point...)
+		if isnothing(point) continue end
 		if point ∉ vp_grid.bounds continue end
 		for r in SupportingPoints(samples_per_random_axis, Bounds((-1,), (1,)))
 			point′ = BB.simulate_point(m, point, r, action)
@@ -485,7 +540,7 @@ end
 
 # ╔═╡ 3e00e758-2e2e-42da-9152-fff188f75875
 begin
-	π_grid = Grid([0.5, 0.5, 1], π_bounds)
+	π_grid = Grid([2, 1, 1], π_bounds)
 	initialize!(π_grid, initial_value_of_π_partition)
 	π_grid
 end
@@ -550,111 +605,6 @@ let
 
 	plot(p1, p2, size=(600, 300))
 end
-
-# ╔═╡ 77750ddb-f774-4c95-8963-a4fd45806bb6
-π; π_grid; @bind do_it_button CounterButton("Do it")
-
-# ╔═╡ e762cebe-cea0-48ea-952b-55d14fbba5bb
-if do_it_button >= 0
-	reachability_function_precomputed = 
-		get_transitions(reachability_function, BB.Action, π_grid);
-end
-
-# ╔═╡ af696d4b-aa09-4339-b471-d9c91f065364
-shield, max_steps_reached = make_shield(reachability_function_precomputed, BB.Action, π_grid; max_steps)
-
-# ╔═╡ a3e566e8-6b31-4d07-a2b9-b3b90f178d63
-Bounds(box(shield, π(7, 0)))
-
-# ╔═╡ e247dfa7-6000-4df1-8a28-328463e32c49
-length(shield)
-
-# ╔═╡ 24350838-772a-4357-b4fd-5275d6a70393
-length(π_grid)
-
-# ╔═╡ e494556c-1106-49ce-85b4-729136b9b0b3
-md"""
-## Apply the shield
-"""
-
-# ╔═╡ efef17e1-8cd7-4d5b-a805-3d4a7345cf9d
-function apply_shield(shield::Grid, policy)
-    return (s) -> begin
-		a = policy(s)
-		if π(s...) ∉ shield
-			return a
-		end
-        allowed = int_to_actions(BB.Action, get_value(box(shield, π(s...))))
-        if a ∈ allowed
-            return a
-        elseif length(allowed) > 0
-			a′ = rand(allowed)
-            return a′
-        else
-            return a
-        end
-    end
-end
-
-# ╔═╡ f5bd346f-ba38-42c5-8920-7ec127f8c547
-random(s...) = if (rand(1:10) == 1) BB.hit else BB.nohit end
-
-# ╔═╡ ff60b015-12cf-478b-9a60-93a9b93d0f5f
-trace = BB.simulate_sequence(m, (0, 10), random, 20)
-
-# ╔═╡ 87651747-c606-4f15-b335-649492faedd9
-plot(); BB.animate_trace(trace...)
-
-# ╔═╡ 937afb55-7775-482d-8674-260c8de29614
-animate_trace(trace)
-
-# ╔═╡ 087cbfb4-9f42-4f9a-85cd-e92ff2004cc8
-shielded_random = apply_shield(shield, random)
-
-# ╔═╡ 92f2f097-02e7-4c7b-a8f0-9d0be416444f
-length(shield)
-
-# ╔═╡ d7b1d3d3-4ced-47f0-918a-3c3aa8cae5ed
-md"""
-# Evaluation
-"""
-
-# ╔═╡ 76af8821-a3ae-41ce-9859-363f5ef4711c
-function check_safety(mechanics, policy, duration; runs=1000)
-	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
-	deaths = 0
-	example_trace = nothing
-	for run in 1:runs
-		trace = BB.simulate_sequence(m, (0, 10), policy, duration)
-		for (v, p) in zip(trace...)
-			if abs(v) < 1 && p == 0
-				deaths += 1
-				example_trace = trace
-				break
-			end
-		end
-		example_trace = something(example_trace, trace)
-	end
-	deaths, example_trace
-end
-
-# ╔═╡ 05b5e4d4-9bea-49b5-ae51-0daa2fb8478d
-runs = 10000
-
-# ╔═╡ c995f805-fc9b-47c1-bfa9-5dbcc9400806
-lazy(_...) = BB.nohit
-
-# ╔═╡ 568bbecc-0726-43d2-ba8e-cc2c468c44b2
-shielded_lazy = apply_shield(shield, lazy)
-
-# ╔═╡ b2a050b0-2548-4a34-80ae-89f3a0bcb056
-deaths, shielded_trace = check_safety(m, shielded_lazy, 120; runs)
-
-# ╔═╡ 8790b998-d96e-4437-b9bb-d77571d4bd1b
-# ╠═╡ disabled = true
-#=╠═╡
-@bind i NumberField(1:length(shielded_trace[1]), default=21)
-  ╠═╡ =#
 
 # ╔═╡ 1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
 let
@@ -725,6 +675,26 @@ let
 
 	plot(p1, p2, size=(800, 400), margin=3mm)
 end
+
+# ╔═╡ 966304ab-8d5e-452b-9d47-c234a14626e6
+begin
+	boundsify(indices::Vector{Int64}) = Partition(π_grid, indices) |> Bounds
+end
+
+# ╔═╡ 77750ddb-f774-4c95-8963-a4fd45806bb6
+π; π_grid; @bind do_it_button CounterButton("Do it")
+
+# ╔═╡ e762cebe-cea0-48ea-952b-55d14fbba5bb
+if do_it_button >= 0
+	reachability_function_precomputed = 
+		get_transitions(reachability_function, BB.Action, π_grid);
+end
+
+# ╔═╡ af696d4b-aa09-4339-b471-d9c91f065364
+shield, max_steps_reached = make_shield(reachability_function_precomputed, BB.Action, π_grid; max_steps)
+
+# ╔═╡ a3e566e8-6b31-4d07-a2b9-b3b90f178d63
+Bounds(box(shield, π(7, 0)))
 
 # ╔═╡ 021e2fb4-1760-4421-916b-fb2ef306cb13
 shield_plot_new_statespace = let
@@ -804,19 +774,28 @@ shield_plot_new_statespace = let
 	plot(p1, p2, size=(800, 400))
 end
 
+# ╔═╡ e247dfa7-6000-4df1-8a28-328463e32c49
+length(shield)
+
 # ╔═╡ 702172e9-59d7-4a77-b663-a89f66132a1f
 partition = box(shield, π(v, p))
 
 # ╔═╡ c1878b2b-8902-4d4d-ac9d-9f8f89896af8
 for π_point in SupportingPoints(samples_per_axis, partition)
-	if π_point ∉ Bounds(partition) continue end
+	#if π_point ∉ Bounds(partition) continue end
 	point = π⁻¹(π_point...)
 	if isnothing(point) continue end
 
 	if π(point...) ∉ partition
-		@show point
+		@show π_point
 	end
 end
+
+# ╔═╡ 3fdb6a5a-81e6-43ab-b3f5-4118fe2275c7
+reachable = boundsify.(reachability_function(partition, action))
+
+# ╔═╡ 7f4b10fe-bed4-4f0a-bc4e-0a6f0d0ca8f1
+reachable′ = boundsify.(reachability_function′(partition, action))
 
 # ╔═╡ a566b33b-7005-43c3-afce-b8793447f615
 shield_plot_old_statespace = let
@@ -851,14 +830,152 @@ shield_plot_old_statespace = let
 	plot!()
 end
 
+# ╔═╡ 5b65f23f-ecd1-4911-98e8-57a582cdb4d3
+bounds = Bounds(partition)
+
+# ╔═╡ cd94ae25-f85e-4693-8eb0-d5eaa1efbe4b
+let
+	xlim = bounds.lower[1] - 4, bounds.upper[1] + 4
+	ylim = bounds.lower[2] - 2, bounds.upper[2] + 2
+	
+	plot(Bounds(partition);
+		xlim, ylim,
+		color=colors.NEPHRITIS, 
+		label=nothing,
+		xlabel=π_xlabel,
+		ylabel=π_ylabel)
+	
+	for r in reachable
+		plot!(r, color=colors.SUNFLOWER, label=nothing)
+	end
+	for r in reachable′
+		plot!(r, color=colors.AMETHYST, label=nothing)
+	end
+	plot!()
+	sp_initial = [π_point for π_point in SupportingPoints([spa, spa, 3], partition)]
+	sp_reached = [π⁻¹(p...) for p in sp_initial]
+	sp_initial = [(e_mek, v) for (e_mek, v, p_gt_4) in sp_initial]
+	
+	sp_reached = [BB.simulate_point(m, vp, 0, action) for vp in sp_reached 
+		if !isnothing(vp)]
+	
+	sp_reached = [π(p...) for p in sp_reached]
+	sp_reached = [(p[1], p[2]) for p in sp_reached]
+	
+	scatter!(sp_initial, 
+		color=colors.EMERALD, 
+		label=nothing, markersize=2, 
+		markerstrokewidth=0)
+	
+	scatter!(sp_reached, color=colors.PETER_RIVER,
+		label=nothing, 
+		markersize=2, 
+		markerstrokewidth=0)
+	
+	e_mek_initial = [e_mek for (e_mek, v) in sp_initial] |> unique |> sort
+	e_mek_reached = [e_mek for (e_mek, v) in sp_reached] |> unique |> sort
+	round′(x) = round(x, digits=8)
+	e_mek_reached_rounded = round′.(e_mek_reached) |> unique |> sort
+
+	
+	@show e_mek_initial
+	@show e_mek_reached
+	@show e_mek_reached_rounded
+	@show e_mek_initial == e_mek_reached
+	@show e_mek_initial == e_mek_reached_rounded
+
+	plot!()
+end
+
+# ╔═╡ 24350838-772a-4357-b4fd-5275d6a70393
+length(π_grid)
+
 # ╔═╡ 3961c068-f268-48c5-926c-99cd5c501018
 let
 	partition = box(π_grid, π(v, p))
 	reachability_function(partition, action)
 end
 
+# ╔═╡ e494556c-1106-49ce-85b4-729136b9b0b3
+md"""
+## Apply the shield
+"""
+
+# ╔═╡ efef17e1-8cd7-4d5b-a805-3d4a7345cf9d
+function apply_shield(shield::Grid, policy)
+    return (s) -> begin
+		a = policy(s)
+		if π(s...) ∉ shield
+			return a
+		end
+        allowed = int_to_actions(BB.Action, get_value(box(shield, π(s...))))
+        if a ∈ allowed
+            return a
+        elseif length(allowed) > 0
+			a′ = rand(allowed)
+            return a′
+        else
+            return a
+        end
+    end
+end
+
+# ╔═╡ f5bd346f-ba38-42c5-8920-7ec127f8c547
+random(s...) = if (rand(1:10) == 1) BB.hit else BB.nohit end
+
+# ╔═╡ ff60b015-12cf-478b-9a60-93a9b93d0f5f
+trace = BB.simulate_sequence(m, (0, 10), random, 20)
+
+# ╔═╡ 87651747-c606-4f15-b335-649492faedd9
+plot(); BB.animate_trace(trace...)
+
+# ╔═╡ 937afb55-7775-482d-8674-260c8de29614
+animate_trace(trace)
+
+# ╔═╡ 087cbfb4-9f42-4f9a-85cd-e92ff2004cc8
+shielded_random = apply_shield(shield, random)
+
 # ╔═╡ d4cbae79-3a44-4f1f-839e-3b652bf83a42
 shielded_random((v, p))
+
+# ╔═╡ 92f2f097-02e7-4c7b-a8f0-9d0be416444f
+length(shield)
+
+# ╔═╡ d7b1d3d3-4ced-47f0-918a-3c3aa8cae5ed
+md"""
+# Evaluation
+"""
+
+# ╔═╡ 76af8821-a3ae-41ce-9859-363f5ef4711c
+function check_safety(mechanics, policy, duration; runs=1000)
+	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
+	deaths = 0
+	example_trace = nothing
+	@progress for run in 1:runs
+		trace = BB.simulate_sequence(m, (0, 10), policy, duration)
+		for (v, p) in zip(trace...)
+			if abs(v) < 1 && p == 0
+				deaths += 1
+				example_trace = trace
+				break
+			end
+		end
+		example_trace = something(example_trace, trace)
+	end
+	deaths, example_trace
+end
+
+# ╔═╡ 05b5e4d4-9bea-49b5-ae51-0daa2fb8478d
+runs = 1000
+
+# ╔═╡ c995f805-fc9b-47c1-bfa9-5dbcc9400806
+lazy(_...) = BB.nohit
+
+# ╔═╡ 568bbecc-0726-43d2-ba8e-cc2c468c44b2
+shielded_lazy = apply_shield(shield, lazy)
+
+# ╔═╡ b2a050b0-2548-4a34-80ae-89f3a0bcb056
+deaths, shielded_trace = check_safety(m, shielded_lazy, 120; runs)
 
 # ╔═╡ cf85b021-ab85-4926-86c4-16854fbbe545
 let
@@ -933,83 +1050,16 @@ md"""
 @bind open_folder_button CounterButton("Open Folder")
 
 # ╔═╡ 5789cc7e-4a58-4a83-9f3a-87c982028c59
-#=╠═╡
 if open_folder_button > 0
 	run(`nautilus $target_dir`, wait=false)
 end; "This cell opens `$target_dir` in nautilus"
-  ╠═╡ =#
 
-# ╔═╡ 86b27da4-a999-41b0-ba2a-b3af68d48491
-#=╠═╡
-begin
-	png(shield_plot_new_statespace, 
-		joinpath(target_dir, "Shield Drawn Onto New Statespace.png"))
-	
-	png(shield_plot_old_statespace, 
-		joinpath(target_dir, "Shield Drawn Onto Old Statespace"))
-end
-  ╠═╡ =#
-
-# ╔═╡ 52096738-62d6-48ce-a050-7cc2744e19f3
-md"""
-## The numpy Array
-"""
-
-# ╔═╡ c619212a-cf96-4d2d-ba07-1dcc1bcf9aa3
-np = pyimport("numpy")
-
-# ╔═╡ 40739482-cc93-4690-8e79-cd857e13a5ab
-pyshield = np.array(shield.array)
-
-# ╔═╡ 5c3325bd-a1a6-411b-a556-48fe7c5c3f72
-#=╠═╡
-open(joinpath(target_dir, "grid.npy"), write=true, create=true) do 🗋
-	np.save(🗋, pyshield)
-end
-  ╠═╡ =#
-
-# ╔═╡ 3ce06a3d-64de-4643-a6fb-f231df6f4d86
-shield
-
-# ╔═╡ 61eedab2-b581-4f92-bfcf-04be50f41de6
-md"""
-## The JSON file
-"""
-
-# ╔═╡ 109ac1f4-0711-43c0-9c9d-75c909fe651d
-function get_meta_info(shield::Grid; variables::A, binary_variables::A, actions::Type, env_id) where A<:AbstractArray
-	meta = (
-		"variables" => variables,
-		"env_id" => env_id,
-	
-		"id_to_actionset" => [
-			(a, [a′ ∈ int_to_actions(actions, a) for a′ in instances(actions)])
-			for a in unique(shield.array) ],
-	
-		"n_actions" => length(instances(actions)),
-		"actions" => instances(actions),
-		"bounds" => [shield.bounds.lower, shield.bounds.upper],
-		"granularity" => shield.granularity,
-		"bvars" => binary_variables
-	)
-end
-
-# ╔═╡ 4f08ee6b-4b91-4581-9a75-738ee38185af
-int_to_actions(BB.Action, 2)
-
-# ╔═╡ 59808c45-c387-4a4b-a898-08e216e67df4
-meta_info = get_meta_info(shield, 
+# ╔═╡ 1cce35be-253e-4e75-8f0f-fdf1aed9799d
+numpy_zip_file(shield, joinpath(target_dir, "shield.zip"); 
 	variables=[π_xlabel, π_ylabel], 
-	binary_variables=[π_zlabel],
-	actions=BB.Action,
-	env_id="E_mek Bouncgng Ball")
-
-# ╔═╡ 0196bdae-8f32-4a23-be1b-c3b53fe86740
-#=╠═╡
-open(joinpath(target_dir, "meta.json"), write=true, create=true) do 🗋
-	JSON.print(🗋, meta_info)
-end
-  ╠═╡ =#
+	binary_variables=[π_zlabel], 
+	actions=BB.Action, 
+	env_id="Bouncing Ball")
 
 # ╔═╡ 700c196c-dafe-4116-bac8-1024acee9642
 md"""
@@ -1097,6 +1147,10 @@ end
 
 # ╔═╡ 80f08a4c-ba20-4408-853e-a694df474a02
 @bind query TextField((95, 6), default="""
+	Pr[<=100;1000] ([] number_deaths < 1)
+
+	E[<=100;100] (max:Learner2.fired)
+
 	simulate[<=100;1] { v, p, HIT_REQUIRED }
 """)
 
@@ -1168,22 +1222,6 @@ BB.simulate_point(m, (vv, pp), BB.nohit)
 # ╔═╡ 1cd28cd7-c3d7-4599-9f7b-b1d68bc094a0
 tt["v"][ii + 1], tt["p"][ii + 1]
 
-# ╔═╡ a31a8a05-c145-43a9-b844-ccfaf9f49645
-#=╠═╡
-p = shielded_trace[2][i]
-  ╠═╡ =#
-
-# ╔═╡ 22d05a23-bcad-4281-8303-5082a3d8e785
-@bind v NumberField(-15:0.2:15)
-
-# ╔═╡ 60401048-7e4a-45c8-a0aa-4fb9338714ab
-#=╠═╡
-v = shielded_trace[1][i]
-  ╠═╡ =#
-
-# ╔═╡ 2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
-@bind p NumberField(0:0.1:8)
-
 # ╔═╡ Cell order:
 # ╟─c663a860-4562-4de0-9b08-edc041cde9e6
 # ╠═9c8abfbc-a5f0-11ec-3a9b-9bfd0b447638
@@ -1233,14 +1271,24 @@ v = shielded_trace[1][i]
 # ╠═3e00e758-2e2e-42da-9152-fff188f75875
 # ╠═cc239362-e3a9-4e7b-bef7-737233e2d338
 # ╟─670639a2-dc12-45af-bb38-5d197ff41fd4
-# ╠═1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
+# ╟─1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
 # ╟─443301cb-ef1c-40b3-a552-f86e46e0cbe8
 # ╟─898fcb77-2f6d-42b9-93c7-dce396664174
 # ╠═206a65db-e953-4216-9689-31966739c88d
 # ╠═c2d118ff-daaa-4649-8937-76f6f4de684b
 # ╠═f0612487-06c4-4330-a0f0-fc4dd367d083
+# ╠═5bf69f54-8ec2-4561-b696-7199ce83c839
 # ╠═f4364c08-d09b-4dcc-89ea-e3a58490d901
 # ╠═c1878b2b-8902-4d4d-ac9d-9f8f89896af8
+# ╠═104f1f24-44c8-4ea8-9d6a-732984a96e91
+# ╠═0335457d-5081-4f34-b086-7f597413c9f7
+# ╠═966304ab-8d5e-452b-9d47-c234a14626e6
+# ╠═3fdb6a5a-81e6-43ab-b3f5-4118fe2275c7
+# ╠═7f4b10fe-bed4-4f0a-bc4e-0a6f0d0ca8f1
+# ╠═cd94ae25-f85e-4693-8eb0-d5eaa1efbe4b
+# ╠═fd928206-accf-44fc-8762-599fe34c26b6
+# ╠═22d05a23-bcad-4281-8303-5082a3d8e785
+# ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
 # ╟─6327ed76-cf69-4389-8ce2-e0e9c42eb11f
 # ╠═01190c0f-b8bb-403f-8eed-57d683ad302a
 # ╠═c98583c9-3105-46b3-80b4-06b84d6e1db6
@@ -1257,13 +1305,11 @@ v = shielded_trace[1][i]
 # ╠═60401048-7e4a-45c8-a0aa-4fb9338714ab
 # ╠═a31a8a05-c145-43a9-b844-ccfaf9f49645
 # ╠═8790b998-d96e-4437-b9bb-d77571d4bd1b
-# ╠═22d05a23-bcad-4281-8303-5082a3d8e785
-# ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
-# ╠═fd928206-accf-44fc-8762-599fe34c26b6
 # ╟─021e2fb4-1760-4421-916b-fb2ef306cb13
 # ╟─a566b33b-7005-43c3-afce-b8793447f615
 # ╠═e247dfa7-6000-4df1-8a28-328463e32c49
 # ╠═702172e9-59d7-4a77-b663-a89f66132a1f
+# ╠═5b65f23f-ecd1-4911-98e8-57a582cdb4d3
 # ╠═080a4374-104e-4c30-b946-313475fb0c11
 # ╠═3961c068-f268-48c5-926c-99cd5c501018
 # ╟─e494556c-1106-49ce-85b4-729136b9b0b3
@@ -1287,17 +1333,7 @@ v = shielded_trace[1][i]
 # ╠═9b4e88ad-2de3-4b8d-8a69-bbb8660cc293
 # ╟─1a3ebfb8-47b8-41a3-b63d-875b03187a4e
 # ╠═5789cc7e-4a58-4a83-9f3a-87c982028c59
-# ╠═86b27da4-a999-41b0-ba2a-b3af68d48491
-# ╟─52096738-62d6-48ce-a050-7cc2744e19f3
-# ╠═c619212a-cf96-4d2d-ba07-1dcc1bcf9aa3
-# ╠═40739482-cc93-4690-8e79-cd857e13a5ab
-# ╠═5c3325bd-a1a6-411b-a556-48fe7c5c3f72
-# ╠═3ce06a3d-64de-4643-a6fb-f231df6f4d86
-# ╟─61eedab2-b581-4f92-bfcf-04be50f41de6
-# ╠═109ac1f4-0711-43c0-9c9d-75c909fe651d
-# ╠═4f08ee6b-4b91-4581-9a75-738ee38185af
-# ╠═59808c45-c387-4a4b-a898-08e216e67df4
-# ╠═0196bdae-8f32-4a23-be1b-c3b53fe86740
+# ╠═1cce35be-253e-4e75-8f0f-fdf1aed9799d
 # ╟─700c196c-dafe-4116-bac8-1024acee9642
 # ╠═aefb7e86-276d-4536-9ea0-33487a5015a8
 # ╠═3071c7f7-4d77-45fb-866f-a27f76270284

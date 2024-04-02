@@ -1,0 +1,830 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>urgent broadcast chan bounce;
+broadcast chan hit;
+clock time;
+clock p, v;
+int number_deaths = 0;
+const double G = 9.81;
+
+/* Shielding */
+
+const int NOHIT = 0;
+const int HIT = 1;
+
+/* Config */
+const bool shield_enabled = true;
+
+import "/home/asger/Documents/Files/Arbejde/AAU/Artikler/Physics-guided Dimensionality Reduction/asdf/bb_mech_shield.so" {
+    int shield(double E, double v, double p_thresh);
+};
+
+const int NOTHING = 0;
+const int ONLY_HIT = 1;
+const int DONT_HIT = 2;
+const int EVERYTHING = 3;
+
+bool HIT_REQUIRED = 0;
+int REQ_HITS = 0;
+double MECH_ENERGY = 0;
+
+
+double mechanicalEnergy(double p, double v) {
+    return G * p + 0.5 * v * v;
+}
+
+bool hitRequired(double p, double v) {
+    if (!shield_enabled) { return false; }
+    else { return shield(mechanicalEnergy(p, v), v, p &gt; 4 ? 1.0 : 0.0) == ONLY_HIT; }
+} 
+
+void updateAllowed() { HIT_REQUIRED = hitRequired(p,v); REQ_HITS += HIT_REQUIRED; MECH_ENERGY = mechanicalEnergy(p, v); }
+
+
+bool allowed(int action) {
+    if (!shield_enabled) { return true; }
+    else {
+        int decision = shield(mechanicalEnergy(p, v), v, p &gt; 4 ? 1.0 : 0.0);
+        if      (decision == ONLY_HIT) { return action == HIT; }
+        else if (decision == DONT_HIT) { return action == NOHIT; }
+        else                           { return true; }
+    }
+}
+
+bool debug1 = hitRequired(6.651162790697675, 1.553884711779446);
+
+bool debug2 = hitRequired(6.147286821705427, 2.656641604010023);
+
+bool debug3 = hitRequired(5.542635658914729, 3.458646616541351);
+
+bool debug4 = hitRequired(4.333333333333333, 5.463659147869674);
+
+bool debug5 = hitRequired(6.751937984496124, 0.9523809523809526);
+
+bool debug6 = hitRequired(6.147286821705427, 2.4561403508771917);
+
+</declaration>
+	<template>
+		<name x="5" y="5">Ball</name>
+		<declaration>// Place local declarations here.
+clock x;
+int fired;</declaration>
+		<location id="id0" x="93" y="-34">
+			<name x="83" y="-68">B</name>
+			<label kind="invariant" x="0" y="-126">v' == -G &amp;&amp;
+p' == v</label>
+			<label kind="exponentialrate" x="68" y="-68">1</label>
+		</location>
+		<location id="id1" x="-144" y="-34">
+			<name x="-154" y="-68">I</name>
+			<urgent/>
+		</location>
+		<location id="id2" x="93" y="153">
+			<name x="110" y="144">is_dead</name>
+			<committed/>
+		</location>
+		<location id="id3" x="-93" y="153">
+			<name x="-103" y="119">dead</name>
+			<label kind="invariant" x="-153" y="170">v' == 0 &amp;&amp;
+p' == 0</label>
+			<committed/>
+		</location>
+		<init ref="id1"/>
+		<transition id="id4" controllable="false">
+			<source ref="id3"/>
+			<target ref="id1"/>
+			<nail x="-144" y="153"/>
+		</transition>
+		<transition id="id5" controllable="false">
+			<source ref="id2"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-8" y="153">v&lt;=1</label>
+			<label kind="assignment" x="-42" y="178">number_deaths++,
+x = 0, v=0, p=0</label>
+		</transition>
+		<transition id="id6" controllable="false">
+			<source ref="id2"/>
+			<target ref="id0"/>
+			<label kind="guard" x="-8" y="42">v&gt;1</label>
+			<nail x="25" y="51"/>
+		</transition>
+		<transition id="id7">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="guard" x="153" y="-110">p &gt;= 4 &amp;&amp; v &gt;= 0</label>
+			<label kind="synchronisation" x="153" y="-127">hit?</label>
+			<label kind="assignment" x="152" y="-94">v = -(0.9 + random(0.1)) * v - 4</label>
+			<nail x="144" y="-102"/>
+			<nail x="144" y="-42"/>
+		</transition>
+		<transition id="id8">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="guard" x="153" y="-8">p &gt;= 4 &amp;&amp; v &gt;= -4 &amp;&amp; v &lt; 0</label>
+			<label kind="synchronisation" x="153" y="-41">hit?</label>
+			<label kind="assignment" x="153" y="-25">v = -4.0</label>
+			<nail x="149" y="6"/>
+			<nail x="149" y="-26"/>
+		</transition>
+		<transition id="id9" controllable="false">
+			<source ref="id0"/>
+			<target ref="id2"/>
+			<label kind="guard" x="102" y="59">p &lt;= 0 &amp;&amp; v &lt;= 0</label>
+			<label kind="synchronisation" x="102" y="42">bounce!</label>
+			<label kind="assignment" x="102" y="76">p = 0,
+v = -(0.85 + random(0.12)) * v</label>
+		</transition>
+		<transition id="id10" controllable="false">
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<label kind="assignment" x="-102" y="-34">p = 8.0 + random(2),
+v = 0</label>
+		</transition>
+	</template>
+	<template>
+		<name>LearnerPlayer</name>
+		<declaration>clock x;
+int fired;</declaration>
+		<location id="id11" x="0" y="0">
+			<name x="-10" y="-34">W</name>
+			<label kind="invariant" x="-17" y="8">x &lt;= 1 &amp;&amp;
+x' == 3.333333</label>
+		</location>
+		<location id="id12" x="0" y="-127">
+			<name x="-10" y="-161">C</name>
+			<committed/>
+		</location>
+		<init ref="id11"/>
+		<transition id="id13" controllable="false">
+			<source ref="id11"/>
+			<target ref="id12"/>
+			<label kind="guard" x="8" y="-76">x == 1</label>
+			<label kind="assignment" x="8" y="-59">x = 0</label>
+		</transition>
+		<transition id="id14">
+			<source ref="id12"/>
+			<target ref="id11"/>
+			<label kind="guard" x="93" y="-51">allowed(NOHIT)</label>
+			<nail x="85" y="-68"/>
+			<nail x="85" y="0"/>
+		</transition>
+		<transition id="id15">
+			<source ref="id12"/>
+			<target ref="id11"/>
+			<label kind="guard" x="-195" y="-59">allowed(HIT)</label>
+			<label kind="synchronisation" x="-127" y="-85">hit!</label>
+			<label kind="assignment" x="-153" y="-34">++fired</label>
+			<nail x="-85" y="-68"/>
+			<nail x="-85" y="0"/>
+		</transition>
+	</template>
+	<template>
+		<name>Learner2</name>
+		<declaration>clock x;
+int fired;</declaration>
+		<location id="id16" x="-42" y="-127">
+			<committed/>
+		</location>
+		<location id="id17" x="-42" y="85">
+			<name x="-52" y="51">W</name>
+			<label kind="invariant" x="-59" y="93">x &lt;= 1 &amp;&amp;
+x' == 10.00</label>
+		</location>
+		<location id="id18" x="-42" y="-42">
+			<name x="-52" y="-76">C</name>
+			<committed/>
+		</location>
+		<init ref="id17"/>
+		<transition id="id19" controllable="false">
+			<source ref="id18"/>
+			<target ref="id16"/>
+			<label kind="assignment" x="-42" y="-84">updateAllowed()</label>
+		</transition>
+		<transition id="id20" controllable="false">
+			<source ref="id17"/>
+			<target ref="id18"/>
+			<label kind="guard" x="-34" y="9">x == 1</label>
+			<label kind="assignment" x="-34" y="26">x = 0</label>
+		</transition>
+		<transition id="id21">
+			<source ref="id16"/>
+			<target ref="id17"/>
+			<label kind="guard" x="51" y="34">!HIT_REQUIRED</label>
+			<nail x="-25" y="-127"/>
+			<nail x="43" y="17"/>
+			<nail x="43" y="85"/>
+		</transition>
+		<transition id="id22">
+			<source ref="id16"/>
+			<target ref="id17"/>
+			<label kind="guard" x="-238" y="25">HIT_REQUIRED</label>
+			<label kind="synchronisation" x="-169" y="0">hit!</label>
+			<label kind="assignment" x="-195" y="51">++fired</label>
+			<nail x="-59" y="-127"/>
+			<nail x="-127" y="17"/>
+			<nail x="-127" y="85"/>
+		</transition>
+	</template>
+	<system>
+system Ball,
+       Learner2;
+</system>
+	<simulator type="concrete">
+		<plot-widget title="p">
+			<expression>p</expression>
+		</plot-widget>
+	</simulator>
+	<queries>
+		<option key="--discretization" value="0.001"/>
+		<option key="--truncation-time-error" value="0.001"/>
+		<option key="--diagnostic" value="1"/>
+		<option key="--truncation-error" value="0.001"/>
+		<query>
+			<formula>// Results before training</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>Pr[&lt;=120;100] ([] number_deaths &lt; 1)</formula>
+			<comment/>
+			<result outcome="success" type="quantity" value="0.972644 ± 0.0271031 (95% CI)" timestamp="2024-03-25 12:53:29 +0100">
+				<option key="--discretization" value="0.001"/>
+				<option key="--truncation-time-error" value="0.001"/>
+				<option key="--diagnostic" value="1"/>
+				<option key="--truncation-error" value="0.001"/>
+				<details>0.972644 ± 0.0271031 (95% CI)</details>
+			</result>
+		</query>
+		<query>
+			<formula>E[&lt;=120;100] (max:Learner2.fired)</formula>
+			<comment/>
+			<result outcome="success" type="quantity" value="55.8 ± 1.11889 (95% CI)" timestamp="2024-03-25 12:30:15 +0100">
+				<option key="--discretization" value="0.001"/>
+				<details>55.8 ± 1.11889 (95% CI)</details>
+				<plot title="Probability Density Distribution" xaxis="max: Learner2.fired" yaxis="probability density">
+					<series title="density" type="b(3.000000)" color="0x0000ff" encoding="csv">33.0,0.0033333333333333335
+36.0,0.0
+39.0,0.0033333333333333335
+42.0,0.0033333333333333335
+45.0,0.016666666666666666
+48.0,0.03333333333333333
+51.0,0.03333333333333333
+54.0,0.056666666666666664
+57.0,0.10333333333333333
+60.0,0.056666666666666664
+63.0,0.02
+66.0,0.0033333333333333335
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">55.8,0.0
+55.8,0.10333333333333333
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=3, bucket count=12
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [33, 66]
+Mean estimate of displayed sample: 55.8 ± 1.1189 (95% CI)</comment>
+				</plot>
+				<plot title="Probability Distribution" xaxis="max: Learner2.fired" yaxis="probability">
+					<series title="probability" type="b(3.000000)" color="0x0000ff" encoding="csv">33.0,0.01
+36.0,0.0
+39.0,0.01
+42.0,0.01
+45.0,0.05
+48.0,0.1
+51.0,0.1
+54.0,0.17
+57.0,0.31
+60.0,0.17
+63.0,0.06
+66.0,0.01
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">55.8,0.0
+55.8,0.31
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=3, bucket count=12
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [33, 66]
+Mean estimate of displayed sample: 55.8 ± 1.1189 (95% CI)</comment>
+				</plot>
+				<plot title="Cumulative Probability Distribution" xaxis="max: Learner2.fired" yaxis="probability">
+					<series title="cumulative" type="l" color="0x000000" encoding="csv">33.0,0.0
+36.0,0.01
+39.0,0.01
+42.0,0.02
+45.0,0.03
+48.0,0.08
+51.0,0.18
+54.0,0.28
+57.0,0.45
+60.0,0.76
+63.0,0.93
+66.0,0.99
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">55.8,0.0
+55.8,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=3, bucket count=12
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [33, 66]
+Mean estimate of displayed sample: 55.8 ± 1.1189 (95% CI)</comment>
+				</plot>
+				<plot title="Cumulative Probability Confidence Intervals" xaxis="max: Learner2.fired" yaxis="probability">
+					<series title="upper limit" type="k" color="0x0000dd" encoding="csv">33.0,0.03621669264517642
+36.0,0.05445938539208066
+39.0,0.05445938539208066
+42.0,0.07038393247107012
+45.0,0.08517605297428003
+48.0,0.15155763586442098
+51.0,0.2694770859668119
+54.0,0.3786670047172675
+57.0,0.552719811226064
+60.0,0.8397753868285528
+63.0,0.9713947110925613
+66.0,0.9997468539670226
+					</series>
+					<series title="lower limit" type="k" color="0xdd0000" encoding="csv">33.0,0.0
+36.0,2.5314603297742064E-4
+39.0,2.5314603297742064E-4
+42.0,0.0024313368239425423
+45.0,0.006229971538306394
+48.0,0.03517156251816281
+51.0,0.11031122915326055
+54.0,0.19479362749118148
+57.0,0.35032022923967204
+60.0,0.6642645107290014
+63.0,0.8610802715441427
+66.0,0.9455406146079194
+					</series>
+					<series title="cumulative" type="l" color="0x000000" encoding="csv">33.0,0.0
+36.0,0.01
+39.0,0.01
+42.0,0.02
+45.0,0.03
+48.0,0.08
+51.0,0.18
+54.0,0.28
+57.0,0.45
+60.0,0.76
+63.0,0.93
+66.0,0.99
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">55.8,0.0
+55.8,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=3, bucket count=12
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [33, 66]
+Mean estimate of displayed sample: 55.8 ± 1.1189 (95% CI)</comment>
+				</plot>
+				<plot title="Frequency Histogram" xaxis="max: Learner2.fired" yaxis="count">
+					<series title="count" type="b(3.000000)" color="0x0000ff" encoding="csv">33.0,1.0
+36.0,0.0
+39.0,1.0
+42.0,1.0
+45.0,5.0
+48.0,10.0
+51.0,10.0
+54.0,17.0
+57.0,31.0
+60.0,17.0
+63.0,6.0
+66.0,1.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">55.8,0.0
+55.8,31.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=3, bucket count=12
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [33, 66]
+Mean estimate of displayed sample: 55.8 ± 1.1189 (95% CI)</comment>
+				</plot>
+			</result>
+		</query>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+		<query>
+			<formula>// Learn or load strategy</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>strategy S = minE (LearnerPlayer.fired + (number_deaths * 1000)) [&lt;=120] {} -&gt; {p, v}: &lt;&gt; time &gt;= 120</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2024-01-17 23:48:17 +0100">
+			</result>
+		</query>
+		<query>
+			<formula>saveStrategy("/home/andreashhp/Documents/university/direc/stratetrees/experiments/automated/bouncing_ball/unshielded_strategy.json", S)</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>strategy S = loadStrategy {} -&gt; {p, v} ("/home/andreashhp/Documents/university/direc/stratetrees/experiments/automated/bouncing_ball/new_strategy.json")</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2024-01-18 09:23:08 +0100">
+			</result>
+		</query>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+		<query>
+			<formula>// Expected cost (hits + number of deaths * 1000)</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>E[&lt;=120;1000] (max:LearnerPlayer.fired + (Ball.number_deaths * 1000 )) under S</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>E[&lt;=120;1000] (max:LearnerPlayer.fired) under S</formula>
+			<comment/>
+			<result outcome="success" type="quantity" value="37.988 ± 0.224608 (95% CI)" timestamp="2024-01-17 16:54:49 +0100">
+				<details>37.988 ± 0.224608 (95% CI)</details>
+				<plot title="Probability Density Distribution" xaxis="max: LearnerPlayer.fired" yaxis="probability density">
+					<series title="density" type="b(1.000000)" color="0x0000ff" encoding="csv">12.0,0.001
+13.0,0.0
+14.0,0.0
+15.0,0.0
+16.0,0.0
+17.0,0.0
+18.0,0.0
+19.0,0.0
+20.0,0.001
+21.0,0.0
+22.0,0.001
+23.0,0.0
+24.0,0.003
+25.0,0.0
+26.0,0.004
+27.0,0.0
+28.0,0.003
+29.0,0.006
+30.0,0.009
+31.0,0.012
+32.0,0.015
+33.0,0.032
+34.0,0.047
+35.0,0.068
+36.0,0.1
+37.0,0.117
+38.0,0.128
+39.0,0.118
+40.0,0.108
+41.0,0.076
+42.0,0.066
+43.0,0.037
+44.0,0.028
+45.0,0.011
+46.0,0.003
+47.0,0.003
+48.0,0.003
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">37.988,0.0
+37.988,0.128
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=37
+Runs: 1000 in total, 1000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [12, 48]
+Mean estimate of displayed sample: 37.988 ± 0.22461 (95% CI)</comment>
+				</plot>
+				<plot title="Probability Distribution" xaxis="max: LearnerPlayer.fired" yaxis="probability">
+					<series title="probability" type="b(1.000000)" color="0x0000ff" encoding="csv">12.0,0.001
+13.0,0.0
+14.0,0.0
+15.0,0.0
+16.0,0.0
+17.0,0.0
+18.0,0.0
+19.0,0.0
+20.0,0.001
+21.0,0.0
+22.0,0.001
+23.0,0.0
+24.0,0.003
+25.0,0.0
+26.0,0.004
+27.0,0.0
+28.0,0.003
+29.0,0.006
+30.0,0.009
+31.0,0.012
+32.0,0.015
+33.0,0.032
+34.0,0.047
+35.0,0.068
+36.0,0.1
+37.0,0.117
+38.0,0.128
+39.0,0.118
+40.0,0.108
+41.0,0.076
+42.0,0.066
+43.0,0.037
+44.0,0.028
+45.0,0.011
+46.0,0.003
+47.0,0.003
+48.0,0.003
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">37.988,0.0
+37.988,0.128
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=37
+Runs: 1000 in total, 1000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [12, 48]
+Mean estimate of displayed sample: 37.988 ± 0.22461 (95% CI)</comment>
+				</plot>
+				<plot title="Cumulative Probability Distribution" xaxis="max: LearnerPlayer.fired" yaxis="probability">
+					<series title="cumulative" type="l" color="0x000000" encoding="csv">12.0,0.0
+13.0,0.001
+14.0,0.001
+15.0,0.001
+16.0,0.001
+17.0,0.001
+18.0,0.001
+19.0,0.001
+20.0,0.001
+21.0,0.002
+22.0,0.002
+23.0,0.003
+24.0,0.003
+25.0,0.006
+26.0,0.006
+27.0,0.01
+28.0,0.01
+29.0,0.013
+30.0,0.019
+31.0,0.028
+32.0,0.04
+33.0,0.055
+34.0,0.087
+35.0,0.134
+36.0,0.202
+37.0,0.302
+38.0,0.419
+39.0,0.547
+40.0,0.665
+41.0,0.773
+42.0,0.849
+43.0,0.915
+44.0,0.952
+45.0,0.98
+46.0,0.991
+47.0,0.994
+48.0,0.997
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">37.988,0.0
+37.988,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=37
+Runs: 1000 in total, 1000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [12, 48]
+Mean estimate of displayed sample: 37.988 ± 0.22461 (95% CI)</comment>
+				</plot>
+				<plot title="Cumulative Probability Confidence Intervals" xaxis="max: LearnerPlayer.fired" yaxis="probability">
+					<series title="upper limit" type="k" color="0x0000dd" encoding="csv">12.0,0.003682083896865672
+13.0,0.005558924279826673
+14.0,0.005558924279826673
+15.0,0.005558924279826673
+16.0,0.005558924279826673
+17.0,0.005558924279826673
+18.0,0.005558924279826673
+19.0,0.005558924279826673
+20.0,0.005558924279826673
+21.0,0.007205838911457498
+22.0,0.007205838911457498
+23.0,0.008742023238478303
+24.0,0.008742023238478303
+25.0,0.013013423270974498
+26.0,0.013013423270974498
+27.0,0.018313243055112453
+28.0,0.018313243055112453
+29.0,0.02212780363677849
+30.0,0.0295124016250978
+31.0,0.040214887373843315
+32.0,0.054072696819368486
+33.0,0.07099151554205749
+34.0,0.1062078579570212
+35.0,0.15669281546729968
+36.0,0.2282455781398835
+37.0,0.3315093775414458
+38.0,0.4502816384002601
+39.0,0.5781752233708395
+40.0,0.6942316401097941
+41.0,0.7986281005145829
+42.0,0.8706386379973464
+43.0,0.9315427212290098
+44.0,0.9643997346571167
+45.0,0.9877417320275936
+46.0,0.9958766043396575
+47.0,0.9977950175148487
+48.0,0.9993809000683505
+					</series>
+					<series title="lower limit" type="k" color="0xdd0000" encoding="csv">12.0,0.0
+13.0,2.5317487491294045E-5
+14.0,2.5317487491294045E-5
+15.0,2.5317487491294045E-5
+16.0,2.5317487491294045E-5
+17.0,2.5317487491294045E-5
+18.0,2.5317487491294045E-5
+19.0,2.5317487491294045E-5
+20.0,2.5317487491294045E-5
+21.0,2.4230111687723193E-4
+22.0,2.4230111687723193E-4
+23.0,6.190999316495713E-4
+24.0,6.190999316495713E-4
+25.0,0.0022049824851513773
+26.0,0.0022049824851513773
+27.0,0.004805510691049307
+28.0,0.004805510691049307
+29.0,0.006939617502851476
+30.0,0.011477036993100943
+31.0,0.018684686195537564
+32.0,0.02872762528589079
+33.0,0.04169879507953599
+34.0,0.0702684860713786
+35.0,0.11348831145425937
+36.0,0.17752233617220833
+37.0,0.27366153594599446
+38.0,0.38819662922677933
+39.0,0.5155473142694611
+40.0,0.6347931918497084
+41.0,0.7457540049781715
+42.0,0.825284533961809
+43.0,0.8959680142216228
+44.0,0.9368598845984908
+45.0,0.9692799673173909
+46.0,0.9829842169301054
+47.0,0.9869865767290255
+48.0,0.9912579767615217
+					</series>
+					<series title="cumulative" type="l" color="0x000000" encoding="csv">12.0,0.0
+13.0,0.001
+14.0,0.001
+15.0,0.001
+16.0,0.001
+17.0,0.001
+18.0,0.001
+19.0,0.001
+20.0,0.001
+21.0,0.002
+22.0,0.002
+23.0,0.003
+24.0,0.003
+25.0,0.006
+26.0,0.006
+27.0,0.01
+28.0,0.01
+29.0,0.013
+30.0,0.019
+31.0,0.028
+32.0,0.04
+33.0,0.055
+34.0,0.087
+35.0,0.134
+36.0,0.202
+37.0,0.302
+38.0,0.419
+39.0,0.547
+40.0,0.665
+41.0,0.773
+42.0,0.849
+43.0,0.915
+44.0,0.952
+45.0,0.98
+46.0,0.991
+47.0,0.994
+48.0,0.997
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">37.988,0.0
+37.988,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=37
+Runs: 1000 in total, 1000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [12, 48]
+Mean estimate of displayed sample: 37.988 ± 0.22461 (95% CI)</comment>
+				</plot>
+				<plot title="Frequency Histogram" xaxis="max: LearnerPlayer.fired" yaxis="count">
+					<series title="count" type="b(1.000000)" color="0x0000ff" encoding="csv">12.0,1.0
+13.0,0.0
+14.0,0.0
+15.0,0.0
+16.0,0.0
+17.0,0.0
+18.0,0.0
+19.0,0.0
+20.0,1.0
+21.0,0.0
+22.0,1.0
+23.0,0.0
+24.0,3.0
+25.0,0.0
+26.0,4.0
+27.0,0.0
+28.0,3.0
+29.0,6.0
+30.0,9.0
+31.0,12.0
+32.0,15.0
+33.0,32.0
+34.0,47.0
+35.0,68.0
+36.0,100.0
+37.0,117.0
+38.0,128.0
+39.0,118.0
+40.0,108.0
+41.0,76.0
+42.0,66.0
+43.0,37.0
+44.0,28.0
+45.0,11.0
+46.0,3.0
+47.0,3.0
+48.0,3.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">37.988,0.0
+37.988,128.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=37
+Runs: 1000 in total, 1000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [12, 48]
+Mean estimate of displayed sample: 37.988 ± 0.22461 (95% CI)</comment>
+				</plot>
+			</result>
+		</query>
+		<query>
+			<formula>E[&lt;=120;10000] (max:number_deaths) under S</formula>
+			<comment/>
+			<result outcome="success" type="quantity" value="0.0064 ± 0.00156321 (95% CI)" timestamp="2024-01-18 09:25:09 +0100">
+				<details>0.0064 ± 0.00156321 (95% CI)</details>
+				<plot title="Probability Density Distribution" xaxis="max: number_deaths" yaxis="probability density">
+					<series title="density" type="b(1.000000)" color="0x0000ff" encoding="csv">0.0,0.9936
+1.0,0.0064
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0064,0.0
+0.0064,0.9936
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=2
+Runs: 10000 in total, 10000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 1]
+Mean estimate of displayed sample: 0.0064 ± 0.001563 (95% CI)</comment>
+				</plot>
+				<plot title="Probability Distribution" xaxis="max: number_deaths" yaxis="probability">
+					<series title="probability" type="b(1.000000)" color="0x0000ff" encoding="csv">0.0,0.9936
+1.0,0.0064
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0064,0.0
+0.0064,0.9936
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=2
+Runs: 10000 in total, 10000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 1]
+Mean estimate of displayed sample: 0.0064 ± 0.001563 (95% CI)</comment>
+				</plot>
+				<plot title="Cumulative Probability Distribution" xaxis="max: number_deaths" yaxis="probability">
+					<series title="cumulative" type="l" color="0x000000" encoding="csv">0.0,0.0
+1.0,0.9936
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0064,0.0
+0.0064,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=2
+Runs: 10000 in total, 10000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 1]
+Mean estimate of displayed sample: 0.0064 ± 0.001563 (95% CI)</comment>
+				</plot>
+				<plot title="Cumulative Probability Confidence Intervals" xaxis="max: number_deaths" yaxis="probability">
+					<series title="upper limit" type="k" color="0x0000dd" encoding="csv">0.0,3.688199146187623E-4
+1.0,0.9950678337752524
+					</series>
+					<series title="lower limit" type="k" color="0xdd0000" encoding="csv">0.0,0.0
+1.0,0.9918345934371035
+					</series>
+					<series title="cumulative" type="l" color="0x000000" encoding="csv">0.0,0.0
+1.0,0.9936
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0064,0.0
+0.0064,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=2
+Runs: 10000 in total, 10000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 1]
+Mean estimate of displayed sample: 0.0064 ± 0.001563 (95% CI)</comment>
+				</plot>
+				<plot title="Frequency Histogram" xaxis="max: number_deaths" yaxis="count">
+					<series title="count" type="b(1.000000)" color="0x0000ff" encoding="csv">0.0,9936.0
+1.0,64.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0064,0.0
+0.0064,9936.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=2
+Runs: 10000 in total, 10000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 1]
+Mean estimate of displayed sample: 0.0064 ± 0.001563 (95% CI)</comment>
+				</plot>
+			</result>
+		</query>
+	</queries>
+</nta>
