@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>/** Simulation-specific stuff */
+urgent broadcast chan bounce;
+broadcast chan hit;
+clock time;
+clock p, v;
+int number_deaths = 0;
+const double m = 1.0;     // Mass of the ball (kg). Twice the weight of a basketball.
+const double g = 9.81;    // Gravity constant (m/s^2). 
+
+
+/** Config */
+const bool shield_enabled = true;
+const bool lazy = true;
+
+/** Shielding */
+/*capture 1*/ import "/home/asger/Documents/Files/Arbejde/AAU/Artikler/Physics-guided Dimensionality Reduction/Uppaal model with grid-shield/shield.so" /* end 1*/
+{
+    int get_value(double e_mek, double v, double p_gt_4);
+};
+
+typedef struct {
+    bool hit;
+    bool nohit;
+} allowedActions_t;
+
+allowedActions_t allowed;
+bool unsafe_state_entered = false;
+
+double e_mek(double v, double p) {
+    return m*g*p + 0.5*m*v*v;
+}
+
+
+allowedActions_t int_to_actions(int bitarray) {
+    // Direct assignment or return not allowed when initializing structs
+    allowedActions_t result = { 
+        (0 != (bitarray &amp; (1 &lt;&lt; 0))),
+        (0 != (bitarray &amp; (1 &lt;&lt; 1)))
+    };
+    return result;
+}
+
+void update_allowed(){
+    int bitarray = get_value(e_mek(v, p), v, p &gt; 4 ? 1 : 0);
+    allowedActions_t any = {true, true};
+    allowed = int_to_actions(bitarray);
+    if (!allowed.hit &amp;&amp; !allowed.nohit) {
+        unsafe_state_entered = true;
+        allowed = any;
+    }
+}</declaration>
+	<template>
+		<name x="5" y="5">Ball</name>
+		<declaration>// Place local declarations here.
+</declaration>
+		<location id="id0" x="297" y="-34">
+			<name x="314" y="42">Location2</name>
+			<label kind="invariant" x="263" y="-93">v' == -9.81 &amp;&amp;
+p' == v</label>
+			<label kind="exponentialrate" x="289" y="-110">1</label>
+		</location>
+		<location id="id1" x="-110" y="-34">
+			<name x="-120" y="-68">Location1</name>
+			<urgent/>
+		</location>
+		<location id="id2" x="-110" y="246">
+			<name x="-119" y="263">Location3</name>
+			<committed/>
+		</location>
+		<init ref="id1"/>
+		<transition id="id3" controllable="false">
+			<source ref="id2"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-102" y="68">v &lt;= 1</label>
+			<label kind="assignment" x="-102" y="85">number_deaths++, 
+v=0, p=0</label>
+		</transition>
+		<transition id="id4" controllable="false">
+			<source ref="id2"/>
+			<target ref="id0"/>
+			<label kind="guard" x="68" y="85">v&gt;1</label>
+		</transition>
+		<transition id="id5">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="guard" x="467" y="-108">p &gt;= 4 &amp;&amp; v &gt;= 0</label>
+			<label kind="synchronisation" x="467" y="-92">hit?</label>
+			<label kind="assignment" x="467" y="-76">v = -4 - (0.95 - 0.05 + random(2*0.05))*v</label>
+			<nail x="459" y="-110"/>
+			<nail x="459" y="-34"/>
+		</transition>
+		<transition id="id6">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="guard" x="467" y="10">p &gt;= 4 &amp;&amp; v &gt;= -4 &amp;&amp; v &lt; 0</label>
+			<label kind="synchronisation" x="467" y="26">hit?</label>
+			<label kind="assignment" x="467" y="42">v = -4.0</label>
+			<nail x="459" y="85"/>
+			<nail x="459" y="10"/>
+		</transition>
+		<transition id="id7" controllable="false">
+			<source ref="id0"/>
+			<target ref="id2"/>
+			<label kind="guard" x="34" y="204">p &lt;= 0 &amp;&amp; v &lt;= 0</label>
+			<label kind="synchronisation" x="68" y="187">bounce!</label>
+			<label kind="assignment" x="-68" y="221">v = -(0.91 - 0.06 + random(2*0.06))*v, p = 0</label>
+			<nail x="289" y="246"/>
+		</transition>
+		<transition id="id8" controllable="false">
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<label kind="assignment" x="-25" y="-25">p = 7 + random(3.0), v = 0</label>
+		</transition>
+	</template>
+	<template>
+		<name>LearnerPlayer</name>
+		<declaration>clock x;
+int fired;</declaration>
+		<location id="id9" x="0" y="8">
+			<name x="-8" y="68">Location6</name>
+			<label kind="invariant" x="-8" y="25">x &lt;= 1 &amp;&amp;
+x' == 10</label>
+		</location>
+		<location id="id10" x="0" y="-272">
+			<name x="-10" y="-306">Location4</name>
+			<committed/>
+		</location>
+		<init ref="id9"/>
+		<transition id="id11">
+			<source ref="id10"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-238" y="-8">allowed.nohit</label>
+			<nail x="-119" y="8"/>
+		</transition>
+		<transition id="id12">
+			<source ref="id10"/>
+			<target ref="id9"/>
+			<label kind="guard" x="127" y="-8">allowed.hit &amp;&amp;
+(!lazy || !allowed.nohit)</label>
+			<label kind="synchronisation" x="127" y="-42">hit!</label>
+			<label kind="assignment" x="127" y="-25">++fired</label>
+			<nail x="119" y="8"/>
+		</transition>
+		<transition id="id13" controllable="false">
+			<source ref="id9"/>
+			<target ref="id10"/>
+			<label kind="guard" x="8" y="-51">x &gt;= 1</label>
+			<label kind="assignment" x="8" y="-68">x = 0,
+update_allowed()</label>
+		</transition>
+	</template>
+	<system>system Ball, LearnerPlayer;</system>
+	<queries>
+		<option key="--total-runs" value="3000"/>
+		<option key="--discretization" value="5.0E-4"/>
+		<option key="--max-iterations" value="1"/>
+		<option key="--good-runs" value="3000"/>
+		<option key="--eval-runs" value="3000"/>
+		<option key="--runs-pr-state" value="3000"/>
+		<option key="--truncation-time-error" value="5.0E-4"/>
+		<option key="--truncation-error" value="5.0E-4"/>
+		<query>
+			<formula/>
+			<comment>Layabout Queries:</comment>
+		</query>
+		<query>
+			<formula>E[&lt;=120;100] (max:LearnerPlayer.fired)</formula>
+			<comment/>
+			<result outcome="success" type="quantity" value="62.77 ± 0.657095 (95% CI)" timestamp="2024-04-02 11:25:17 +0200">
+				<option key="--total-runs" value="3000"/>
+				<option key="--discretization" value="5.0E-4"/>
+				<option key="--max-iterations" value="1"/>
+				<option key="--good-runs" value="3000"/>
+				<option key="--eval-runs" value="3000"/>
+				<option key="--runs-pr-state" value="3000"/>
+				<option key="--truncation-time-error" value="5.0E-4"/>
+				<option key="--truncation-error" value="5.0E-4"/>
+				<details>62.77 ± 0.657095 (95% CI)</details>
+				<plot title="Probability Density Distribution" xaxis="max: LearnerPlayer.fired" yaxis="probability density">
+					<series title="density" type="b(2.000000)" color="0x0000ff" encoding="csv">49.0,0.005
+51.0,0.0
+53.0,0.005
+55.0,0.005
+57.0,0.02
+59.0,0.05
+61.0,0.15
+63.0,0.105
+65.0,0.1
+67.0,0.05
+69.0,0.005
+71.0,0.005
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">62.77,0.0
+62.77,0.15
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=2, bucket count=12
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [49, 71]
+Mean estimate of displayed sample: 62.77 ± 0.6571 (95% CI)</comment>
+				</plot>
+				<plot title="Probability Distribution" xaxis="max: LearnerPlayer.fired" yaxis="probability">
+					<series title="probability" type="b(2.000000)" color="0x0000ff" encoding="csv">49.0,0.01
+51.0,0.0
+53.0,0.01
+55.0,0.01
+57.0,0.04
+59.0,0.1
+61.0,0.3
+63.0,0.21
+65.0,0.2
+67.0,0.1
+69.0,0.01
+71.0,0.01
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">62.77,0.0
+62.77,0.3
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=2, bucket count=12
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [49, 71]
+Mean estimate of displayed sample: 62.77 ± 0.6571 (95% CI)</comment>
+				</plot>
+				<plot title="Cumulative Probability Distribution" xaxis="max: LearnerPlayer.fired" yaxis="probability">
+					<series title="cumulative" type="l" color="0x000000" encoding="csv">49.0,0.0
+51.0,0.01
+53.0,0.01
+55.0,0.02
+57.0,0.03
+59.0,0.07
+61.0,0.17
+63.0,0.47
+65.0,0.68
+67.0,0.88
+69.0,0.98
+71.0,0.99
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">62.77,0.0
+62.77,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=2, bucket count=12
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [49, 71]
+Mean estimate of displayed sample: 62.77 ± 0.6571 (95% CI)</comment>
+				</plot>
+				<plot title="Cumulative Probability Confidence Intervals" xaxis="max: LearnerPlayer.fired" yaxis="probability">
+					<series title="upper limit" type="k" color="0x0000dd" encoding="csv">49.0,0.03621669264517642
+51.0,0.05445938539208066
+53.0,0.05445938539208066
+55.0,0.07038393247107012
+57.0,0.08517605297428003
+59.0,0.13891972845585734
+61.0,0.2581754106321587
+63.0,0.5724185151099549
+65.0,0.769780083238423
+67.0,0.9364310974388407
+69.0,0.9975686631760574
+71.0,0.9997468539670226
+					</series>
+					<series title="lower limit" type="k" color="0xdd0000" encoding="csv">49.0,0.0
+51.0,2.5314603297742064E-4
+53.0,2.5314603297742064E-4
+55.0,0.0024313368239425423
+57.0,0.006229971538306394
+59.0,0.028605288907438693
+61.0,0.10226491003552826
+63.0,0.3694051641943945
+65.0,0.5792331383683774
+67.0,0.7997643163800312
+69.0,0.9296160675289299
+71.0,0.9455406146079194
+					</series>
+					<series title="cumulative" type="l" color="0x000000" encoding="csv">49.0,0.0
+51.0,0.01
+53.0,0.01
+55.0,0.02
+57.0,0.03
+59.0,0.07
+61.0,0.17
+63.0,0.47
+65.0,0.68
+67.0,0.88
+69.0,0.98
+71.0,0.99
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">62.77,0.0
+62.77,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=2, bucket count=12
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [49, 71]
+Mean estimate of displayed sample: 62.77 ± 0.6571 (95% CI)</comment>
+				</plot>
+				<plot title="Frequency Histogram" xaxis="max: LearnerPlayer.fired" yaxis="count">
+					<series title="count" type="b(2.000000)" color="0x0000ff" encoding="csv">49.0,1.0
+51.0,0.0
+53.0,1.0
+55.0,1.0
+57.0,4.0
+59.0,10.0
+61.0,30.0
+63.0,21.0
+65.0,20.0
+67.0,10.0
+69.0,1.0
+71.0,1.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">62.77,0.0
+62.77,30.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=2, bucket count=12
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [49, 71]
+Mean estimate of displayed sample: 62.77 ± 0.6571 (95% CI)</comment>
+				</plot>
+			</result>
+		</query>
+		<query>
+			<formula>Pr[&lt;=120;100] (&lt;&gt; number_deaths &gt;  0)</formula>
+			<comment/>
+			<result outcome="failure" type="quantity" value="0.045703 ± 0.039473 (95% CI)" timestamp="2024-04-02 11:25:34 +0200">
+				<option key="--total-runs" value="3000"/>
+				<option key="--discretization" value="5.0E-4"/>
+				<option key="--max-iterations" value="1"/>
+				<option key="--good-runs" value="3000"/>
+				<option key="--eval-runs" value="3000"/>
+				<option key="--runs-pr-state" value="3000"/>
+				<option key="--truncation-time-error" value="5.0E-4"/>
+				<option key="--truncation-error" value="5.0E-4"/>
+				<details>0.045703 ± 0.039473 (95% CI)</details>
+			</result>
+		</query>
+		<query>
+			<formula>Pr[&lt;=120;100] (&lt;&gt; unsafe_state_entered)</formula>
+			<comment/>
+			<result outcome="failure" type="quantity" value="0.102983 ± 0.0609993 (95% CI)" timestamp="2024-04-02 11:25:50 +0200">
+				<option key="--total-runs" value="3000"/>
+				<option key="--discretization" value="5.0E-4"/>
+				<option key="--max-iterations" value="1"/>
+				<option key="--good-runs" value="3000"/>
+				<option key="--eval-runs" value="3000"/>
+				<option key="--runs-pr-state" value="3000"/>
+				<option key="--truncation-time-error" value="5.0E-4"/>
+				<option key="--truncation-error" value="5.0E-4"/>
+				<details>0.102983 ± 0.0609993 (95% CI)</details>
+			</result>
+		</query>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+		<query>
+			<formula/>
+			<comment>Training Queries:</comment>
+		</query>
+		<query>
+			<formula>strategy HitWell = minE (LearnerPlayer.fired) [&lt;=120] {} -&gt; {p, v}: &lt;&gt; time &gt;= 120</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>E[&lt;=120;100] (max:LearnerPlayer.fired) under HitWell</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>Pr[&lt;=120;100] (&lt;&gt; number_deaths &gt; 0) under HitWell</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>E[&lt;=120;100] (max:interventions) under HitWell</formula>
+			<comment/>
+		</query>
+	</queries>
+</nta>

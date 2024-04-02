@@ -202,6 +202,10 @@ begin
 	π_xlabel = "\$E_{mek}\$"
 	π_ylabel = "v"
 	π_zlabel = "p > 4"
+	
+	π_xlabel_simple = "E_mek"
+	π_ylabel_simple = "v"
+	π_zlabel_simple = "p_gt_4"
 end
 
 # ╔═╡ d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
@@ -349,7 +353,7 @@ md"""
 const samples_per_random_axis = [3]
 
 # ╔═╡ c2d118ff-daaa-4649-8937-76f6f4de684b
-samples_per_axis = [6, 6, 1]
+samples_per_axis = [10, 10, 1]
 
 # ╔═╡ f0612487-06c4-4330-a0f0-fc4dd367d083
 prod([samples_per_axis..., samples_per_random_axis...])
@@ -358,7 +362,7 @@ prod([samples_per_axis..., samples_per_random_axis...])
 round_8(x) = round(x, digits=8)
 
 # ╔═╡ 104f1f24-44c8-4ea8-9d6a-732984a96e91
-@bind spa NumberField(1:1000, default=samples_per_axis[1])
+@bind spa NumberField(1:1000, default=samples_per_axis[1]/2)
 
 # ╔═╡ fd928206-accf-44fc-8762-599fe34c26b6
 @bind action Select(BB.Action |> instances |> collect, default=BB.nohit)
@@ -485,9 +489,9 @@ function reachability_function(partition, action)::Vector{Vector{Int64}}
 		if π_point ∉ Bounds(partition) continue end
 		point = π⁻¹(π_point...)
 		if isnothing(point) continue end
+		if point ∉ vp_grid.bounds continue end
 		for r in SupportingPoints(samples_per_random_axis, Bounds((-1,), (1,)))
 			point′ = BB.simulate_point(m, point, r, action)
-			if point′ ∉ vp_grid.bounds continue end
 			π_point′ = π(point′...)
 			if π_point′ ∉ grid
 				continue
@@ -511,9 +515,9 @@ function reachability_function′(partition, action)::Vector{Vector{Int64}}
 		#if π_point ∉ Bounds(partition) continue end
 		point = π⁻¹(π_point...)
 		if isnothing(point) continue end
-		if point ∉ vp_grid.bounds continue end
 		for r in SupportingPoints(samples_per_random_axis, Bounds((-1,), (1,)))
 			point′ = BB.simulate_point(m, point, r, action)
+			if point′ ∉ vp_grid.bounds continue end
 			π_point′ = π(point′...)
 			if π_point′ ∉ grid
 				continue
@@ -540,7 +544,7 @@ end
 
 # ╔═╡ 3e00e758-2e2e-42da-9152-fff188f75875
 begin
-	π_grid = Grid([2, 1, 1], π_bounds)
+	π_grid = Grid([4, 1, 1], π_bounds)
 	initialize!(π_grid, initial_value_of_π_partition)
 	π_grid
 end
@@ -841,16 +845,25 @@ let
 	plot(Bounds(partition);
 		xlim, ylim,
 		color=colors.NEPHRITIS, 
-		label=nothing,
+		label="initial",
 		xlabel=π_xlabel,
-		ylabel=π_ylabel)
+		ylabel=π_ylabel,
+		title="zoomed-in view of reachability computation")
 	
 	for r in reachable
 		plot!(r, color=colors.SUNFLOWER, label=nothing)
 	end
+	
+	plot!([], seriestype=:shape, color=colors.SUNFLOWER, 
+		label="reachable by reachability_function")
+	
 	for r in reachable′
 		plot!(r, color=colors.AMETHYST, label=nothing)
 	end
+	
+	plot!([], seriestype=:shape, color=colors.AMETHYST, 
+		label="reachable by reachability_function′")
+	
 	plot!()
 	sp_initial = [π_point for π_point in SupportingPoints([spa, spa, 3], partition)]
 	sp_reached = [π⁻¹(p...) for p in sp_initial]
@@ -864,11 +877,12 @@ let
 	
 	scatter!(sp_initial, 
 		color=colors.EMERALD, 
-		label=nothing, markersize=2, 
+		label="sp_initial",
+		markersize=2, 
 		markerstrokewidth=0)
 	
 	scatter!(sp_reached, color=colors.PETER_RIVER,
-		label=nothing, 
+		label="sp_reached", 
 		markersize=2, 
 		markerstrokewidth=0)
 	
@@ -966,7 +980,7 @@ function check_safety(mechanics, policy, duration; runs=1000)
 end
 
 # ╔═╡ 05b5e4d4-9bea-49b5-ae51-0daa2fb8478d
-runs = 1000
+runs = 100000
 
 # ╔═╡ c995f805-fc9b-47c1-bfa9-5dbcc9400806
 lazy(_...) = BB.nohit
@@ -1046,20 +1060,48 @@ md"""
 # ╔═╡ 9b4e88ad-2de3-4b8d-8a69-bbb8660cc293
 @bind target_dir TextField(95, default=mktempdir())
 
+# ╔═╡ 71481fd5-b4d9-4c24-8eb5-9acc56ae382f
+mktempdir()
+
 # ╔═╡ 1a3ebfb8-47b8-41a3-b63d-875b03187a4e
-@bind open_folder_button CounterButton("Open Folder")
+target_dir; @bind open_folder_button CounterButton("Open Folder")
 
 # ╔═╡ 5789cc7e-4a58-4a83-9f3a-87c982028c59
 if open_folder_button > 0
 	run(`nautilus $target_dir`, wait=false)
 end; "This cell opens `$target_dir` in nautilus"
 
+# ╔═╡ 2813bdf7-9530-40a0-bdb5-ab1213f54b31
+let
+	filename = "$π_xlabel_simple, $π_ylabel_simple, $π_zlabel_simple.shield"
+	
+	robust_grid_serialization(joinpath(target_dir, filename), shield)
+	
+	"Exported `'$filename'`." |> Markdown.parse
+end
+
+# ╔═╡ fbe0e11d-a06b-41fe-b349-ccbcc66ffd3f
+begin
+	shield_so = "shield.so"
+	shield_so = joinpath(target_dir, shield_so)
+	
+	get_libshield(shield; destination=shield_so, force=true)
+	
+	"Exported `'$shield_so'`." |> Markdown.parse
+end
+
 # ╔═╡ 1cce35be-253e-4e75-8f0f-fdf1aed9799d
-numpy_zip_file(shield, joinpath(target_dir, "shield.zip"); 
-	variables=[π_xlabel, π_ylabel], 
-	binary_variables=[π_zlabel], 
-	actions=BB.Action, 
-	env_id="Bouncing Ball")
+let
+	filename = "shield.zip"
+	
+	numpy_zip_file(shield, joinpath(target_dir, filename); 
+		variables=[π_xlabel, π_ylabel], 
+		binary_variables=[π_zlabel], 
+		actions=BB.Action, 
+		env_id="Bouncing Ball")
+	
+	"Exported `'$filename'`." |> Markdown.parse
+end
 
 # ╔═╡ 700c196c-dafe-4116-bac8-1024acee9642
 md"""
@@ -1143,15 +1185,34 @@ function parse_trace(output, Δt, keywords...)
 end
 
 # ╔═╡ 7ee88060-754f-488d-9341-633bf54c2318
-@bind model_file TextField(80, default=pwd() ⨝ "asdf/bb_mech_shielded.xml")
+@bind model_file TextField(80, 
+	default=pwd() ⨝ "Uppaal model with grid-shield/Bouncing Ball Shielded.xml")
+
+# ╔═╡ 38489318-eadb-4cff-bd54-c91d76fa8800
+function copy_and_replace(input_file, outfile, replacements)
+	file = input_file |> read |> String
+	open(outfile, "w") do io
+		for line in split(file, "\n")
+			line′ = replace(line, replacements...)
+			println(io, line′)
+		end
+	end
+	outfile
+end
+
+# ╔═╡ e2959cd8-f3da-4a81-a539-671a59b4ddb5
+begin
+	model_file′ = copy_and_replace(model_file, target_dir ⨝ "BB.xml", 
+		[r"/\*capture 1\*/.*/\*end 1\*/" => "import $shield_so"])
+end
 
 # ╔═╡ 80f08a4c-ba20-4408-853e-a694df474a02
 @bind query TextField((95, 6), default="""
 	Pr[<=100;1000] ([] number_deaths < 1)
 
-	E[<=100;100] (max:Learner2.fired)
+	E[<=100;100] (max:LearnerPlayer.fired)
 
-	simulate[<=100;1] { v, p, HIT_REQUIRED }
+	simulate[<=100;1] { v, p, allowed.nohit }
 """)
 
 # ╔═╡ eadf88fa-1290-4e08-9af4-53e0f613dc17
@@ -1168,6 +1229,9 @@ query |> remove_single_line_breaks |> multiline
 # ╔═╡ 9733a667-964a-4007-9e51-f656c3838954
 @bind verifyta TextField(80, default=homedir() ⨝ "opt/uppaal-5.0.0-linux64/bin/verifyta")
 
+# ╔═╡ 572dac94-aded-44af-8855-8f2c9811f94d
+discretization = 0.001
+
 # ╔═╡ 7efc9685-1031-4882-8202-2fcd83a728d8
 @bind working_dir TextField(80, default=mktempdir())
 
@@ -1179,20 +1243,23 @@ query_file = let
 end
 
 # ╔═╡ c2fad765-52d9-479e-a494-faf38736d58c
-if isfile(query_file) && isfile(model_file)
-	output = Cmd([
+if isfile(query_file) && isfile(model_file′)
+	output = Cmd(String[
 		verifyta,
 		"-s",
-		model_file,
+		split("--discretization $discretization --truncation-error $discretization --truncation-time-error $discretization", " ")...,
+		model_file′,
 		query_file
-	]) |> read |> String
-end;
+	]) |> read |> String;
+else
+	@info "not found" isfile(query_file) isfile(model_file′)
+end
 
 # ╔═╡ ab63a35f-b674-4de1-bb6c-04f45f034a1d
 output[1:min(10000, length(output))] |> multiline
 
 # ╔═╡ 6f1a76ea-5eb7-4908-9edf-c47b7595f913
-tt = parse_trace(output, 0.1, "v", "p", "HIT_REQUIRED")
+tt = parse_trace(output, 0.1, "v", "p", "allowed.nohit")
 
 # ╔═╡ 465f5546-e9a1-4ea6-98e9-75436240dd86
 @bind ii NumberField(1:10000)
@@ -1200,7 +1267,7 @@ tt = parse_trace(output, 0.1, "v", "p", "HIT_REQUIRED")
 # ╔═╡ 0038f63a-d7fc-4e48-a487-6aa97df100c5
 let
 	plot(shield_plot_old_statespace)
-	plot!(tt["v"], tt["p"])
+	plot!(tt["v"][2:end], tt["p"][2:end])
 	scatter!([tt["v"][ii]], [tt["p"][ii]])
 end
 
@@ -1208,7 +1275,7 @@ end
 tt["p"][ii]
 
 # ╔═╡ bc9a89bd-6b93-4ff9-8326-b24f8d3c54d1
-tt["HIT_REQUIRED"][ii]
+tt["allowed.nohit"][ii]
 
 # ╔═╡ b4849f98-2174-4e55-9070-61b5bded79a4
 vv, pp = tt["v"][ii], tt["p"][ii]
@@ -1285,10 +1352,7 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═966304ab-8d5e-452b-9d47-c234a14626e6
 # ╠═3fdb6a5a-81e6-43ab-b3f5-4118fe2275c7
 # ╠═7f4b10fe-bed4-4f0a-bc4e-0a6f0d0ca8f1
-# ╠═cd94ae25-f85e-4693-8eb0-d5eaa1efbe4b
-# ╠═fd928206-accf-44fc-8762-599fe34c26b6
-# ╠═22d05a23-bcad-4281-8303-5082a3d8e785
-# ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
+# ╟─cd94ae25-f85e-4693-8eb0-d5eaa1efbe4b
 # ╟─6327ed76-cf69-4389-8ce2-e0e9c42eb11f
 # ╠═01190c0f-b8bb-403f-8eed-57d683ad302a
 # ╠═c98583c9-3105-46b3-80b4-06b84d6e1db6
@@ -1305,6 +1369,9 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═60401048-7e4a-45c8-a0aa-4fb9338714ab
 # ╠═a31a8a05-c145-43a9-b844-ccfaf9f49645
 # ╠═8790b998-d96e-4437-b9bb-d77571d4bd1b
+# ╠═fd928206-accf-44fc-8762-599fe34c26b6
+# ╠═22d05a23-bcad-4281-8303-5082a3d8e785
+# ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
 # ╟─021e2fb4-1760-4421-916b-fb2ef306cb13
 # ╟─a566b33b-7005-43c3-afce-b8793447f615
 # ╠═e247dfa7-6000-4df1-8a28-328463e32c49
@@ -1331,8 +1398,11 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═b097e128-a1df-44f0-8fb7-347d9317abfc
 # ╟─048a3a18-64c5-4ef3-9b25-23306e100dd2
 # ╠═9b4e88ad-2de3-4b8d-8a69-bbb8660cc293
-# ╟─1a3ebfb8-47b8-41a3-b63d-875b03187a4e
-# ╠═5789cc7e-4a58-4a83-9f3a-87c982028c59
+# ╠═71481fd5-b4d9-4c24-8eb5-9acc56ae382f
+# ╠═1a3ebfb8-47b8-41a3-b63d-875b03187a4e
+# ╟─5789cc7e-4a58-4a83-9f3a-87c982028c59
+# ╠═2813bdf7-9530-40a0-bdb5-ab1213f54b31
+# ╠═fbe0e11d-a06b-41fe-b349-ccbcc66ffd3f
 # ╠═1cce35be-253e-4e75-8f0f-fdf1aed9799d
 # ╟─700c196c-dafe-4116-bac8-1024acee9642
 # ╠═aefb7e86-276d-4536-9ea0-33487a5015a8
@@ -1345,11 +1415,14 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═a833bed7-8f79-4163-b601-6370a337c944
 # ╠═43f7a7c3-df0d-4862-9f3c-9fba64c1eb2f
 # ╠═7ee88060-754f-488d-9341-633bf54c2318
+# ╠═38489318-eadb-4cff-bd54-c91d76fa8800
+# ╠═e2959cd8-f3da-4a81-a539-671a59b4ddb5
 # ╠═80f08a4c-ba20-4408-853e-a694df474a02
 # ╠═eadf88fa-1290-4e08-9af4-53e0f613dc17
 # ╠═ecfea12e-c933-49a0-b117-88658fd5723a
 # ╠═b703f5a3-e869-4051-83a7-64d53f446000
 # ╠═9733a667-964a-4007-9e51-f656c3838954
+# ╠═572dac94-aded-44af-8855-8f2c9811f94d
 # ╠═c2fad765-52d9-479e-a494-faf38736d58c
 # ╠═7efc9685-1031-4882-8202-2fcd83a728d8
 # ╠═ab63a35f-b674-4de1-bb6c-04f45f034a1d

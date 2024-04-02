@@ -10,7 +10,7 @@ clock x;           // Used to control decision period
 int resets = 0;    // The game resets when the ball "dies" i.e. p=0 and |v|&lt;1.
 int swings;        // Times the player swings at the ball.
 int hits;          // Times those siwings actually affect the state.
-const double m = 0.5;     // Mass of the ball (kg). Roughly matches the weight of a basketball.
+const double m = 1;     // Mass of the ball (kg). Twice the weight of a basketball.
 const double g = 9.81;    // Gravity constant (m/s^2). 
 
 // Energy gained by hitting the ball
