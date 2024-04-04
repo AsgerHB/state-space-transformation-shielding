@@ -43,9 +43,15 @@ allowedActions_t int_to_actions(int bitarray) {
     return result;
 }
 
+double round_8(double x) {    // Round to nearest 8th digit
+    return round(x*1e8)/1e8;
+}
+// double debug1 = round_8(0.0005); double debug2 = round_8(0.00000005); double debug3 = round_8(0.000000005); double debug4 = round_8(0.0000000005);
+
+
 void update_allowed(){
-    int bitarray = get_value(e_mek(v, p), v, p &gt; 4 ? 1 : 0);
-    allowedActions_t any = {true, true};
+    int bitarray = get_value(round_8(e_mek(v, p)), round_8(v), round_8(p) &gt; 4 ? 1 : 0);
+    allowedActions_t any = {true, false};
     allowed = int_to_actions(bitarray);
     if (!allowed.hit &amp;&amp; !allowed.nohit) {
         unsafe_state_entered = true;
@@ -155,13 +161,10 @@ update_allowed()</label>
 	<system>system Ball, LearnerPlayer;</system>
 	<queries>
 		<option key="--total-runs" value="3000"/>
-		<option key="--discretization" value="5.0E-4"/>
 		<option key="--max-iterations" value="1"/>
 		<option key="--good-runs" value="3000"/>
 		<option key="--eval-runs" value="3000"/>
 		<option key="--runs-pr-state" value="3000"/>
-		<option key="--truncation-time-error" value="5.0E-4"/>
-		<option key="--truncation-error" value="5.0E-4"/>
 		<query>
 			<formula/>
 			<comment>Layabout Queries:</comment>
@@ -318,18 +321,15 @@ Mean estimate of displayed sample: 62.77 ± 0.6571 (95% CI)</comment>
 			</result>
 		</query>
 		<query>
-			<formula>Pr[&lt;=120;100] (&lt;&gt; number_deaths &gt;  0)</formula>
+			<formula>Pr[&lt;=120;1000] (&lt;&gt; number_deaths &gt;  0)</formula>
 			<comment/>
-			<result outcome="failure" type="quantity" value="0.045703 ± 0.039473 (95% CI)" timestamp="2024-04-02 11:25:34 +0200">
+			<result outcome="success" type="interval" value="≤ 0.00368208 (95% CI)" timestamp="2024-04-02 15:33:11 +0200">
 				<option key="--total-runs" value="3000"/>
-				<option key="--discretization" value="5.0E-4"/>
 				<option key="--max-iterations" value="1"/>
 				<option key="--good-runs" value="3000"/>
 				<option key="--eval-runs" value="3000"/>
 				<option key="--runs-pr-state" value="3000"/>
-				<option key="--truncation-time-error" value="5.0E-4"/>
-				<option key="--truncation-error" value="5.0E-4"/>
-				<details>0.045703 ± 0.039473 (95% CI)</details>
+				<details>≤ 0.00368208 (95% CI)</details>
 			</result>
 		</query>
 		<query>

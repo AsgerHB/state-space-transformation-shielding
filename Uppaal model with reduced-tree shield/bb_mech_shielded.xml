@@ -16,7 +16,7 @@ const int HIT = 1;
 /* Config */
 const bool shield_enabled = true;
 
-import "/home/asger/Documents/Files/Arbejde/AAU/Artikler/Physics-guided Dimensionality Reduction/asdf/bb_mech_shield.so" {
+import "/home/asger/Documents/Files/Arbejde/AAU/Artikler/Physics-guided Dimensionality Reduction/Uppaal model with reduced-tree shield/bb_mech_shield.so" {
     int shield(double E, double v, double p_thresh);
 };
 
@@ -34,9 +34,15 @@ double mechanicalEnergy(double p, double v) {
     return G * p + 0.5 * v * v;
 }
 
+double round_8(double x) {    // Round to nearest 8th digit
+    return round(x*1e8)/1e8;
+}
+// double debug1 = round_8(0.0005); double debug2 = round_8(0.00000005); double debug3 = round_8(0.000000005); double debug4 = round_8(0.0000000005);
+
+
 bool hitRequired(double p, double v) {
     if (!shield_enabled) { return false; }
-    else { return shield(mechanicalEnergy(p, v), v, p &gt; 4 ? 1.0 : 0.0) == ONLY_HIT; }
+    else { return shield(round_8(mechanicalEnergy(p, v)), round_8(v), round_8(p) &gt; 4 ? 1.0 : 0.0) == ONLY_HIT; }
 } 
 
 void updateAllowed() { HIT_REQUIRED = hitRequired(p,v); REQ_HITS += HIT_REQUIRED; MECH_ENERGY = mechanicalEnergy(p, v); }
@@ -45,7 +51,7 @@ void updateAllowed() { HIT_REQUIRED = hitRequired(p,v); REQ_HITS += HIT_REQUIRED
 bool allowed(int action) {
     if (!shield_enabled) { return true; }
     else {
-        int decision = shield(mechanicalEnergy(p, v), v, p &gt; 4 ? 1.0 : 0.0);
+        int decision = shield(round_8(mechanicalEnergy(p, v)), round_8(v), round_8(p) &gt; 4 ? 1.0 : 0.0);
         if      (decision == ONLY_HIT) { return action == HIT; }
         else if (decision == DONT_HIT) { return action == NOHIT; }
         else                           { return true; }
