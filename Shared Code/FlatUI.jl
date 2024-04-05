@@ -62,3 +62,4 @@ ccshieldlabelsabbreviated = ["{}", "{backwards}", "{backwards, neutral}", "{back
 shielding_type_colors = (pre_shielded=colors.GREEN_SEA, no_shield=colors.BELIZE_HOLE, post_shielded=colors.SUNFLOWER, layabout=colors.MIDNIGHT_BLUE)
 interventions_colors = [colors.TURQUOISE colors.PETER_RIVER colors.EMERALD colors.AMETHYST]		# d=0, d=10, d=100, d=1000
 deaths_colors = [colors.PETER_RIVER colors.EMERALD colors.AMETHYST]		# d=10, d=100, d=1000
+;
