@@ -30,6 +30,9 @@ begin
 	include("Shared Code/FlatUI.jl")
 end
 
+# ╔═╡ cd2df9dc-af72-4b37-b1ef-ff8a0dcb9e0f
+Pkg.add("StaticArrays")
+
 # ╔═╡ 2767663f-3ef8-44f5-81a2-8e480158266e
 md"""
 # Cart Pole Problem
@@ -39,9 +42,6 @@ md"""
 md"""
 ## Preliminaries
 """
-
-# ╔═╡ cd2df9dc-af72-4b37-b1ef-ff8a0dcb9e0f
-Pkg.add("StaticArrays")
 
 # ╔═╡ a8aff15c-255d-498f-97dd-4c9c953ec662
 begin
@@ -139,6 +139,11 @@ begin
 	    x[end] = A.value
 	    return x
 	end
+	
+	function apply!(A::Action, x::MVector)
+	    x[end] = A.value
+	    return x
+	end
 end
 
 # ╔═╡ b52604cc-e8bc-4b53-84ad-79cf019c1667
@@ -216,28 +221,28 @@ const time_test_ds, time_test_s =
 # ╔═╡ 1d690e0a-2748-4e52-b23e-66cac2e83411
 @time cartpole!(time_test_ds, time_test_s, :_, m.τ)
 
-# ╔═╡ bc682eeb-0120-427e-9bfb-b306a7d82d0c
-s0() = Float64[0, 0, rand(Uniform(-0.1, 0.1)), 0, left.value]
-
 # ╔═╡ 0a67aaa8-189b-4e19-be48-6693b05bc54d
 # Terminal state
 st = Float64[-1, -1, -1, -1, -1]
 
 # ╔═╡ 2f21c16b-1dc5-4960-a93d-18d13ce01f0e
-solver = TaylorMethod(8)
+solver = Tsit5()
+
+# ╔═╡ c97daca9-3e71-4c38-af24-19a40d326467
+const CartPoleState = MVector{5, Float64}
+
+# ╔═╡ bc682eeb-0120-427e-9bfb-b306a7d82d0c
+s0()::CartPoleState = Float64[0, 0, rand(Uniform(-0.1, 0.1)), 0, left.value]
 
 # ╔═╡ 78bfb1a5-0f9c-4e8b-ae9b-a149f2acd953
 solve(ODEProblem(cartpole!, s0(), m.τ), solver)
 
 # ╔═╡ 187344d0-b0c1-4f63-b257-9254f5dab869
-function simulate_point(m::CartPoleMechanics, s0, a::Action)
-	prob = ODEProblem(cartpole!, apply(a, s0), m.τ)
+function simulate_point(m::CartPoleMechanics, s0, a::Action)::CartPoleState
+	prob = ODEProblem(cartpole!, apply!(a, s0), m.τ)
 	result = solve(prob, solver)
-	result[2]
+	result[end]
 end
-
-# ╔═╡ c97daca9-3e71-4c38-af24-19a40d326467
-CartPoleState = Vector{Float64}
 
 # ╔═╡ 5306c76f-f0df-427c-88d3-a738f9048721
 @kwdef struct CartPoleTrace
@@ -288,21 +293,23 @@ function animate_sequence(trace::CartPoleTrace; speed=1)
 			aspectratio=:equal)
 
 		# Action #
-		a = trace.actions[i]
-		if a.value == left.value
-			plot!([x, x - 0.3], [0, 0],
-				label=nothing,
-				marker=:ltriangle,
-				markerstrokewidth=0,
-				color=colors.EMERALD,)
-		elseif a.value == right.value
-				plot!([x, x + 0.3], [0, 0],
-				label=nothing,
-				marker=:rtriangle,
-				markerstrokewidth=0,
-				color=colors.EMERALD,)
-		else
-			error("Unexpected action value $a")
+		if i <= length(trace.actions)
+			a = trace.actions[i]
+			if a.value == left.value
+				plot!([x, x - 0.3], [0, 0],
+					label=nothing,
+					marker=:ltriangle,
+					markerstrokewidth=0,
+					color=colors.EMERALD,)
+			elseif a.value == right.value
+					plot!([x, x + 0.3], [0, 0],
+					label=nothing,
+					marker=:rtriangle,
+					markerstrokewidth=0,
+					color=colors.EMERALD,)
+			else
+				error("Unexpected action value $a")
+			end
 		end
 		
 		# Cart #
@@ -330,7 +337,7 @@ md"""
 """
 
 # ╔═╡ 1ebddb2c-428e-4bca-bbe1-f5f2189b5418
-Q_granularity = [0.5, 0.5, 0.05, 0.2]
+Q_granularity = Float64[0.5, 1, 0.1, 0.2]
 
 # ╔═╡ 0f9da8fe-7a26-4b21-9a64-906e908d835e
 Q_bounds = Bounds([-2.2, -4.8, -0.4, -0.836],
@@ -419,6 +426,60 @@ md"""
 # Making a shield
 """
 
+# ╔═╡ a7296808-4eb8-4f10-8683-adc4963b21ce
+md"""
+## Altered State Space
+"""
+
+# ╔═╡ 51bf9a44-626c-40f8-abdb-9101ad7769ab
+e_kin(m, v) = 1/2*m*v^2
+
+# ╔═╡ 338e5d40-6251-429c-9b0d-ef92460a7e52
+const AlteredState = MVector{6, Float64}
+
+# ╔═╡ 6eedcd3c-1aa5-4d8b-9e5f-8465e608f6c7
+function f(s::CartPoleState)::AlteredState
+	x = s[1]
+	x_vel = s[2]
+	θ = s[3]
+	θ_vel = s[4]
+
+	cart_e_kin = e_kin(cart_mass, x_vel)
+	x_vel_sign = x_vel >= 0 ? 1 : -1
+	pole_e_kin = e_kin(pole_mass, θ_vel)
+	θ_sign = θ_vel >= 0 ? 1 : -1
+	AlteredState(
+		#=1=# x,
+		#=2=# cart_e_kin,
+		#=3=# x_vel_sign,
+		#=4=# θ,
+		#=5=# pole_e_kin,
+		#=6=# θ_sign,
+	)
+end
+
+# ╔═╡ 1eb460d5-3de2-44b0-9a75-378a35e8cf6f
+function f⁻¹(s::AlteredState)::CartPoleState
+	x = s[1]
+	cart_e_kin = s[2]
+	x_vel_sign = s[3]
+	if cart_e_kin == 0
+		x_vel = 0.0
+	else
+		x_vel = sqrt(2*cart_mass*cart_e_kin)/(cart_mass)*x_vel_sign
+	end
+	θ = s[4]
+	pole_e_kin = s[5]
+	θ_vel_sign = s[6]
+	if pole_e_kin == 0
+		θ_vel = 0.0
+	else
+		θ_vel = sqrt(2*pole_mass*pole_e_kin)/(pole_mass)*θ_vel_sign
+	end
+
+	CartPoleState(x, x_vel, θ, θ_vel, 0.0)
+end
+
 # ╔═╡ 731d3595-1746-46cd-9851-e285673d6a1b
 md"""
 ### Safety
@@ -427,10 +488,14 @@ md"""
 # ╔═╡ e5371840-2989-4f7f-b15c-4b07e8e96a3b
 # Bounds of the state space
 # The episode terminates if the cart is outside the [-2.4, 2.4] range
-# or the angle is outside [-0.418, 0.418]. I assume the 
+# or the angle is outside [-0.418, 0.418].
+# The theoretical upper bound for the velocities are the values 
+# that will cause a violation in the next step.
+# However, these are hideously large, so I've done some empirical observations
+# and set my own bounds
 cart_pole_bounds = Bounds(
-	[-2.4, -2.4/m.τ/4, -0.418, -0.418/m.τ/4],
-	[2.4, 2.4/m.τ/4, 0.418, 0.418/m.τ/4])
+	[-2.4, -4, -0.418, -3],
+	[2.4, 4, 0.418, 3])
 
 # ╔═╡ 16060176-987c-4450-819e-9b06dc23a051
 function simulate_sequence(m::CartPoleMechanics, s0, policy, duration)
@@ -444,6 +509,7 @@ function simulate_sequence(m::CartPoleMechanics, s0, policy, duration)
 		push!(trace.times, t)
 		push!(trace.actions, action)
 		if s′ ∉ cart_pole_bounds
+			push!(trace.states, s′)
 			break
 		else
 			push!(trace.states, s′)
@@ -466,10 +532,10 @@ function Q_learn()
 
 	# Discourage exploration; we want to stay near s0
 	for partition in Q[left]
-		set_value!(partition, -1)
+		set_value!(partition, -2)
 	end
 	for partition in Q[right]
-		set_value!(partition, -1)
+		set_value!(partition, -2)
 	end
 	
 	@progress for i ∈ 1:episodes
@@ -477,7 +543,6 @@ function Q_learn()
 		Aₜ = rand((left, right))
 		for t ∈ 0:m.τ:10
 			Sₜ₊₁ = simulate_point(m, Sₜ, Aₜ)
-			if Sₜ₊₁ ∉ cart_pole_bounds break end
 			if Sₜ₊₁ ∉ Q_bounds continue end
 			Q_Sₜ_Aₜ = box(Q[Aₜ], Sₜ)
 			set_value!(Q_Sₜ_Aₜ, 
@@ -487,6 +552,7 @@ function Q_learn()
 			
 			Aₜ₊₁ = ϵ_greedy(ϵ(t), Q, Sₜ)
 			Sₜ, Aₜ = Sₜ₊₁, Aₜ₊₁
+			if Sₜ₊₁ ∉ cart_pole_bounds break end
 		end
 	end
 
@@ -511,6 +577,12 @@ end
 # ╔═╡ 78c4dab0-3d95-462a-a214-9578f84b6cb4
 Q_trace = simulate_sequence(m, s0(), Q_policy, 4)
 
+# ╔═╡ eb53b3db-db53-4842-ad48-4272a667b7cf
+max([abs(x_vel) for (x, x_vel, θ, θ_vel, _) in Q_trace.states]...)
+
+# ╔═╡ 5bfe3632-dba7-4e12-ba21-823b9803b9df
+max([abs(θ_vel) for (x, x_vel, θ, θ_vel, _) in Q_trace.states]...)
+
 # ╔═╡ 2ac120e4-f380-4b02-bc7f-a1d5e84d7c36
 animate_sequence(Q_trace)
 
@@ -518,15 +590,47 @@ animate_sequence(Q_trace)
 length(Q[left].array |> unique),
 length(Q[right].array |> unique)
 
+# ╔═╡ 45785f69-c79a-4172-b8b4-9009ee08e613
+Q_trace.states[end] ∈ cart_pole_bounds
+
+# ╔═╡ 227f0131-fc76-4382-902e-18874ce66104
+cart_pole_bounds
+
+# ╔═╡ dfdaf4cc-3490-4b93-a8d9-9f4d01c39c09
+for i in 1:100
+	s = [rand(cart_pole_bounds.lower[i]:0.0001:cart_pole_bounds.upper[i])
+		for i in 1:4]
+
+	s = CartPoleState(s..., 0)
+	
+	if s ≉ f⁻¹(f(s))
+		@info "s ≉ f⁻¹(f(s))" s f(s) f⁻¹(f(s))
+		break
+	end
+end; "The inverse function seems to work 👍"
+
 # ╔═╡ 453f70e4-c22f-4c75-b786-d523c8e4bf9c
 begin
-	function is_safe(s::Vector{Float64})
-		s ∈ cart_pole_bounds
+	function is_safe(s::AlteredState)
+		s = f⁻¹(s)
+		# If I just use the inclusion operator ∈, they will be 
+		# strict on the upper bound only.
+		for (i, b) in enumerate(cart_pole_bounds.lower)
+			if s[i] < b
+				return false
+			end
+		end
+		for (i, b) in enumerate(cart_pole_bounds.upper)
+			if s[i] > b
+				return false
+			end
+		end
+		return true
 	end
 
 	function is_safe(bounds::Bounds)
-		for s in SupportingPoints([2, 1, 2, 1, 1], bounds)
-			if !is_safe([s..., 0])
+		for s in SupportingPoints([2, 1, 1, 2, 1, 1], bounds)
+			if !is_safe(AlteredState(s))
 				return false
 			end
 		end
@@ -535,7 +639,7 @@ begin
 end
 
 # ╔═╡ 16315ce1-9dca-4284-936b-32a204b56108
-is_safe(s0())
+is_safe(f(s0()))
 
 # ╔═╡ e0892cae-9ef0-4e57-9a1c-91bf34043956
 md"""
@@ -549,23 +653,48 @@ no_action = actions_to_int([])
 any_action = actions_to_int([left.value, right.value])
 
 # ╔═╡ 26cfc8ec-1351-468f-b9dc-e76acec6e777
-function initializer(partition)
-	is_safe(partition) ? any_action : no_action
+function initializer(bounds::Bounds)
+	is_safe(bounds) ? any_action : no_action
 end
 
 # ╔═╡ 5dde6492-564f-46cb-848d-8a28ea2adb5f
-granularity = Float64[0.2, 2.0, 0.04, 0.4]
+granularity = Float64[0.4, 0.4, 2, 0.038, 0.02, 2]
 
 # ╔═╡ bcbf4a16-ce8f-451e-b58b-0bf9d8d0d872
 get_size(granularity, cart_pole_bounds)
 
 # ╔═╡ 38bc7025-9e1f-4101-a53d-a3a7ff802aa7
-grid_bounds = Bounds(
-	cart_pole_bounds.lower .- granularity, 
-	cart_pole_bounds.upper .+ granularity)
+grid_bounds = let
+	lower = Float64[
+		cart_pole_bounds.lower[1] - granularity[1],
+		0,
+		-1,
+		cart_pole_bounds.lower[3] - granularity[4],
+		0,
+		-1
+		]
+	upper = Float64[
+		cart_pole_bounds.upper[1] + granularity[1],
+		e_kin(cart_mass, cart_pole_bounds.upper[2]),
+		3,
+		cart_pole_bounds.upper[3] + granularity[4],
+		e_kin(pole_mass, cart_pole_bounds.upper[4]),
+		3
+		]
+	Bounds(lower, upper)
+end
+
+# ╔═╡ edbc95e3-9705-4cde-a746-971f3a78cf14
+e_kin(pole_mass, cart_pole_bounds.upper[4])
 
 # ╔═╡ 0610d08b-020e-4ec8-9815-1d0a4c592899
-get_size(granularity, cart_pole_bounds)
+get_size(granularity, grid_bounds)
+
+# ╔═╡ ba37f6ae-33cb-4de1-a8ce-1439ac083b47
+[grid_bounds.upper[i]/granularity[i] for i in 1:length(granularity)]
+
+# ╔═╡ 299658d1-c3df-48a2-b992-02ef94c1bb59
+prod(get_size(granularity, grid_bounds))
 
 # ╔═╡ b966dc17-050f-40dc-adee-b6f9e79b4b0c
 begin
@@ -575,9 +704,6 @@ end
 
 # ╔═╡ f723aa48-e30b-4666-ad70-c20ae10fb4bb
 is_safe(Bounds(box(grid, grid.bounds.lower)))
-
-# ╔═╡ d618a32d-370b-4b45-a691-8cd3ce09eff3
-length(grid)
 
 # ╔═╡ 3fd479d1-c43a-4c6f-95f8-0c74a9ffbf18
 begin
@@ -592,31 +718,59 @@ begin
 end
 
 # ╔═╡ 6de525db-e339-435f-9f87-620fed817839
-@bind s_input multi_field(["x", "x_vel", "θ", "θ_vel"], 
-	[Float64, Float64, Float64, Float64])
+md"""
 
-# ╔═╡ 39c77465-5d24-4d5f-808f-90b18ac18446
-@bind action Select([a => a.name for a in (left, right)])
+`x =`
+$(@bind x NumberField(cart_pole_bounds.lower[1]:0.1:cart_pole_bounds.upper[1], default=0))
+
+`x_vel =`
+$(@bind x_vel NumberField(cart_pole_bounds.lower[2]:0.1:cart_pole_bounds.upper[2], default=0))
+
+`θ =`
+$(@bind θ NumberField(cart_pole_bounds.lower[3]:0.001:cart_pole_bounds.upper[3], default=0))
+
+`θ_vel =`
+$(@bind θ_vel NumberField(cart_pole_bounds.lower[4]:0.001:cart_pole_bounds.upper[4], default=0))
+
+`action =`
+$(@bind action Select([a => a.name for a in (left, right)]))
+"""
 
 # ╔═╡ a5a3b815-23c4-4acd-90d5-a12c721e7866
 action
 
 # ╔═╡ 1b882558-e83e-4679-8d51-3dc54040cdf1
-s = apply(action, [s_input.x, s_input.x_vel, s_input.θ, s_input.θ_vel, 0])
+s = CartPoleState(apply(action, [x, x_vel, θ, θ_vel, 0]))
 
 # ╔═╡ 65f2972d-d1c1-4e21-95ed-f73f2047093d
 @time simulate_point(m, s, action)
 
+# ╔═╡ 23317253-20ab-44fe-b6f3-82d40307f5be
+s
+
+# ╔═╡ a2917851-62f0-471f-b57a-f64c14526f56
+f(s)
+
+# ╔═╡ 6127c10d-87c5-4123-87d8-7986a4f3a311
+f⁻¹(f(s))
+
+# ╔═╡ 1b797c47-31dd-45df-94f0-07bd376b57b7
+s == f⁻¹(f(s))
+
+# ╔═╡ 3ae14c03-d786-4e79-8744-3c52a8f4266d
+f(s)
+
 # ╔═╡ 915e0813-216c-4f01-8341-75c57198dc44
-partition = box(grid, s)
+partition = box(grid, f(s))
 
 # ╔═╡ ee7fdda2-732f-42be-926c-bcdbf0634299
 let
 	slice = Any[partition.indices...]
-	slice[1] = slice[2] = Colon()
+	slice[1] = slice[4] = Colon()
 	draw(grid, slice,
 		colors=shieldcolors,
 		color_labels=shieldlabels,
+		show_grid=true,
 		xlabel="x",
 		ylabel="θ")
 end
@@ -627,23 +781,26 @@ bounds = Bounds(partition)
 # ╔═╡ f4c3e866-50aa-440b-a141-65de2daf9c4c
 is_safe(bounds)
 
+# ╔═╡ 641cc511-cb53-4d08-81f1-43a94b3fbb1c
+is_safe(bounds)
+
 # ╔═╡ ace4eb92-b880-4fe6-9391-ad5bc586b802
 md"""
 ### Reachability
 """
 
 # ╔═╡ dee84d76-f3a2-45a6-b1db-3ca865877de1
-samples_per_axis = [3, 3, 3, 3]
+const samples_per_axis = [2, 2, 1, 2, 2, 1]
 
 # ╔═╡ 5376f447-716b-4011-bd3a-4b60db5ed110
-function reachability_function(partition, action)::Vector{Vector{Int64}}
+function reachability_function(partition::Partition, action)::Vector{Vector{Int64}}
 	result = Vector{Int64}[]
 	grid = partition.grid
-	for s in SupportingPoints(samples_per_axis, partition)
-		if s ∉ Bounds(partition) continue end
+	for s::AlteredState in SupportingPoints(samples_per_axis, partition)
 		#for r in SupportingPoints(samples_per_random_axis, Bounds((-1,), (1,)))
-		s′ = simulate_point(m, [s..., 0.0], action)
-		clamp(s′, grid.bounds)
+		s′ = simulate_point(m, f⁻¹(s), get_action(action))
+		s′ = f(s′)
+		clamp!(s′, grid.bounds)
 		partition′ = box(grid, s′)
 		if partition′.indices ∈ result
 			continue
@@ -655,47 +812,74 @@ function reachability_function(partition, action)::Vector{Vector{Int64}}
 end
 
 # ╔═╡ b1de4c47-e90e-45c3-8c60-340516b42f8e
-reachability_function(partition, action)
+@time reachability_function(partition, action.value)
 
 # ╔═╡ 5c6c1a0d-1442-4d39-bc4d-f7c943e14d97
 md"""
 ### Mainmatter
 """
 
+# ╔═╡ dac58385-3443-436d-acf4-dc15ce28c4af
+reachability_function, grid; @bind do_it_button CounterButton("Do it.")
+
 # ╔═╡ b5453b51-a878-4073-8152-c69d85d30ec1
-# ╠═╡ disabled = true
-#=╠═╡
-reachability_function_precomputed = get_transitions(reachability_function, 
-	[0, 1], 
-	grid);
-  ╠═╡ =#
+if do_it_button > 0
+	reachability_function_precomputed = get_transitions(reachability_function, 
+		[0, 1],
+		grid);
+end
 
 # ╔═╡ e77abd9a-de23-40b8-a442-b0971339f903
-#=╠═╡
-reachability_function_precomputed[left][partition.indices]
-  ╠═╡ =#
+reachability_function_precomputed[action.value][partition.indices...]
 
 # ╔═╡ b79619f1-aa55-4a5c-851f-7387d411d8eb
 @bind max_steps NumberField(0:1000)
 
+# ╔═╡ fa3ae0ca-d4b1-4961-afaa-c0d98174e0d2
+size(grid)
+
 # ╔═╡ 0c28089a-1547-47f4-a411-e3a57cac6a6d
-#=╠═╡
 shield, max_steps_reached = 
-	make_shield(reachability_function_precomputed, actions, grid; max_steps)
-  ╠═╡ =#
+	make_shield(reachability_function_precomputed, [0, 1], grid; max_steps)
+
+# ╔═╡ 3aeb0922-e5f8-4311-b66d-dd42d61f18f3
+altered_state_axes = [
+	"x",
+	"cart E_kin",
+	"x_vel > 0",
+	"θ",
+	"pole E_kin",
+	"θ_vel > 0"
+	
+]
+
+# ╔═╡ abaa6617-7932-4a10-a355-b2218bad4103
+@bind slice_axis_1 Select([i => n for (i, n) in enumerate(altered_state_axes)])
+
+# ╔═╡ cfc4624d-822a-47fe-8855-6f25603aa47a
+@bind slice_axis_2 Select([i => n for (i, n) in enumerate(altered_state_axes)], 
+	default=3)
 
 # ╔═╡ c7a4e65c-a907-468e-b31c-ce05393d41d5
-#=╠═╡
 let
 	slice = Any[partition.indices...]
-	slice[1] = slice[2] = Colon()
-	draw(shield, slice,
+	slice[slice_axis_1] = slice[slice_axis_2] = Colon()
+	
+	if slice_axis_2 > slice_axis_1
+		xlabel=altered_state_axes[slice_axis_1]
+		ylabel=altered_state_axes[slice_axis_2]
+	else
+		xlabel=altered_state_axes[slice_axis_2]
+		ylabel=altered_state_axes[slice_axis_1]
+	end
+	
+	draw(shield, slice;
+		show_grid=true,
 		colors=shieldcolors,
 		color_labels=shieldlabels,
-		xlabel="x",
-		ylabel="θ")
+		xlabel,
+		ylabel)
 end
-  ╠═╡ =#
 
 # ╔═╡ Cell order:
 # ╟─2767663f-3ef8-44f5-81a2-8e480158266e
@@ -753,8 +937,22 @@ end
 # ╠═787677e2-bdf3-43e3-ac71-563a483ef8dc
 # ╠═d712571e-ced8-4f06-8b44-6874fcd3e15d
 # ╠═78c4dab0-3d95-462a-a214-9578f84b6cb4
+# ╠═45785f69-c79a-4172-b8b4-9009ee08e613
+# ╠═227f0131-fc76-4382-902e-18874ce66104
+# ╠═eb53b3db-db53-4842-ad48-4272a667b7cf
+# ╠═5bfe3632-dba7-4e12-ba21-823b9803b9df
 # ╠═2ac120e4-f380-4b02-bc7f-a1d5e84d7c36
 # ╟─6c84e1aa-f45a-453c-8a78-f3976c605385
+# ╟─a7296808-4eb8-4f10-8683-adc4963b21ce
+# ╠═51bf9a44-626c-40f8-abdb-9101ad7769ab
+# ╠═338e5d40-6251-429c-9b0d-ef92460a7e52
+# ╠═6eedcd3c-1aa5-4d8b-9e5f-8465e608f6c7
+# ╠═1eb460d5-3de2-44b0-9a75-378a35e8cf6f
+# ╠═23317253-20ab-44fe-b6f3-82d40307f5be
+# ╠═a2917851-62f0-471f-b57a-f64c14526f56
+# ╠═6127c10d-87c5-4123-87d8-7986a4f3a311
+# ╠═1b797c47-31dd-45df-94f0-07bd376b57b7
+# ╠═dfdaf4cc-3490-4b93-a8d9-9f4d01c39c09
 # ╟─731d3595-1746-46cd-9851-e285673d6a1b
 # ╠═e5371840-2989-4f7f-b15c-4b07e8e96a3b
 # ╠═453f70e4-c22f-4c75-b786-d523c8e4bf9c
@@ -767,23 +965,31 @@ end
 # ╠═26cfc8ec-1351-468f-b9dc-e76acec6e777
 # ╠═5dde6492-564f-46cb-848d-8a28ea2adb5f
 # ╠═38bc7025-9e1f-4101-a53d-a3a7ff802aa7
+# ╠═edbc95e3-9705-4cde-a746-971f3a78cf14
 # ╠═0610d08b-020e-4ec8-9815-1d0a4c592899
+# ╠═ba37f6ae-33cb-4de1-a8ce-1439ac083b47
+# ╠═299658d1-c3df-48a2-b992-02ef94c1bb59
 # ╠═b966dc17-050f-40dc-adee-b6f9e79b4b0c
-# ╠═d618a32d-370b-4b45-a691-8cd3ce09eff3
 # ╠═3fd479d1-c43a-4c6f-95f8-0c74a9ffbf18
 # ╟─ee7fdda2-732f-42be-926c-bcdbf0634299
-# ╠═6de525db-e339-435f-9f87-620fed817839
-# ╠═39c77465-5d24-4d5f-808f-90b18ac18446
 # ╠═1b882558-e83e-4679-8d51-3dc54040cdf1
+# ╠═3ae14c03-d786-4e79-8744-3c52a8f4266d
 # ╠═915e0813-216c-4f01-8341-75c57198dc44
 # ╠═1d8867a6-a0b9-4ee1-8cf0-dabfa4678937
+# ╠═641cc511-cb53-4d08-81f1-43a94b3fbb1c
+# ╟─6de525db-e339-435f-9f87-620fed817839
 # ╟─ace4eb92-b880-4fe6-9391-ad5bc586b802
 # ╠═dee84d76-f3a2-45a6-b1db-3ca865877de1
 # ╠═5376f447-716b-4011-bd3a-4b60db5ed110
 # ╠═b1de4c47-e90e-45c3-8c60-340516b42f8e
 # ╟─5c6c1a0d-1442-4d39-bc4d-f7c943e14d97
+# ╠═dac58385-3443-436d-acf4-dc15ce28c4af
 # ╠═b5453b51-a878-4073-8152-c69d85d30ec1
 # ╠═e77abd9a-de23-40b8-a442-b0971339f903
 # ╠═b79619f1-aa55-4a5c-851f-7387d411d8eb
+# ╠═fa3ae0ca-d4b1-4961-afaa-c0d98174e0d2
 # ╠═0c28089a-1547-47f4-a411-e3a57cac6a6d
+# ╠═3aeb0922-e5f8-4311-b66d-dd42d61f18f3
+# ╠═abaa6617-7932-4a10-a355-b2218bad4103
+# ╠═cfc4624d-822a-47fe-8855-6f25603aa47a
 # ╠═c7a4e65c-a907-468e-b31c-ce05393d41d5
