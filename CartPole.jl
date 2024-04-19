@@ -391,6 +391,13 @@ md"""
 ## Altered State Space
 """
 
+# ╔═╡ 9da1c57f-c922-420c-8c46-0d6842553f8c
+md"""
+### 🛠 Toggle altered state space
+
+`enable_altered_state_space =` $(@bind enable_altered_state_space CheckBox(default=true))
+"""
+
 # ╔═╡ 338e5d40-6251-429c-9b0d-ef92460a7e52
 const AlteredState = MVector{4, Float64}
 
@@ -436,31 +443,53 @@ end
 P2⁻¹(θ, P2_s) = P2(θ, 0) - P2_s 
 
 # ╔═╡ 6eedcd3c-1aa5-4d8b-9e5f-8465e608f6c7
-function f(s::CartPoleState)::AlteredState
-	x = s[1]
-	x_vel = s[2]
-	θ = s[3]
-	θ_vel = s[4]
-	#AlteredState(0, 0, θ, P2(θ, θ_vel))
-	AlteredState(x, P1(x, x_vel), θ, P2(θ, θ_vel))
-	#AlteredState(x, f1(x, x_vel), 0, 0)
+if enable_altered_state_space
+
+	function f(s::CartPoleState)::AlteredState
+		x = s[1]
+		x_vel = s[2]
+		θ = s[3]
+		θ_vel = s[4]
+		AlteredState(x, P1(x, x_vel), θ, P2(θ, θ_vel))
+	end
+
+else
+	
+	function f(s::CartPoleState)::AlteredState
+		x = s[1]
+		x_vel = s[2]
+		θ = s[3]
+		θ_vel = s[4]
+		AlteredState(x, x_vel, θ, θ_vel)
+	end
+	
 end
 
 # ╔═╡ 1eb460d5-3de2-44b0-9a75-378a35e8cf6f
-function f⁻¹(s::AlteredState, samples=4)::Vector{CartPoleState}
-	x = s[1]
-	#x_vel = s[2]
-	P1_s = s[2]
-	θ = s[3]
-	#θ_vel = s[4]
-	P2_s = s[4]
-	#x_vel_1, x_vel_2 = f1⁻¹(x, f1_s)
-	#= [
-		CartPoleState(x, x_vel_1, θ, θ_vel, 0),
-		CartPoleState(x, x_vel_2, θ, θ_vel, 0),
-	] =#
-	[CartPoleState(x, P1⁻¹(x, P1_s), θ, P2⁻¹(θ, P2_s), 0)]
-	#CartPoleState(x, x_vel, θ, P2⁻¹(θ, P2_s), 0)
+if enable_altered_state_space
+
+	function f⁻¹(s::AlteredState, samples=4)::Vector{CartPoleState}
+		x = s[1]
+		P1_s = s[2]
+		θ = s[3]
+		P2_s = s[4]
+		#= [
+			CartPoleState(x, x_vel_1, θ, θ_vel, 0),
+			CartPoleState(x, x_vel_2, θ, θ_vel, 0),
+		] =#
+		[CartPoleState(x, P1⁻¹(x, P1_s), θ, P2⁻¹(θ, P2_s), 0)]
+	end
+
+else
+
+	function f⁻¹(s::AlteredState, samples=4)::Vector{CartPoleState}
+		x = s[1]
+		x_vel = s[2]
+		θ = s[3]
+		θ_vel = s[4]
+		[CartPoleState(x, x_vel, θ, θ_vel, 0)]
+	end
+	
 end
 
 # ╔═╡ f52cb596-8f54-4721-879c-65d8f206a224
@@ -533,10 +562,10 @@ function simulate_sequence(m::CartPoleMechanics, s0, policy, duration)
 		push!(trace.actions, action)
 
 		# Wrap back if leaving frame
-		if s′[1] < cart_pole_bounds.lower[1]
+		if !concerned_with_position && s′[1] < cart_pole_bounds.lower[1]
 			s′[1] = cart_pole_bounds.upper[1]
 			push!(trace.states, s′)
-		elseif s′[1] > cart_pole_bounds.upper[1]
+		elseif !concerned_with_position && s′[1] >= cart_pole_bounds.upper[1]
 			s′[1] = cart_pole_bounds.lower[1]
 			push!(trace.states, s′)
 		
@@ -711,22 +740,6 @@ md"""
 ## The Grid
 """
 
-# ╔═╡ 668f4592-75fd-445e-a0fa-56ee02a03f2d
-no_action = actions_to_int([])
-
-# ╔═╡ 611ba5df-6af9-413b-8e8a-b3da0c825d3e
-any_action = actions_to_int([left.value, right.value])
-
-# ╔═╡ 5dde6492-564f-46cb-848d-8a28ea2adb5f
-# 👇 Granularity
-
-granularity = Float64[2.4/15, 5/15, 0.418/15, 3/15]
-
-# 👆 This is probably the cell you're looking for :-)
-
-# ╔═╡ bcbf4a16-ce8f-451e-b58b-0bf9d8d0d872
-get_size(granularity, cart_pole_bounds)
-
 # ╔═╡ 38bc7025-9e1f-4101-a53d-a3a7ff802aa7
 grid_bounds = let
 	lower = Float64[-2.4, -5, -0.418, -3]
@@ -788,10 +801,48 @@ end
 # ╔═╡ 16315ce1-9dca-4284-936b-32a204b56108
 is_safe(f(s0()))
 
-# ╔═╡ 26cfc8ec-1351-468f-b9dc-e76acec6e777
-function initializer(bounds::Bounds)
-	is_safe(bounds) ? any_action : no_action
+# ╔═╡ 1aa6c36a-7884-48d1-9c5f-1dc87f1278e3
+@bind resolution PlutoUI.combine() do field
+	fields = [field("$i", NumberField(1:1000, default=10)) for i in 1:4]
+	md"""`resolution =` 
+	
+	$fields"""
 end
+
+# ╔═╡ 5dde6492-564f-46cb-848d-8a28ea2adb5f
+granularity = let
+	l, u = grid_bounds.lower, grid_bounds.upper
+	span = u .- l
+
+	if concerned_with_angle && concerned_with_position
+		Float64[
+			span[1]/resolution[1],
+			span[2]/resolution[2],
+			span[3]/resolution[3],
+			span[4]/resolution[4]]
+	elseif concerned_with_angle
+		Float64[
+			span[1],
+			span[2],
+			span[3]/resolution[3],
+			span[4]/resolution[4]]
+	elseif concerned_with_position
+		Float64[
+			span[1]/resolution[1],
+			span[2]/resolution[2],
+			span[3],
+			span[4]]
+	else # Not really valid
+		Float64[
+			span[1],
+			span[2],
+			span[3],
+			span[4]]
+	end
+end
+
+# ╔═╡ bcbf4a16-ce8f-451e-b58b-0bf9d8d0d872
+get_size(granularity, cart_pole_bounds)
 
 # ╔═╡ 0610d08b-020e-4ec8-9815-1d0a4c592899
 get_size(granularity, grid_bounds)
@@ -799,10 +850,22 @@ get_size(granularity, grid_bounds)
 # ╔═╡ 299658d1-c3df-48a2-b992-02ef94c1bb59
 prod(get_size(granularity, grid_bounds))
 
+# ╔═╡ 668f4592-75fd-445e-a0fa-56ee02a03f2d
+no_action = actions_to_int([])
+
+# ╔═╡ 611ba5df-6af9-413b-8e8a-b3da0c825d3e
+any_action = actions_to_int([left.value, right.value])
+
+# ╔═╡ 26cfc8ec-1351-468f-b9dc-e76acec6e777
+function initializer(bounds::Bounds)
+	is_safe(bounds) ? any_action : no_action
+end
+
 # ╔═╡ b966dc17-050f-40dc-adee-b6f9e79b4b0c
-begin
+grid = let
 	grid = Grid(granularity, grid_bounds)
 	GridShielding.initialize!(grid, initializer)
+	grid
 end
 
 # ╔═╡ f723aa48-e30b-4666-ad70-c20ae10fb4bb
@@ -891,55 +954,6 @@ md"""
 	[i => n for (i, n) in enumerate(altered_state_axes)], default=2))
 """
 
-# ╔═╡ 891b2c11-c79b-4fc2-8188-cf7a1097bb6d
-@bind show_reachability CheckBox(default=false)
-
-# ╔═╡ 1161cbd5-7e47-4358-9b7e-139dcd6740a1
-@bind zoom CheckBox(default=false)
-
-# ╔═╡ a05e58c6-9bf1-4865-9052-a1a4a231f3b2
-show_grid = size(grid)[slice_axis_1] < 50 && size(grid)[slice_axis_2] < 50
-
-# ╔═╡ 0871379f-8cf8-4949-a033-d64c9e3e633d
-if max_steps_reached
-	md"""
-	!!! warning "Shield not done"
-		Either synthesis has not even been started, or the `max_steps` variable controlling the number of iterations has been set too low."""
-end
-
-# ╔═╡ 973fba84-d206-454c-a743-0d9eae296c28
-md"""
-## Fit a Polynomial
-"""
-
-# ╔═╡ 7a0c307f-0015-4d82-a469-419d27f052f0
-# Fit to lower border.
-function P3(x, x_vel)
-	-4.88317543737385 - 1.1876989831897105*x + 0.15131651722076384*x^2 - 0.0011789582554793075*x^3 - 0.047931945372531364*x^4 - 0.024267127237915628*x^5 + 0.03662759309950464*x^6 + 0.007282019873773756*x^7 - 0.009385631070408396*x^8 - 0.0008798254171864017*x^9 + 0.0008737448942722494*x^10 - x_vel
-end
-
-# ╔═╡ 25d88777-7351-4b9d-aae2-251bcb2cc11d
-# Fit to upper border.
-function P4(x, x_vel)
-	4.8831754373738505 - 1.1876989831897127*x - 0.15131651722076142*x^2 - 0.001178958255472992*x^3 + 0.04793194537252679*x^4 - 0.024267127237919763*x^5 - 0.03662759309950152*x^6 + 0.007282019873774767*x^7 + 0.009385631070407569*x^8 - 0.0008798254171864848*x^9 - 0.0008737448942721756*x^10 - x_vel
-	# Det man hører, er man selv.
-end
-
-# ╔═╡ d76879a6-5fc1-4550-bdfe-520138a678d6
-# Not making it easy for myself with these names.
-function f1(x, x_vel)
-	if x_vel < 0 
-		-P3(x, x_vel)
-	else
-		-P4(x, x_vel)
-	end
-end
-
-# ╔═╡ 2ba49512-9776-4d78-a954-e92d1db115b6
-function f1⁻¹(x, f1_s)
-	-1*(-P4(x, 0) - f1_s), -1*(-P3(x, 0) - f1_s)
-end
-
 # ╔═╡ 6de525db-e339-435f-9f87-620fed817839
 md"""
 ### 🛠 `s`
@@ -1002,9 +1016,6 @@ is_safe(bounds)
 # ╔═╡ 641cc511-cb53-4d08-81f1-43a94b3fbb1c
 is_safe(bounds)
 
-# ╔═╡ 4bae6425-1730-4d6a-8d79-a7534f9d131a
-bounds
-
 # ╔═╡ f908b62b-4183-4ee8-9dbc-cab4a8164e70
 begin
 	slice = Any[partition.indices...]
@@ -1012,14 +1023,26 @@ begin
 	slice
 end
 
-# ╔═╡ 481c90d7-dbb1-4ddb-aebd-66d018c27d92
-f⁻¹(f(s))
-
 # ╔═╡ b1de4c47-e90e-45c3-8c60-340516b42f8e
 @time reachability_function(partition, action.value)
 
 # ╔═╡ e77abd9a-de23-40b8-a442-b0971339f903
 reachability_function_precomputed[action.value][partition.indices...]
+
+# ╔═╡ 891b2c11-c79b-4fc2-8188-cf7a1097bb6d
+@bind show_reachability CheckBox(default=false)
+
+# ╔═╡ 1161cbd5-7e47-4358-9b7e-139dcd6740a1
+@bind zoom CheckBox(default=false)
+
+# ╔═╡ 4bae6425-1730-4d6a-8d79-a7534f9d131a
+bounds
+
+# ╔═╡ 481c90d7-dbb1-4ddb-aebd-66d018c27d92
+s, f(s)
+
+# ╔═╡ a05e58c6-9bf1-4865-9052-a1a4a231f3b2
+show_grid = size(grid)[slice_axis_1] < 50 && size(grid)[slice_axis_2] < 50
 
 # ╔═╡ c7a4e65c-a907-468e-b31c-ce05393d41d5
 p3 = let
@@ -1057,7 +1080,11 @@ p3 = let
 			markerstrokewidth=0,
 			label="initial")
 
-		sp = [simulate_point(m, f⁻¹(AlteredState(s)), action) for s in sp]
+		sp = [simulate_point(m, s′, action) 
+			for s′ in f⁻¹(AlteredState(s))
+			for s in sp
+			]
+				
 		xs = [s[sa1] for s in sp]
 		ys = [s[sa2] for s in sp]
 		
@@ -1089,14 +1116,109 @@ p3 = let
 	plot!()
 end
 
+# ╔═╡ 0871379f-8cf8-4949-a033-d64c9e3e633d
+if max_steps_reached
+	md"""
+	!!! warning "Shield not done"
+		Either synthesis has not even been started, or the `max_steps` variable controlling the number of iterations has been set too low."""
+end
+
+# ╔═╡ 8f424501-1641-4779-bf60-0204f6ea3efc
+shieldcolors[get_value(partition) + 1], bounds
+
+# ╔═╡ 5b373e7a-6254-4fe4-bead-eababbd8f065
+# Reachability from s
+let
+	round_8(n) = round(n, digits=8)
+	
+	to_string(b::Bounds) = 
+		"Bounds($(round_8.(b.lower)), $(round_8.(b.upper)))"
+	
+	reachable = reachability_function_precomputed[action.value][partition.indices...]
+	reachable = [Partition(shield, indices) for indices in reachable]
+	reachable = [(get_value(partition), partition) for partition in reachable]
+	reachable = [(shieldcolors[v+1], Bounds(p)) for (v, p) in reachable]
+	reachable = [(c, to_string(b)) for (c, b) in reachable]
+end
+
+# ╔═╡ 973fba84-d206-454c-a743-0d9eae296c28
+md"""
+## Fit a Polynomial
+"""
+
+# ╔═╡ d73c2ee5-e8bf-4cc4-8855-d239224ba843
+# ╠═╡ disabled = true
+#=╠═╡
+p4 = let
+	if slice_axis_2 < slice_axis_1
+		sa1, sa2 = slice_axis_2, slice_axis_1
+	else
+		sa1, sa2 = slice_axis_1, slice_axis_2
+	end
+	
+	plot(p3)
+	lower_border = border_points(shield, 2, 3, slice) |> sort
+	upper_border = border_points(shield, 1, 3, slice) |> sort
+	
+	averaged_border = [(x1, (l + u)/2) 
+			for ((x1, l), (x2, u)) in zip(upper_border, lower_border)
+			if x1 == x2]
+
+	p = Polynomials.fit((upper_border |> unzip)..., 10)
+	@show p
+	
+	scatter!(upper_border,
+		color=colors.ASBESTOS,
+		markersize=2,
+		markerstrokewidth=0,
+		label="average")
+
+	plot!([(x, p(x)) 
+			for x in grid_bounds.lower[sa1]:granularity[sa1]:grid_bounds.upper[sa1]],
+		color=colors.SILVER,
+		label="p")
+end
+  ╠═╡ =#
+
+# ╔═╡ 7a0c307f-0015-4d82-a469-419d27f052f0
+# Fit to lower border.
+function P3(x, x_vel)
+	-4.88317543737385 - 1.1876989831897105*x + 0.15131651722076384*x^2 - 0.0011789582554793075*x^3 - 0.047931945372531364*x^4 - 0.024267127237915628*x^5 + 0.03662759309950464*x^6 + 0.007282019873773756*x^7 - 0.009385631070408396*x^8 - 0.0008798254171864017*x^9 + 0.0008737448942722494*x^10 - x_vel
+end
+
+# ╔═╡ 25d88777-7351-4b9d-aae2-251bcb2cc11d
+# Fit to upper border.
+function P4(x, x_vel)
+	4.8831754373738505 - 1.1876989831897127*x - 0.15131651722076142*x^2 - 0.001178958255472992*x^3 + 0.04793194537252679*x^4 - 0.024267127237919763*x^5 - 0.03662759309950152*x^6 + 0.007282019873774767*x^7 + 0.009385631070407569*x^8 - 0.0008798254171864848*x^9 - 0.0008737448942721756*x^10 - x_vel
+	# Det man hører, er man selv.
+end
+
+# ╔═╡ d76879a6-5fc1-4550-bdfe-520138a678d6
+# Not making it easy for myself with these names.
+function f1(x, x_vel)
+	if x_vel < 0 
+		-P3(x, x_vel)
+	else
+		-P4(x, x_vel)
+	end
+end
+
+# ╔═╡ 2ba49512-9776-4d78-a954-e92d1db115b6
+function f1⁻¹(x, f1_s)
+	-1*(-P4(x, 0) - f1_s), -1*(-P3(x, 0) - f1_s)
+end
+
 # ╔═╡ bfa0c9a5-01e9-4df2-b48c-103f5f5ffae7
 x_vel, f1(x, x_vel), f1⁻¹(x, f1(x, x_vel))
 
 # ╔═╡ 474e569d-dbaa-4613-a068-4c2e283ea5b1
+# ╠═╡ disabled = true
+#=╠═╡
 let
 	plot(p3)
 	plot!(x -> f1(x, x_vel))
 end
+  ╠═╡ =#
 
 # ╔═╡ 05f7c96a-dd50-41a7-8916-293938c03b40
 # ╠═╡ disabled = true
@@ -1179,64 +1301,25 @@ function border_points(grid::Grid, value_1, value_2, slice)
 	result
 end
 
-# ╔═╡ d73c2ee5-e8bf-4cc4-8855-d239224ba843
-# ╠═╡ disabled = true
-#=╠═╡
-p4 = let
-	if slice_axis_2 < slice_axis_1
-		sa1, sa2 = slice_axis_2, slice_axis_1
-	else
-		sa1, sa2 = slice_axis_1, slice_axis_2
-	end
-	
-	plot(p3)
-	lower_border = border_points(shield, 2, 3, slice) |> sort
-	upper_border = border_points(shield, 1, 3, slice) |> sort
-	
-	averaged_border = [(x1, (l + u)/2) 
-			for ((x1, l), (x2, u)) in zip(upper_border, lower_border)
-			if x1 == x2]
-
-	p = Polynomials.fit((upper_border |> unzip)..., 10)
-	@show p
-	
-	scatter!(upper_border,
-		color=colors.ASBESTOS,
-		markersize=2,
-		markerstrokewidth=0,
-		label="average")
-
-	plot!([(x, p(x)) 
-			for x in grid_bounds.lower[sa1]:granularity[sa1]:grid_bounds.upper[sa1]],
-		color=colors.SILVER,
-		label="p")
-end
-  ╠═╡ =#
-
-# ╔═╡ 8f424501-1641-4779-bf60-0204f6ea3efc
-shieldcolors[get_value(partition) + 1], bounds
-
-# ╔═╡ 5b373e7a-6254-4fe4-bead-eababbd8f065
-# Reachability from s
-let
-	round_8(n) = round(n, digits=8)
-	
-	to_string(b::Bounds) = 
-		"Bounds($(round_8.(b.lower)), $(round_8.(b.upper)))"
-	
-	reachable = reachability_function_precomputed[action.value][partition.indices...]
-	reachable = [Partition(shield, indices) for indices in reachable]
-	reachable = [(get_value(partition), partition) for partition in reachable]
-	reachable = [(shieldcolors[v+1], Bounds(p)) for (v, p) in reachable]
-	reachable = [(c, to_string(b)) for (c, b) in reachable]
-end
-
 # ╔═╡ 2498792a-a7b9-4295-bfb9-7e9068a02d7d
 random_policy
 
+# ╔═╡ 0f5f2fea-3b84-4d1d-80bc-08715f947661
+md"""
+## Check Safety
+"""
+
+# ╔═╡ 9fda178a-0fcd-49ad-b0b8-025523995691
+# ╠═╡ disabled = true
+#=╠═╡
+animate_sequence(shielded_trace)
+  ╠═╡ =#
+
 # ╔═╡ e2db38df-8347-4bf4-be27-d9ad19c96823
-function get_allowed(s)
-	allowed = int_to_actions(Int, get_value((box(shield, f(s)))))
+function get_allowed(s::CartPoleState)
+	f_s = f(s)
+	f_s = crude_clamp!(f_s, shield.bounds)
+	allowed = int_to_actions(Int, get_value((box(shield, f_s))))
 	allowed = [get_action(a) for a in allowed]
 end
 
@@ -1244,9 +1327,9 @@ end
 function shield_policy(policy)
 	return s -> begin
 		a = policy(s)
-		if f(s) ∉ shield
-			error("Outside grid: $s")
-		end
+		#if f(s) ∉ shield
+		#	error("Outside grid: s=$s f(s)=$(f(s))")
+		#end
 		allowed = get_allowed(s)
 		if a ∈ allowed
 			return a
@@ -1267,16 +1350,8 @@ s0_const = s0()
 # ╔═╡ d3f51f26-92da-4e23-9316-13a249079100
 get_allowed(s0_const)
 
-# ╔═╡ 0f5f2fea-3b84-4d1d-80bc-08715f947661
-md"""
-## Check Safety
-"""
-
 # ╔═╡ 2dbb749a-cd7e-4092-b662-519b10d9552d
 runs = 100
-
-# ╔═╡ 84734786-a79c-484a-95a9-5de041436c2f
-shield.bounds
 
 # ╔═╡ 08d65223-892b-4921-9d09-af959524bb7a
 function check_safety(m::CartPoleMechanics, policy, duration; runs=1000)
@@ -1302,14 +1377,11 @@ function check_safety(m::CartPoleMechanics, policy, duration; runs=1000)
 	deaths, example_trace
 end
 
+# ╔═╡ 84734786-a79c-484a-95a9-5de041436c2f
+cart_pole_bounds
+
 # ╔═╡ 9bad8bb4-bfa1-47a3-821c-dd3448c3f534
 deaths, shielded_trace = check_safety(m, shielded_random_policy, 10; runs)
-
-# ╔═╡ 9fda178a-0fcd-49ad-b0b8-025523995691
-# ╠═╡ disabled = true
-#=╠═╡
-animate_sequence(shielded_trace)
-  ╠═╡ =#
 
 # ╔═╡ 3d63e8c3-6218-4eec-86de-698bb61d8f96
 let
@@ -1330,11 +1402,6 @@ end
 
 # ╔═╡ 65f542c6-d5f3-40e0-be5f-ab66786eaf72
 shielded_trace.states[end]
-
-# ╔═╡ 193c74e9-00fc-497f-82d0-0a22bcf15e18
-md"""
-# Further altered state space
-"""
 
 # ╔═╡ Cell order:
 # ╟─2767663f-3ef8-44f5-81a2-8e480158266e
@@ -1400,6 +1467,7 @@ md"""
 # ╠═2ac120e4-f380-4b02-bc7f-a1d5e84d7c36
 # ╟─6c84e1aa-f45a-453c-8a78-f3976c605385
 # ╟─a7296808-4eb8-4f10-8683-adc4963b21ce
+# ╟─9da1c57f-c922-420c-8c46-0d6842553f8c
 # ╠═338e5d40-6251-429c-9b0d-ef92460a7e52
 # ╠═3aeb0922-e5f8-4311-b66d-dd42d61f18f3
 # ╠═b4ddbac3-33e9-42e7-bac7-a2ec32093678
@@ -1425,13 +1493,14 @@ md"""
 # ╠═f4c3e866-50aa-440b-a141-65de2daf9c4c
 # ╠═f723aa48-e30b-4666-ad70-c20ae10fb4bb
 # ╟─e0892cae-9ef0-4e57-9a1c-91bf34043956
+# ╠═38bc7025-9e1f-4101-a53d-a3a7ff802aa7
+# ╠═1aa6c36a-7884-48d1-9c5f-1dc87f1278e3
+# ╠═5dde6492-564f-46cb-848d-8a28ea2adb5f
+# ╠═0610d08b-020e-4ec8-9815-1d0a4c592899
+# ╠═299658d1-c3df-48a2-b992-02ef94c1bb59
 # ╠═668f4592-75fd-445e-a0fa-56ee02a03f2d
 # ╠═611ba5df-6af9-413b-8e8a-b3da0c825d3e
 # ╠═26cfc8ec-1351-468f-b9dc-e76acec6e777
-# ╠═5dde6492-564f-46cb-848d-8a28ea2adb5f
-# ╠═38bc7025-9e1f-4101-a53d-a3a7ff802aa7
-# ╠═0610d08b-020e-4ec8-9815-1d0a4c592899
-# ╠═299658d1-c3df-48a2-b992-02ef94c1bb59
 # ╠═b966dc17-050f-40dc-adee-b6f9e79b4b0c
 # ╠═1b882558-e83e-4679-8d51-3dc54040cdf1
 # ╠═3ae14c03-d786-4e79-8744-3c52a8f4266d
@@ -1451,15 +1520,18 @@ md"""
 # ╠═fa3ae0ca-d4b1-4961-afaa-c0d98174e0d2
 # ╠═0c28089a-1547-47f4-a411-e3a57cac6a6d
 # ╠═b79619f1-aa55-4a5c-851f-7387d411d8eb
+# ╟─c7a4e65c-a907-468e-b31c-ce05393d41d5
 # ╟─abaa6617-7932-4a10-a355-b2218bad4103
 # ╟─f908b62b-4183-4ee8-9dbc-cab4a8164e70
-# ╟─c7a4e65c-a907-468e-b31c-ce05393d41d5
+# ╟─6de525db-e339-435f-9f87-620fed817839
 # ╠═891b2c11-c79b-4fc2-8188-cf7a1097bb6d
 # ╠═1161cbd5-7e47-4358-9b7e-139dcd6740a1
 # ╠═4bae6425-1730-4d6a-8d79-a7534f9d131a
 # ╠═481c90d7-dbb1-4ddb-aebd-66d018c27d92
 # ╠═a05e58c6-9bf1-4865-9052-a1a4a231f3b2
 # ╟─0871379f-8cf8-4949-a033-d64c9e3e633d
+# ╠═8f424501-1641-4779-bf60-0204f6ea3efc
+# ╠═5b373e7a-6254-4fe4-bead-eababbd8f065
 # ╟─973fba84-d206-454c-a743-0d9eae296c28
 # ╠═d73c2ee5-e8bf-4cc4-8855-d239224ba843
 # ╠═7a0c307f-0015-4d82-a469-419d27f052f0
@@ -1468,23 +1540,19 @@ md"""
 # ╠═2ba49512-9776-4d78-a954-e92d1db115b6
 # ╠═bfa0c9a5-01e9-4df2-b48c-103f5f5ffae7
 # ╠═474e569d-dbaa-4613-a068-4c2e283ea5b1
-# ╟─6de525db-e339-435f-9f87-620fed817839
 # ╠═05f7c96a-dd50-41a7-8916-293938c03b40
 # ╠═442a2427-e8a7-4088-8221-ec7a5dc9f1c2
-# ╠═8f424501-1641-4779-bf60-0204f6ea3efc
-# ╠═5b373e7a-6254-4fe4-bead-eababbd8f065
 # ╠═2498792a-a7b9-4295-bfb9-7e9068a02d7d
+# ╟─0f5f2fea-3b84-4d1d-80bc-08715f947661
+# ╠═9fda178a-0fcd-49ad-b0b8-025523995691
 # ╠═d08f05d8-6227-4bbf-aab2-744152726107
 # ╠═e2db38df-8347-4bf4-be27-d9ad19c96823
 # ╠═fbaa39a7-d1d2-4ad8-a475-c712cdafe35d
 # ╠═d6ee45cf-765a-41d6-8bc7-b74662ac9243
 # ╠═d3f51f26-92da-4e23-9316-13a249079100
-# ╟─0f5f2fea-3b84-4d1d-80bc-08715f947661
-# ╠═9fda178a-0fcd-49ad-b0b8-025523995691
 # ╠═2dbb749a-cd7e-4092-b662-519b10d9552d
-# ╠═84734786-a79c-484a-95a9-5de041436c2f
 # ╠═08d65223-892b-4921-9d09-af959524bb7a
+# ╠═84734786-a79c-484a-95a9-5de041436c2f
 # ╠═9bad8bb4-bfa1-47a3-821c-dd3448c3f534
 # ╟─3d63e8c3-6218-4eec-86de-698bb61d8f96
 # ╠═65f542c6-d5f3-40e0-be5f-ab66786eaf72
-# ╟─193c74e9-00fc-497f-82d0-0a22bcf15e18
