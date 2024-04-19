@@ -1,4 +1,7 @@
 = Cart Pole Dimensionality Reduction
+
+== Fitting Polynomial from Fime-grained Shield
+
 Recall that the state space for the cartpole is 
 $(x, dot(x), θ, dot(θ))^top$.
 
@@ -49,42 +52,78 @@ The same thing can be seen for the shield that controls the pole's angle in @ang
 Unfortunately, combining the two polynomials into a state space $(x, P_1(x, dot(x)), θ, P_2(θ, dot(θ)))^top$ 
 does not yield a safety strategy at any granularity that I have tried. 
 
+Future work would be to find better expressions for the decision boundaries, perhaps by combining the polynomials depending on the sign of $dot(x)$. 
+
+The 1st degree polynomial used for the position state space was: $P_1(x, dot(x)) = -1.3324x - dot(x)$. Numbers have been rounded, eliminating near-zero terms. And the 10th degree polynomial: 
+
+$P_1(x, dot(x))  - 1.1877*x - 0.0012*x^3 - 0.0243*x^5 + 0.0073*x^7 - 0.0009*x^9 - dot(x) $
+
 #grid(columns: 2,
   [#figure(image("Graphics/Cart Pole/Position 10th Degree Polynomial.png", fit:"cover"), 
-      caption: "Fitting a polynomial to the average of the two decision borders") 
+      caption: [x-shield produced by using a 10th degree polynomial from @position_polynomial_fitting_average.]) 
     <position_10th_degree_polynomial>],
 
   [#figure(image("Graphics/Cart Pole/Position 1st Degree Polynomial.png", fit:"cover"), 
-      caption: "Fitting a polynomial to the topmost decision border of the  position-shield.") 
+      caption: [x-shield produced by using a 1rst degree polynomial from @position_polynomial_fitting_average.]) 
     <position_1st_degree_polynomial>],
 
   [#figure(image("Graphics/Cart Pole/Position 1st Degree Polynomial Coarse.png", fit:"cover"), 
-      caption: "Fitting a polynomial to the average of the two decision borders") 
+      caption: [A $30 times 30$ x-shield using the altered state space of @position_1st_degree_polynomial.])
     <position_1st_degree_polynomial_coarse>],
 
   [#figure(image("Graphics/Cart Pole/Position 1st Degree Polynomial Very Coarse.png", fit:"cover"), 
-      caption: "Fitting a polynomial to the topmost decision border of the position-shield.") 
+      caption: [A $10 times 30$ x-shield using the altered state space of @position_1st_degree_polynomial. Using the regular state space with a grid of this size does not produce a viable safety strategy. ]) 
     <position_1st_degree_polynomial_very_coarse>],
 
 )
 
-Future work would be to find better expressions for the decision boundaries, perhaps by combining the polynomials depending on the sign of $dot(x)$. 
 
 #grid(columns: 2,
   [#figure(image("Graphics/Cart Pole/Angle 10th Degree Polynomial.png", fit:"cover"), 
-      caption: "Fitting a polynomial to the average of the two decision borders") 
+      caption: [θ-shield produced by using the 10th degree polynomial from @position_polynomial_fitting_average.])
     <angle_10th_degree_polynomial>],
 
   [#figure(image("Graphics/Cart Pole/Angle 1st Degree Polynomial.png", fit:"cover"), 
-      caption: "Fitting a polynomial to the topmost decision border of the position-shield.") 
+      caption: [θ-shield produced by using the 1st degree polynomial from @position_polynomial_fitting_average.])
     <angle_1st_degree_polynomial>],
 
   [#figure(image("Graphics/Cart Pole/Angle 1st Degree Polynomial Coarse.png", fit:"cover"), 
-      caption: "Fitting a polynomial to the average of the two decision borders") 
+      caption: [A $30 times 30$ θ-shield using the altered state space of @position_1st_degree_polynomial.])
     <angle_1st_degree_polynomial_coarse>],
 
   [#figure(image("Graphics/Cart Pole/Angle 1st Degree Polynomial Very Coarse.png", fit:"cover"), 
-      caption: "Fitting a polynomial to the topmost decision border of the position-shield.") 
+      caption: [A $10 times 30$ θ-shield using the altered state space of @position_1st_degree_polynomial. Using the regular state space with a grid of this size does not produce a viable safety strategy.]) 
     <angle_1st_degree_polynomial_very_coarse>],
 
 )
+
+
+== Fitting Polynomial from  Coarse, Unfinished, Shield
+
+The previously presented approach still requires synthesising a fine-grained shield, which may not be feasible in the first place. 
+However, the whole point of the exercise is that it is not possible to synthesize a safety strategy for the given coarseness.
+
+@no_safe_strategy shows what happens if a grid with too coarse granulairty, is used to synthesise a safety strategy.
+This grid contains just $10 times 10$ partitions.
+The abstraction allows behvaiours for the partitions which could always lead to a safety violation eventually. 
+A finer granulairty or a better state-space could reduce the over-approximation and yield a safety straegy which includes safe states. But finer granularity may not be feasible, and how to find a suitable state-space transformation without a viable safety strategy?
+
+@unfinished_shield shows a grid where the fixed-point iteration used to construct the shield was halted after two steps. This means that the strategy is only guaranteed to be safe for two steps, after which a safety violation may occur at any time. The result of continuing the iteration is shown in @no_safe_strategy, but even though the abstraction is too coarse to produce a safety strategy, the shape produced by the unfinished shield might still be useful for fitting a polynomial to transform the state-space. Indeed, the shape looks like an exaggerated version of the fine-grained shield in @position_regular.
+
+
+#grid(columns: 2,
+  [#figure(image("Graphics/Cart Pole/No Safe Strategy.svg", fit:"cover"), 
+      caption: "No partition is considered safe at an abstraction this coarse.") 
+    <no_safe_strategy>],
+
+  [#figure(image("Graphics/Cart Pole/Fitting Polynomial to Unfinished Shield.svg", fit:"cover"), 
+      caption: "The result of taking two steps in the fixed-point iteration. A 3rd-degree polynomial is fit to the average between the two decision boundaries.") 
+    <unfinished_shield>],
+
+
+  [#figure(image("Graphics/Cart Pole/Angle Polynomial from Unfinished Shield.svg", fit:"cover"), 
+      caption: [A safety strategy for the 3rd degree polynomial learned in @unfinished_shield.]) 
+    <angle_unfinished_shield_polynomial>],
+)
+
+And this works!@angle_unfinished_shield_polynomial shows a shield using the altered state-space. For the record, the polynomial was: $P_2(θ, dot(θ)) = 0.6111θ - 14.3656θ^3 - dot(θ)$. Numbers have been rounded, eliminating near-zero terms.
