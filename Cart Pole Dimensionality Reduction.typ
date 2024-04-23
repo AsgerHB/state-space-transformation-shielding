@@ -40,7 +40,7 @@ The idea then was to fit a polynomial to the decision boundaries. @position_poly
 So now I have a polynomial $P$, where $P(x) = dot(x)$ such that $dot(x)$ is at the decision boundary. An offset $omega$ can be applied, such that the boundary can be shifted: $P(x) - omega = dot(x)$ which can be re-written as: $omega = P(x) - dot(x)$. 
 Now, creating a grid whose state space is $vec(x, omega)$ instead of $vec(x, dot(x))$ should create a decision boundary that better aligns with the partition boundary.
 
-This is an abstraction for which we can still compute reachability, since $dot(x)$ is given from $x$ and $omega$. Let $P_1(x, dot(x)) = P(x) - dot(x)$. Then $P_1^(-1)(x, omega) = P(x) - omega = dot(x)$. A safety strategy in the $vec(x, omega)$-grid abstraction can be used as a safety strategy to keep the cart's position within bounds, by looking up the set of allowed actions as $vec(x, P_1(x))$. 
+This is an abstraction for which we can still compute reachability, since $dot(x)$ is given from $x$ and $omega$. Let $P_1(x, dot(x)) = P(x) - dot(x)$. Then $P_1^(-1)(x, omega) = P(x) - omega = dot(x)$. A safety strategy in the $vec(x, omega)$-grid abstraction can be used as a safety strategy to keep the cart's position within bounds, by looking up the set of allowed actions as $vec(x, P_1(x, dot(x)))$. 
 
 @position_10th_degree_polynomial shows a 10th degree polynomial, fit to the average of the two decision boundaries. 
 @position_1st_degree_polynomial shows the same for a 1st degree polymonial. Note that neither decision boundary is completely straight, because the upper and lower boundary aren't the same polynomial. However, This is still a better abstraction.
@@ -108,7 +108,7 @@ This grid contains just $10 times 10$ partitions.
 The abstraction allows behvaiours for the partitions which could always lead to a safety violation eventually. 
 A finer granulairty or a better state-space could reduce the over-approximation and yield a safety straegy which includes safe states. But finer granularity may not be feasible, and how to find a suitable state-space transformation without a viable safety strategy?
 
-@unfinished_shield shows a grid where the fixed-point iteration used to construct the shield was halted after two steps. This means that the strategy is only guaranteed to be safe for two steps, after which a safety violation may occur at any time. The result of continuing the iteration is shown in @no_safe_strategy, but even though the abstraction is too coarse to produce a safety strategy, the shape produced by the unfinished shield might still be useful for fitting a polynomial to transform the state-space. Indeed, the shape looks like an exaggerated version of the fine-grained shield in @position_regular.
+@unfinished_shield shows a grid where the fixed-point iteration used to construct the shield was halted after four steps. This means that the strategy is only guaranteed to be safe for four steps, after which a safety violation may occur at any time. The result of continuing the iteration is shown in @no_safe_strategy, but even though the abstraction is too coarse to produce a safety strategy, the shape produced by the unfinished shield might still be useful for fitting a polynomial to transform the state-space. Indeed, the shape looks like an exaggerated version of the fine-grained shield in @position_regular.
 
 
 #grid(columns: 2,
@@ -117,7 +117,7 @@ A finer granulairty or a better state-space could reduce the over-approximation 
     <no_safe_strategy>],
 
   [#figure(image("Graphics/Cart Pole/Fitting Polynomial to Unfinished Shield.svg", fit:"cover"), 
-      caption: "The result of taking two steps in the fixed-point iteration. A 3rd-degree polynomial is fit to the average between the two decision boundaries.") 
+      caption: "The result of taking four steps in the fixed-point iteration. A 3rd-degree polynomial is fit to the average between the two decision boundaries.") 
     <unfinished_shield>],
 
 
@@ -126,4 +126,4 @@ A finer granulairty or a better state-space could reduce the over-approximation 
     <angle_unfinished_shield_polynomial>],
 )
 
-And this works!@angle_unfinished_shield_polynomial shows a shield using the altered state-space. For the record, the polynomial was: $P_2(θ, dot(θ)) = 0.6111θ - 14.3656θ^3 - dot(θ)$. Numbers have been rounded, eliminating near-zero terms.
+And this works! @angle_unfinished_shield_polynomial shows a shield using the altered state-space. For the record, the polynomial was: $P_2(θ, dot(θ)) =- 1.8785 dot θ - 23.3148 dot θ^3 - dot(θ)$. Numbers have been rounded, eliminating near-zero terms.
