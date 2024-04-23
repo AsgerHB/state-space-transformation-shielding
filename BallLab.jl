@@ -359,22 +359,13 @@ samples_per_axis = [10, 10, 1]
 prod([samples_per_axis..., samples_per_random_axis...])
 
 # ╔═╡ 5bf69f54-8ec2-4561-b696-7199ce83c839
-round_8(x) = round(x, digits=8)
+round_8(x) = round(x, RoundNearestTiesUp, digits=8)
+
+# ╔═╡ cc66d652-a8e5-4ae1-9d72-5ccbc9d500f0
+round(2.00000002, RoundingMode.RoundNearestTiesUp, digits=8)
 
 # ╔═╡ 104f1f24-44c8-4ea8-9d6a-732984a96e91
 @bind spa NumberField(1:1000, default=samples_per_axis[1]/2)
-
-# ╔═╡ fd928206-accf-44fc-8762-599fe34c26b6
-@bind action Select(BB.Action |> instances |> collect, default=BB.nohit)
-
-# ╔═╡ 7802329e-9ef1-40a5-8d5f-79010fa6ac1f
-BB.simulate_point(m, (v_0, p_0), action)
-
-# ╔═╡ 22d05a23-bcad-4281-8303-5082a3d8e785
-@bind v NumberField(-15:0.2:15)
-
-# ╔═╡ 2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
-@bind p NumberField(0:0.1:8)
 
 # ╔═╡ 6327ed76-cf69-4389-8ce2-e0e9c42eb11f
 md"""
@@ -458,6 +449,18 @@ p = shielded_trace[2][i]
 #=╠═╡
 @bind i NumberField(1:length(shielded_trace[1]), default=21)
   ╠═╡ =#
+
+# ╔═╡ fd928206-accf-44fc-8762-599fe34c26b6
+@bind action Select(BB.Action |> instances |> collect, default=BB.nohit)
+
+# ╔═╡ 7802329e-9ef1-40a5-8d5f-79010fa6ac1f
+BB.simulate_point(m, (v_0, p_0), action)
+
+# ╔═╡ 22d05a23-bcad-4281-8303-5082a3d8e785
+@bind v NumberField(-15:0.2:15)
+
+# ╔═╡ 2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
+@bind p NumberField(0:0.1:8)
 
 # ╔═╡ 080a4374-104e-4c30-b946-313475fb0c11
 any_action, no_action = actions_to_int([BB.hit BB.nohit]), actions_to_int([])
@@ -857,12 +860,14 @@ let
 	plot!([], seriestype=:shape, color=colors.SUNFLOWER, 
 		label="reachable by reachability_function")
 	
+	#=
 	for r in reachable′
 		plot!(r, color=colors.AMETHYST, label=nothing)
 	end
 	
 	plot!([], seriestype=:shape, color=colors.AMETHYST, 
 		label="reachable by reachability_function′")
+	=#
 	
 	plot!()
 	sp_initial = [π_point for π_point in SupportingPoints([spa, spa, 3], partition)]
@@ -980,7 +985,7 @@ function check_safety(mechanics, policy, duration; runs=1000)
 end
 
 # ╔═╡ 05b5e4d4-9bea-49b5-ae51-0daa2fb8478d
-runs = 100000
+runs = 100
 
 # ╔═╡ c995f805-fc9b-47c1-bfa9-5dbcc9400806
 lazy(_...) = BB.nohit
@@ -1059,9 +1064,6 @@ md"""
 
 # ╔═╡ 9b4e88ad-2de3-4b8d-8a69-bbb8660cc293
 @bind target_dir TextField(95, default=mktempdir())
-
-# ╔═╡ 71481fd5-b4d9-4c24-8eb5-9acc56ae382f
-mktempdir()
 
 # ╔═╡ 1a3ebfb8-47b8-41a3-b63d-875b03187a4e
 target_dir; @bind open_folder_button CounterButton("Open Folder")
@@ -1230,7 +1232,7 @@ query |> remove_single_line_breaks |> multiline
 @bind verifyta TextField(80, default=homedir() ⨝ "opt/uppaal-5.0.0-linux64/bin/verifyta")
 
 # ╔═╡ 572dac94-aded-44af-8855-8f2c9811f94d
-discretization = 0.001
+discretization = 0.01
 
 # ╔═╡ 7efc9685-1031-4882-8202-2fcd83a728d8
 @bind working_dir TextField(80, default=mktempdir())
@@ -1345,14 +1347,15 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═c2d118ff-daaa-4649-8937-76f6f4de684b
 # ╠═f0612487-06c4-4330-a0f0-fc4dd367d083
 # ╠═5bf69f54-8ec2-4561-b696-7199ce83c839
+# ╠═cc66d652-a8e5-4ae1-9d72-5ccbc9d500f0
 # ╠═f4364c08-d09b-4dcc-89ea-e3a58490d901
 # ╠═c1878b2b-8902-4d4d-ac9d-9f8f89896af8
 # ╠═104f1f24-44c8-4ea8-9d6a-732984a96e91
-# ╠═0335457d-5081-4f34-b086-7f597413c9f7
+# ╟─0335457d-5081-4f34-b086-7f597413c9f7
 # ╠═966304ab-8d5e-452b-9d47-c234a14626e6
 # ╠═3fdb6a5a-81e6-43ab-b3f5-4118fe2275c7
 # ╠═7f4b10fe-bed4-4f0a-bc4e-0a6f0d0ca8f1
-# ╟─cd94ae25-f85e-4693-8eb0-d5eaa1efbe4b
+# ╠═cd94ae25-f85e-4693-8eb0-d5eaa1efbe4b
 # ╟─6327ed76-cf69-4389-8ce2-e0e9c42eb11f
 # ╠═01190c0f-b8bb-403f-8eed-57d683ad302a
 # ╠═c98583c9-3105-46b3-80b4-06b84d6e1db6
@@ -1372,7 +1375,7 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═fd928206-accf-44fc-8762-599fe34c26b6
 # ╠═22d05a23-bcad-4281-8303-5082a3d8e785
 # ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
-# ╟─021e2fb4-1760-4421-916b-fb2ef306cb13
+# ╠═021e2fb4-1760-4421-916b-fb2ef306cb13
 # ╟─a566b33b-7005-43c3-afce-b8793447f615
 # ╠═e247dfa7-6000-4df1-8a28-328463e32c49
 # ╠═702172e9-59d7-4a77-b663-a89f66132a1f
@@ -1398,7 +1401,6 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═b097e128-a1df-44f0-8fb7-347d9317abfc
 # ╟─048a3a18-64c5-4ef3-9b25-23306e100dd2
 # ╠═9b4e88ad-2de3-4b8d-8a69-bbb8660cc293
-# ╠═71481fd5-b4d9-4c24-8eb5-9acc56ae382f
 # ╠═1a3ebfb8-47b8-41a3-b63d-875b03187a4e
 # ╟─5789cc7e-4a58-4a83-9f3a-87c982028c59
 # ╠═2813bdf7-9530-40a0-bdb5-ab1213f54b31
