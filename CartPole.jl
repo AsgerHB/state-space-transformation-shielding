@@ -266,7 +266,7 @@ end
 end
 
 # ╔═╡ b345bb20-15ee-4db5-865e-d99952a64f02
-random_policy = _ -> rand((left, right, right, right, right, right, right, right, right, right, right, right, right, right, right, right, right, right, right, right, right, right, right, right, right, right, right))
+random_policy = _ -> rand((left, right))
 
 # ╔═╡ a30b08af-8584-481e-930c-793db7ee97d4
 picked_right_last = false
@@ -414,16 +414,16 @@ end
 function P1(x, x_vel)
 	# Learned for x-safety only (high-resolution shield)
 	# 1st degree polynomial.
-	# 1.1576428742879741e-16 - 1.3323889308715684*x - x_vel
+	1.1576428742879741e-16 - 1.3323889308715684*x - x_vel
 
-	# 4th degree polynomial.
-	#4.477364352214748e-17 - 1.117327466419795*x + 5.895507231320874e-17*x^2 - 0.0630681740594013*x^3 - 5.318238711511679e-18*x^4 - x_vel
+	# 3rd degree polynomial.
+	#-5.825994626151625e-16 - 1.2619650186305709*x + 2.1257671487621227e-17*x^2 - 0.06534525808753018*x^3 - x_vel
 
 	# 10th degree polynomial.
 	#1.533027510694019e-16 - 1.1876989831897111*x + 3.1522767529704323e-16*x^2 - 0.0011789582554770342*x^3 - 7.598423842747513e-16*x^4 - 0.02426712723791725*x^5 + 4.568548785183162e-16*x^6 + 0.007282019873774172*x^7 - 9.6422807357472e-17*x^8 - 0.0008798254171864366*x^9 + 6.889278808967192e-18*x^10 - x_vel
 
 	# Learned for xθ-safety
-	-2.1168409757996343e-16 - 0.45757222597230013*x + 6.961499988538256e-16*x^2 - 0.19858329583255419*x^3 - 1.852317696169052e-16*x^4 - x_vel
+	#-2.1168409757996343e-16 - 0.45757222597230013*x + 6.961499988538256e-16*x^2 - 0.19858329583255419*x^3 - 1.852317696169052e-16*x^4 - x_vel
 end
 
 # ╔═╡ 64be4f5a-97f6-49bc-b848-450506d9ceb1
@@ -749,8 +749,8 @@ grid_bounds = let
 		lower = Float64[-2.4, -5, -0.418, -3]
 		upper = Float64[ 2.4,  5,  0.418,  3]
 	else
-		lower = Float64[-2.4, -5, -0.418, -3]
-		upper = Float64[ 2.4,  5,  0.418,  3]
+		lower = Float64[-2.4, -10, -0.418, -3]
+		upper = Float64[ 2.4,  10,  0.418,  3]
 	end
 	Bounds(lower, upper)
 end
@@ -764,7 +764,7 @@ begin
 			elseif !concerned_with_angle && (i == 3 || i == 4)
 				continue
 			end
-			if l >= s[i]
+			if l ≈ s[i]
 				return false
 			end
 		end
@@ -774,7 +774,7 @@ begin
 			elseif !concerned_with_angle && (i == 3 || i == 4)
 				continue
 			end
-			if u <= s[i]
+			if u ≈ s[i]
 				return false
 			end
 		end
@@ -788,7 +788,7 @@ begin
 			elseif !concerned_with_angle && (i == 3 || i == 4)
 				continue
 			end
-			if l <= grid_bounds.lower[i]
+			if l ≈ grid_bounds.lower[i]
 				return false
 			end
 		end
@@ -798,7 +798,7 @@ begin
 			elseif !concerned_with_angle && (i == 3 || i == 4)
 				continue
 			end
-			if u >= grid_bounds.upper[i]
+			if u ≈ grid_bounds.upper[i]
 				return false
 			end
 		end
@@ -1307,10 +1307,10 @@ p4 = let
 			for ((x1, l), (x2, u)) in zip(upper_border, lower_border)
 			if x1 == x2]
 
-	p = Polynomials.fit((averaged_border |> unzip)..., polynomial_degree)
+	p = Polynomials.fit((lower_border[1:40] |> unzip)..., polynomial_degree)
 	@show p
 	
-	scatter!(averaged_border,
+	scatter!(lower_border[1:40],
 		color=colors.ASBESTOS,
 		markersize=2,
 		markerstrokewidth=0,
@@ -1331,6 +1331,12 @@ random_policy
 md"""
 ## Check Safety
 """
+
+# ╔═╡ 9fda178a-0fcd-49ad-b0b8-025523995691
+# ╠═╡ disabled = true
+#=╠═╡
+animate_sequence(shielded_trace)
+  ╠═╡ =#
 
 # ╔═╡ e2db38df-8347-4bf4-be27-d9ad19c96823
 function get_allowed(s::CartPoleState)
@@ -1399,12 +1405,6 @@ cart_pole_bounds
 
 # ╔═╡ 9bad8bb4-bfa1-47a3-821c-dd3448c3f534
 deaths, shielded_trace = check_safety(m, shielded_random_policy, 10; runs)
-
-# ╔═╡ 9fda178a-0fcd-49ad-b0b8-025523995691
-# ╠═╡ disabled = true
-#=╠═╡
-animate_sequence(shielded_trace)
-  ╠═╡ =#
 
 # ╔═╡ 3d63e8c3-6218-4eec-86de-698bb61d8f96
 let
