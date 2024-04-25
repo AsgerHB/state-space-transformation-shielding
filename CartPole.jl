@@ -32,6 +32,9 @@ begin
 	include("Shared Code/FlatUI.jl")
 end
 
+# ╔═╡ 5c808e32-0aa6-49ec-a7b1-d01e44aa48ea
+using Measures
+
 # ╔═╡ 2767663f-3ef8-44f5-81a2-8e480158266e
 md"""
 # Cart Pole Problem
@@ -80,6 +83,44 @@ begin
 		multi_field(names, types, defaults)
 	end
 end
+
+# ╔═╡ 319eff14-0f2e-458e-99b3-b3a64eccccee
+md"""
+### 🛠 `make_paper_friendly_figures` 
+Toggle: $(@bind make_paper_friendly_figures CheckBox(default=false))
+
+TODO: For some reason, this ruins the figures when they're imported in LaTeX :s
+"""
+
+# ╔═╡ 1d5aced4-a27a-4f3b-ab08-69b1a3b1559f
+begin
+	default_font = default(:fontfamily)
+	default_size = default(:size)
+	default_margin = default(:margin)
+end;
+
+# ╔═╡ 35c76906-f2dd-4f4d-af43-0fafe69d211b
+begin
+	paper_font = "Bookman Light" 	# https://gr-framework.org/fonts.html
+	paper_size = (300, 220)
+	paper_margin = 0mm
+end;
+
+# ╔═╡ 8172cdb6-b9a4-4afc-844f-245e5d951bb7
+theme_type = if make_paper_friendly_figures
+	Plots.default(fontfamily=paper_font)
+	Plots.default(size=paper_size)
+	Plots.default(margin=paper_margin)
+	"Paper-firendly it is!"
+else
+	Plots.default(fontfamily=default_font)
+	Plots.default(size=default_size)
+	Plots.default(margin=default_margin)
+	"Using Julia Plots defaults :-)"
+end
+
+# ╔═╡ e008fe83-3851-4061-9e5a-35e938a53ec1
+theme_type; plot(rand(1:10, 10), xlabel="θαβ ∪⋆", ylabel="asdf")
 
 # ╔═╡ 7dd5c185-2b95-4297-a36c-4e2ca38952ea
 md"""
@@ -1064,6 +1105,8 @@ show_grid = size(grid)[slice_axis_1] < 50 && size(grid)[slice_axis_2] < 50
 
 # ╔═╡ c7a4e65c-a907-468e-b31c-ce05393d41d5
 p3 = let
+	theme_type # reactivity
+	
 	if slice_axis_2 < slice_axis_1
 		sa1, sa2 = slice_axis_2, slice_axis_1
 	else
@@ -1168,7 +1211,10 @@ md"""
 """
 
 # ╔═╡ acbdbfe1-66e1-45d9-81d6-96a059aafb6f
-@bind polynomial_degree NumberField(1:24, default=1)
+@bind polynomial_degree NumberField(1:24, default=3)
+
+# ╔═╡ a54f79bb-a240-47e5-9f04-8b2674ac9be1
+@bind fit_to Select(["Averaged", "Upper", "Lower"])
 
 # ╔═╡ 7a0c307f-0015-4d82-a469-419d27f052f0
 # Fit to lower border.
@@ -1293,6 +1339,8 @@ end
 
 # ╔═╡ d73c2ee5-e8bf-4cc4-8855-d239224ba843
 p4 = let
+	theme_type # reactivity
+	
 	if slice_axis_2 < slice_axis_1
 		sa1, sa2 = slice_axis_2, slice_axis_1
 	else
@@ -1300,21 +1348,40 @@ p4 = let
 	end
 	
 	plot(p3)
-	lower_border = border_points(shield, 2, 3, slice) |> sort
-	upper_border = border_points(shield, 1, 3, slice) |> sort
+	lower_border = border_points(shield, 1, 3, slice) |> sort
+	upper_border = border_points(shield, 2, 3, slice) |> sort
 	
 	averaged_border = [(x1, (l + u)/2) 
 			for ((x1, l), (x2, u)) in zip(upper_border, lower_border)
 			if x1 == x2]
 
-	p = Polynomials.fit((lower_border[1:40] |> unzip)..., polynomial_degree)
+	to_fit_to = fit_to == "Upper" ? upper_border :
+				fit_to == "Lower" ? lower_border :
+				fit_to == "Averaged" ? averaged_border : error("whu? wha?")
+
+	p = Polynomials.fit((to_fit_to |> unzip)..., polynomial_degree)
 	@show p
 	
-	scatter!(lower_border[1:40],
-		color=colors.ASBESTOS,
-		markersize=2,
+	scatter!(upper_border,
+		color=colors.CONCRETE,
+		markersize=3,
+		marker=:utriangle,
 		markerstrokewidth=0,
-		label="average")
+		label="Upper")
+	
+	scatter!(averaged_border,
+		color=colors.CONCRETE,
+		markersize=3,
+		marker=:diamond,
+		markerstrokewidth=0,
+		label="Average")
+	
+	scatter!(lower_border,
+		color=colors.CONCRETE,
+		markersize=3,
+		marker=:dtriangle,
+		markerstrokewidth=0,
+		label="Lower")
 
 	plot!([(x, p(x)) 
 			for x in grid_bounds.lower[sa1]:granularity[sa1]/2:grid_bounds.upper[sa1]],
@@ -1431,15 +1498,21 @@ shielded_trace.states[end]
 # ╟─3115801b-0a07-4a44-a6b3-d1ab2b9c0775
 # ╠═cb6e988a-f263-11ee-1f3f-53192cebcad4
 # ╠═cd2df9dc-af72-4b37-b1ef-ff8a0dcb9e0f
+# ╠═5c808e32-0aa6-49ec-a7b1-d01e44aa48ea
 # ╟─a8aff15c-255d-498f-97dd-4c9c953ec662
+# ╟─319eff14-0f2e-458e-99b3-b3a64eccccee
+# ╠═1d5aced4-a27a-4f3b-ab08-69b1a3b1559f
+# ╠═35c76906-f2dd-4f4d-af43-0fafe69d211b
+# ╠═8172cdb6-b9a4-4afc-844f-245e5d951bb7
+# ╟─e008fe83-3851-4061-9e5a-35e938a53ec1
 # ╟─3fd479d1-c43a-4c6f-95f8-0c74a9ffbf18
 # ╟─7dd5c185-2b95-4297-a36c-4e2ca38952ea
+# ╠═35605d87-4c3a-49a9-93d1-a5fceede3653
 # ╠═b52604cc-e8bc-4b53-84ad-79cf019c1667
 # ╠═e1f217af-759a-4868-b0b2-6ce08de324ea
 # ╠═274e6f36-bcae-4232-9bb6-732f954aa4e5
 # ╠═788e089e-ded6-4ad7-9951-1d10a32a8295
 # ╠═86ab3957-129c-4c71-911d-a54fd80cfd2d
-# ╠═35605d87-4c3a-49a9-93d1-a5fceede3653
 # ╠═822b3f06-613a-4992-8baf-6450a405d961
 # ╠═d385483b-df9c-4e19-9071-815df436f7bc
 # ╠═0b7509e7-433b-41c7-a971-bfdb164c44a1
@@ -1560,7 +1633,8 @@ shielded_trace.states[end]
 # ╠═5b373e7a-6254-4fe4-bead-eababbd8f065
 # ╟─973fba84-d206-454c-a743-0d9eae296c28
 # ╠═acbdbfe1-66e1-45d9-81d6-96a059aafb6f
-# ╠═d73c2ee5-e8bf-4cc4-8855-d239224ba843
+# ╠═a54f79bb-a240-47e5-9f04-8b2674ac9be1
+# ╟─d73c2ee5-e8bf-4cc4-8855-d239224ba843
 # ╠═7a0c307f-0015-4d82-a469-419d27f052f0
 # ╠═25d88777-7351-4b9d-aae2-251bcb2cc11d
 # ╠═d76879a6-5fc1-4550-bdfe-520138a678d6
