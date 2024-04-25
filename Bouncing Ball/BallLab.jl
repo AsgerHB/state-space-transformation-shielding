@@ -17,7 +17,7 @@ end
 # ╔═╡ 9c8abfbc-a5f0-11ec-3a9b-9bfd0b447638
 begin
 	using Pkg
-	Pkg.activate(".")
+	Pkg.activate("..")
 	Pkg.develop("GridShielding")
 	using GridShielding
 	using Plots
@@ -27,7 +27,7 @@ begin
 	using PyCall
 	using JSON
 	using ProgressLogging
-	include("Shared Code/FlatUI.jl")
+	include("../Shared Code/FlatUI.jl")
 end
 
 # ╔═╡ c663a860-4562-4de0-9b08-edc041cde9e6

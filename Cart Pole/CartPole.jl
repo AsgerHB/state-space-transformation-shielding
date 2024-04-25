@@ -17,7 +17,7 @@ end
 # ╔═╡ cb6e988a-f263-11ee-1f3f-53192cebcad4
 begin
 	using Pkg
-	Pkg.activate(".")
+	Pkg.activate("..")
 	Pkg.develop("GridShielding")
 	using GridShielding
 	using OrdinaryDiffEq
@@ -29,7 +29,7 @@ begin
 	using StaticArrays
 	using Polynomials
 	using Unzip
-	include("Shared Code/FlatUI.jl")
+	include("../Shared Code/FlatUI.jl")
 end
 
 # ╔═╡ 5c808e32-0aa6-49ec-a7b1-d01e44aa48ea
