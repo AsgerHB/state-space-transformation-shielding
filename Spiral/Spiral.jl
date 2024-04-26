@@ -762,7 +762,7 @@ let
 	shield_so = "spiral_shield_altered_state_space.so"
 	shield_so = joinpath(target_dir, shield_so)
 	
-	get_libshield(shield; destination=shield_so, force=true)
+	get_libshield(a_shield; destination=shield_so, force=true)
 	
 	"Exported `'$shield_so'`." |> Markdown.parse
 end

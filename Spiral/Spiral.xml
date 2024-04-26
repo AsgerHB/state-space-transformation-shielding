@@ -170,6 +170,9 @@ Rock5 = Rock(-1.2, -0.4, 0.1);
 system Agent, Metronome, Rock1, Rock2, Rock3, Rock4, Rock5;
 </system>
 	<queries>
+		<option key="--discretization" value="0.001"/>
+		<option key="--truncation-time-error" value="0.001"/>
+		<option key="--truncation-error" value="0.001"/>
 		<query>
 			<formula>simulate[&lt;=100;1] {x1, x2}</formula>
 			<comment>There's no way to plot one value as a function of the other, but these values should describe a sine and cosine curve, respectively.</comment>
@@ -184,6 +187,10 @@ system Agent, Metronome, Rock1, Rock2, Rock3, Rock4, Rock5;
 		</query>
 		<query>
 			<formula>Pr[&lt;=100;100] (&lt;&gt; unsafe_state_entered)</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>Pr[&lt;=100;100] (&lt;&gt; collisions &gt; 0)</formula>
 			<comment/>
 		</query>
 	</queries>
