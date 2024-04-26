@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>// Place global declarations here.
+
+urgent broadcast chan rock_collision;
+broadcast chan choose;
+int collisions = 0;
+clock x1 = 1.5;
+clock x2 = 0;
+
+typedef int[0, 2] action_t;
+const action_t STAY_COURSE = 0;
+const action_t MOVE_OUT = 1;
+const action_t MOVE_IN = 2;
+
+const double SPEED = 0.2;
+const double DELTA = 0.05;
+
+void take_action(action_t a) {
+    double angle = atan2(x1, x2);
+    double radius = sqrt(x1*x1 + x2*x2);
+    if (a == MOVE_OUT)
+        radius = (1 + (SPEED * DELTA)) * radius;
+    else if (a == MOVE_IN)
+        radius = (1 - (SPEED * DELTA)) * radius;
+    else if (a == STAY_COURSE)
+        radius = radius;
+    x1 = radius * sin(angle);
+    x2 = radius * cos(angle);
+}
+
+double distance(double p1, double p2, double q1, double q2) {
+    double x1 = p1 - q1;
+    double x2 = p2 - q2;
+    return sqrt(x1*x1 + x2*x2);
+}
+
+/** Shielding **/
+
+import "/home/asger/Documents/Files/Arbejde/AAU/Artikler/Physics-guided Dimensionality Reduction/Spiral/spiral_shield_altered_state_space.so"
+{
+    int get_value(double angle, double radius);
+};
+
+typedef struct {
+    bool stay_course;
+    bool move_out;
+    bool move_in;
+} allowed_actions_t;
+
+allowed_actions_t allowed;
+
+allowed_actions_t intToActions(int bitarray) {
+    allowed_actions_t result = { 
+        (0 != (bitarray &amp; (1 &lt;&lt; 0))),
+        (0 != (bitarray &amp; (1 &lt;&lt; 1))),
+        (0 != (bitarray &amp; (1 &lt;&lt; 2)))
+    };
+    return result;
+}
+
+bool unsafe_state_entered = 0;
+
+int debug1 = get_value(1.5, 1.5);
+allowed_actions_t debug2;
+double debog3;
+double debug4;
+
+allowed_actions_t get_allowed(double x1, double x2) {
+    double angle = atan2(x1, x2);
+    double radius = sqrt(x1*x1 + x2*x2);
+    allowed_actions_t allowed = intToActions(get_value(angle, radius));
+    allowed_actions_t any = {true, true, true};
+    debug2 = allowed;
+    debog3 = angle;
+    debug4 = radius;
+    if (!allowed.stay_course &amp;&amp; !allowed.move_in &amp;&amp; !allowed.move_out) {
+        unsafe_state_entered = true;
+        return any;
+    }
+    return allowed;
+}
+</declaration>
+	<template>
+		<name>Metronome</name>
+		<declaration>clock x;</declaration>
+		<location id="id0" x="0" y="0">
+			<label kind="invariant" x="-10" y="17">x &lt;= 1 &amp;&amp;
+x' == 1.0/DELTA</label>
+		</location>
+		<init ref="id0"/>
+		<transition id="id1">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="guard" x="-25" y="-110">x == 1</label>
+			<label kind="synchronisation" x="-25" y="-93">choose!</label>
+			<label kind="assignment" x="-25" y="-127">x = 0</label>
+			<nail x="42" y="-59"/>
+			<nail x="-42" y="-59"/>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">Rock</name>
+		<parameter>double y1, double y2, double radius</parameter>
+		<declaration>// Place local declarations here.
+</declaration>
+		<location id="id2" x="0" y="0">
+		</location>
+		<init ref="id2"/>
+		<transition id="id3">
+			<source ref="id2"/>
+			<target ref="id2"/>
+			<label kind="guard" x="102" y="-42">distance(x1, x2, y1, y2) &lt; radius</label>
+			<label kind="synchronisation" x="102" y="-25">rock_collision!</label>
+			<label kind="assignment" x="102" y="0">collisions++, x1 = 1.5, x2 = 0</label>
+			<nail x="85" y="-42"/>
+			<nail x="85" y="42"/>
+		</transition>
+	</template>
+	<template>
+		<name>Agent</name>
+		<location id="id4" x="0" y="170">
+			<name x="8" y="136">Choose</name>
+			<urgent/>
+		</location>
+		<location id="id5" x="0" y="8">
+			<name x="17" y="0">Wait</name>
+			<label kind="invariant" x="-34" y="-51">x1' == -x2 &amp;&amp;
+x2' == x1</label>
+		</location>
+		<init ref="id5"/>
+		<transition id="id6">
+			<source ref="id4"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-195" y="93">allowed.stay_course</label>
+			<nail x="-17" y="85"/>
+		</transition>
+		<transition id="id7">
+			<source ref="id4"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-263" y="195">allowed.move_in</label>
+			<label kind="assignment" x="-263" y="178">take_action(MOVE_IN)</label>
+			<nail x="-263" y="170"/>
+			<nail x="-263" y="8"/>
+		</transition>
+		<transition id="id8">
+			<source ref="id4"/>
+			<target ref="id5"/>
+			<label kind="guard" x="25" y="187">allowed.move_out</label>
+			<label kind="assignment" x="25" y="170">take_action(MOVE_OUT)</label>
+			<nail x="323" y="170"/>
+			<nail x="323" y="8"/>
+		</transition>
+		<transition id="id9" controllable="false">
+			<source ref="id5"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="25" y="76">choose?</label>
+			<label kind="assignment" x="17" y="42">allowed = get_allowed(x1, x2)</label>
+			<nail x="8" y="76"/>
+		</transition>
+	</template>
+	<system>// Place template instantiations here.
+Rock1 = Rock(0, 0, 0.1);
+Rock2 = Rock(1.2, 1.2, 0.1);
+Rock3 = Rock(-0.5, 0.7, 0.1);
+Rock4 = Rock(1.4, -0.7, 0.1);
+Rock5 = Rock(-1.2, -0.4, 0.1);
+// List one or more processes to be composed into a system.
+system Agent, Metronome, Rock1, Rock2, Rock3, Rock4, Rock5;
+</system>
+	<queries>
+		<query>
+			<formula>simulate[&lt;=100;1] {x1, x2}</formula>
+			<comment>There's no way to plot one value as a function of the other, but these values should describe a sine and cosine curve, respectively.</comment>
+		</query>
+		<query>
+			<formula>simulate[&lt;=100;1] {atan2(x1, x2), sqrt(x1*x1 + x2*x2)}</formula>
+			<comment>Angle, Radius</comment>
+		</query>
+		<query>
+			<formula>simulate[&lt;=100;1] {distance(x1, x2, Rock2.y1, Rock2.y2), collisions}</formula>
+			<comment>Sanity check: Distance to the middle rock should be the same as radius</comment>
+		</query>
+		<query>
+			<formula>Pr[&lt;=100;100] (&lt;&gt; unsafe_state_entered)</formula>
+			<comment/>
+		</query>
+	</queries>
+</nta>

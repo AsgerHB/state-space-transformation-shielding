@@ -58,6 +58,9 @@ const δ = 0.05  # time step
 # ╔═╡ ec77c85b-f27e-406b-98c3-5efbb8fa860a
 const speed = 0.2
 
+# ╔═╡ acd8f481-ba99-42cf-b95a-8c175b996e1d
+1/δ
+
 # ╔═╡ cb7fdd55-db5c-40ae-938c-0f3dd2b26b59
 # simulation
 r0 = 1.5  # initial radius
@@ -284,37 +287,6 @@ size(grid)
 # ╔═╡ 3c15b3dc-d3f0-4a0c-89cd-da2bbd6e4865
 size(grid) |> prod
 
-# ╔═╡ 74bebc78-c912-4ac8-9c94-1f85838e836b
-begin
-	shieldlabels = 	[
-		"{$(join(int_to_actions(Action, i), ", "))}"
-		for i in no_action:any_action]
-	shieldcolors = 
-		[colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.PETER_RIVER, colors.CARROT, colors.EMERALD, colors.PUMPKIN, colors.CLOUDS]
-	(;shieldcolors, shieldlabels)
-end
-
-# ╔═╡ 332ac25d-b07f-40ee-ab7d-e6cdfb2d075f
-begin
-	draw(grid;
-		aspectratio=:equal,
-		legend=:outerright,
-		size=(800, 600),
-		clim=(no_action, any_action),
-		colors=shieldcolors, 
-		color_labels=shieldlabels,)
-
-	#draw_barbaric_transition!(simulation_model, partition, action)
-	
-	
-	plot!(rocks, 
-		seriestype=:shape,
-		color=colors.CONCRETE,
-		linewidth=0,
-		label=nothing)
-	
-end
-
 # ╔═╡ 5084de0e-e5e8-435b-9264-d858362957fb
 action = stay_course
 
@@ -343,6 +315,44 @@ reachability_function_precomputed = get_transitions(reachability_function, Actio
 
 # ╔═╡ 398ce525-47fc-494a-ad4c-312b6c49c566
 shield, max_steps_reached = make_shield(reachability_function_precomputed, Action, grid; max_steps)
+
+# ╔═╡ 74bebc78-c912-4ac8-9c94-1f85838e836b
+begin
+	shieldlabels = 	[
+		"{$(join(int_to_actions(Action, i), ", "))}"
+		for i in no_action:any_action]
+	shieldcolors = 
+		[	colors.WET_ASPHALT, 
+			colors.CONCRETE, 
+			colors.POMEGRANATE, 
+			colors.ORANGE, 
+			colors.PETER_RIVER,
+			colors.WISTERIA,
+			colors.SUNFLOWER,
+			colors.CLOUDS]
+	(;shieldcolors, shieldlabels)
+end
+
+# ╔═╡ 332ac25d-b07f-40ee-ab7d-e6cdfb2d075f
+begin
+	draw(grid;
+		aspectratio=:equal,
+		legend=:outerright,
+		size=(800, 600),
+		clim=(no_action, any_action),
+		colors=shieldcolors, 
+		color_labels=shieldlabels,)
+
+	#draw_barbaric_transition!(simulation_model, partition, action)
+	
+	
+	plot!(rocks, 
+		seriestype=:shape,
+		color=colors.CONCRETE,
+		linewidth=0,
+		label=nothing)
+	
+end
 
 # ╔═╡ 9ea2e239-00f8-4517-aeac-566415a5fa8a
 begin
@@ -511,6 +521,9 @@ draw(a_shield;
 		colors=shieldcolors, 
 		color_labels=shieldlabels,)
 
+# ╔═╡ 6c3550be-a891-4019-a97d-d4f28e3b1912
+get_value(box(a_shield, 1.5, 1.5))
+
 # ╔═╡ 98822937-709b-4654-b3dc-e23342d28f0f
 if a_max_steps_reached
 md"""
@@ -525,7 +538,11 @@ md"""
 end
 
 # ╔═╡ e1a91b83-07d3-48f0-9c25-e27f3ce0258f
-function draw_function(policy::Function, x_min, x_max, y_min, y_max, G; plotargs...)
+function draw_function(policy::Function, x_min, x_max, y_min, y_max, G; 
+	colors=[],
+	color_labels=[],
+	plotargs...)
+	
 	size_x, size_y = Int((x_max - x_min)/G), Int((y_max - y_min)/G)
 	matrix = Matrix(undef, size_x, size_y)
 	for i in 1:size_x
@@ -541,17 +558,36 @@ function draw_function(policy::Function, x_min, x_max, y_min, y_max, G; plotargs
 	plot(;plotargs...)
 	heatmap!(x_tics, y_tics, transpose(matrix);
 			plotargs...)
+
+	# Show labels
+	if length(color_labels) > 0
+		if length(color_labels) != length(colors)
+			throw(ArgumentError("Length of argument color_labels does not match  number of colors."))
+		end
+		for (color, label) in zip(colors, color_labels)
+			# Apparently shapes are added to the legend even if the list is empty
+		    plot!(Float64[], Float64[], seriestype=:shape, 
+		        label=label, color=color)
+		end
+	end
 end
 
 # ╔═╡ ee3c081b-9bc1-4dfc-b056-620eb305b4cd
 let
 	l, u = grid.bounds.lower, grid.bounds.upper
 	
-	draw_function(x -> get_value(box(a_shield, f(x))), l[1], u[1], l[2], u[2], 0.01,
+	📈  = draw_function(x -> get_value(box(a_shield, f(x))), 
+			l[1], u[1], l[2], u[2], 0.05;
 			color=shieldcolors,
+			xticks=-2:1:2,
+			yticks=-2:1:2,
 			xlabel="x1",
 			ylabel="x2",
 			ratio=1,
+			size=(800, 600),
+			legend=:outerright,
+			colors=shieldcolors, 
+			color_labels=shieldlabels,
 			colorbar=nothing)
 	
 	plot!(rocks, 
@@ -559,7 +595,14 @@ let
 		color=colors.CONCRETE,
 		linewidth=0,
 		label=nothing)
-	
+
+	lens!(📈, [-0.5, 1], [0, 1]; 
+		inset=(1, bbox(0.6, 0.6, 0.2, 0.2)),
+		xticks=-2:1:2,
+		yticks=-2:1:2,
+		cbar=nothing)
+
+	plot!()
 end
 
 # ╔═╡ a5b2aa32-8267-45da-8664-98ea3afe4671
@@ -645,10 +688,118 @@ function a_animate_sequence(trace::SpiralTrace)
 end
 
 # ╔═╡ 875fe159-8fb4-437b-a327-3e2129957484
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	
 	a_animate_sequence(a_shielded_trace)
 
+end
+  ╠═╡ =#
+
+# ╔═╡ f47335e6-999d-449d-bf95-1f184b898042
+md"""
+# Exporting the Shield
+"""
+
+# ╔═╡ e514a65b-eb40-4193-92cd-406273e43d9b
+@bind target_dir TextField(95, default=mktempdir())
+
+# ╔═╡ 3b0d8736-713c-4fde-85db-7cfb239c45fe
+target_dir; @bind open_folder_button CounterButton("Open Folder")
+
+# ╔═╡ 551adaa4-3c3c-47a1-a263-db3fefcaf4f0
+if open_folder_button > 0
+	run(`nautilus $target_dir`, wait=false)
+end; "This cell opens `$target_dir` in nautilus"
+
+# ╔═╡ 04d7c2d6-fb7c-4329-b349-0d8563c8cde8
+md"""
+### Export as serialized julia-tuple
+
+Easy export and import between julia code.
+"""
+
+# ╔═╡ ab11ba27-c11f-41cb-8266-9b8c9e39008a
+let
+	filename = "Spiral - Standard State Space.shield"
+	
+	robust_grid_serialization(joinpath(target_dir, filename), shield)
+	
+	"Exported `'$filename'`." |> Markdown.parse
+end
+
+# ╔═╡ c58c5add-cca1-4102-a71a-af82e3115993
+let
+	filename = "Spiral - Altered State Space.shield"
+	
+	robust_grid_serialization(joinpath(target_dir, filename), a_shield)
+	
+	"Exported `'$filename'`." |> Markdown.parse
+end
+
+# ╔═╡ fe28308c-829d-4b9d-a821-9f2aba4204aa
+md"""
+### Export as a function in a shared-object library
+
+Use this library to access the shield from C and C++ code.
+
+The shield is compiled into a shared-object binary, which exports the function `int get_value(double v, double p)`. It takes the state-variables as input and returns the bit-encoded list of allowed actions. (See `int_to_actions`.)
+"""
+
+# ╔═╡ 35079353-ac6d-4c09-b25f-cdcaf526c914
+let
+	shield_so = "spiral_shield_standard_state_space.so"
+	shield_so = joinpath(target_dir, shield_so)
+	
+	get_libshield(shield; destination=shield_so, force=true)
+	
+	"Exported `'$shield_so'`." |> Markdown.parse
+end
+
+# ╔═╡ abefb2a8-19fd-4c92-a81a-b0513572b756
+let
+	shield_so = "spiral_shield_altered_state_space.so"
+	shield_so = joinpath(target_dir, shield_so)
+	
+	get_libshield(shield; destination=shield_so, force=true)
+	
+	"Exported `'$shield_so'`." |> Markdown.parse
+end
+
+# ╔═╡ e5f19917-868f-41f0-8873-6eef2d40bfaf
+md"""
+### Export to Numpy
+
+Exports a zip-file containing a serialized numpy-array along with a JSON file with details on how to read it.
+"""
+
+# ╔═╡ 46e15850-9632-4232-9d8f-05f3a9cb4832
+let
+
+	meta_info = (;variables=["x1", "x2"], 
+		actions=Action,
+		env_id="Bouncing Ball")
+	
+	filename = "Spiral Shield - Standard State Space.zip"
+	
+	numpy_zip_file(shield, joinpath(target_dir, filename); meta_info...)
+	
+	"Exported `'$filename'`." |> Markdown.parse
+end
+
+# ╔═╡ 852cb308-c800-42ee-9412-412fe9b9a05e
+let
+
+	meta_info = (;variables=["angle", "radius"], 
+		actions=Action,
+		env_id="Bouncing Ball")
+	
+	filename = "Spiral Shield - Altered State Space.zip"
+	
+	numpy_zip_file(a_shield, joinpath(target_dir, filename); meta_info...)
+	
+	"Exported `'$filename'`." |> Markdown.parse
 end
 
 # ╔═╡ Cell order:
@@ -660,6 +811,7 @@ end
 # ╠═d355823b-cc1c-40b9-96e0-a09cd79be7ff
 # ╠═52be2607-df01-458b-898e-901406747e3e
 # ╠═ec77c85b-f27e-406b-98c3-5efbb8fa860a
+# ╠═acd8f481-ba99-42cf-b95a-8c175b996e1d
 # ╠═cb7fdd55-db5c-40ae-938c-0f3dd2b26b59
 # ╠═9c3302dc-c01c-46f4-b9fd-42b4f3f7dd61
 # ╠═61fa2c7c-4c61-4b6c-9db1-f35c011df04a
@@ -689,7 +841,6 @@ end
 # ╠═0f42e2d4-6446-401e-a062-b5aa893e9ac5
 # ╠═1c429eaf-f72f-4197-8242-12f41db29f81
 # ╠═3c15b3dc-d3f0-4a0c-89cd-da2bbd6e4865
-# ╠═74bebc78-c912-4ac8-9c94-1f85838e836b
 # ╟─332ac25d-b07f-40ee-ab7d-e6cdfb2d075f
 # ╠═5084de0e-e5e8-435b-9264-d858362957fb
 # ╠═1ce94535-be9e-4f07-b0f3-062509540516
@@ -700,6 +851,7 @@ end
 # ╠═d5d84407-294d-4247-b00f-291530edf099
 # ╠═af490584-bd8c-4e03-a64b-32bab91afc33
 # ╠═398ce525-47fc-494a-ad4c-312b6c49c566
+# ╠═74bebc78-c912-4ac8-9c94-1f85838e836b
 # ╟─9ea2e239-00f8-4517-aeac-566415a5fa8a
 # ╟─4bf2b834-15a3-4d1a-8314-8b851a9ca33b
 # ╠═8bb0f2ad-5802-492d-b209-158d35b66a18
@@ -728,6 +880,7 @@ end
 # ╠═4663c31a-bede-45af-876d-8650f2a5125a
 # ╠═cc8226c6-1a47-4050-af50-5c8ca7f7a3a9
 # ╟─351e2fb7-70d9-4c5e-81d5-6ba651c490e8
+# ╠═6c3550be-a891-4019-a97d-d4f28e3b1912
 # ╟─98822937-709b-4654-b3dc-e23342d28f0f
 # ╠═e1a91b83-07d3-48f0-9c25-e27f3ce0258f
 # ╠═ee3c081b-9bc1-4dfc-b056-620eb305b4cd
@@ -740,3 +893,16 @@ end
 # ╠═d2427d85-7e20-4d2e-865c-2c582f65fe87
 # ╠═9ce546c6-361d-4186-b585-2534d38614b6
 # ╠═875fe159-8fb4-437b-a327-3e2129957484
+# ╟─f47335e6-999d-449d-bf95-1f184b898042
+# ╠═e514a65b-eb40-4193-92cd-406273e43d9b
+# ╟─3b0d8736-713c-4fde-85db-7cfb239c45fe
+# ╟─551adaa4-3c3c-47a1-a263-db3fefcaf4f0
+# ╟─04d7c2d6-fb7c-4329-b349-0d8563c8cde8
+# ╠═ab11ba27-c11f-41cb-8266-9b8c9e39008a
+# ╠═c58c5add-cca1-4102-a71a-af82e3115993
+# ╟─fe28308c-829d-4b9d-a821-9f2aba4204aa
+# ╠═35079353-ac6d-4c09-b25f-cdcaf526c914
+# ╠═abefb2a8-19fd-4c92-a81a-b0513572b756
+# ╟─e5f19917-868f-41f0-8873-6eef2d40bfaf
+# ╠═46e15850-9632-4232-9d8f-05f3a9cb4832
+# ╠═852cb308-c800-42ee-9412-412fe9b9a05e

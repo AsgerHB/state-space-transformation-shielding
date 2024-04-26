@@ -15,7 +15,19 @@ macro bind(def, element)
 end
 
 # ╔═╡ cb6e988a-f263-11ee-1f3f-53192cebcad4
-begin
+beginvoid take_action(action_t action) {
+    double theta = atan2(x1, x2);
+    double radius = sqrt(x1^2 + x2^2);
+	if (a == MOVE_OUT)
+    	radius = (1 + (speed * δ)) * radius;
+	elseif (a == MOVE_IN)
+    	radius = (1 - (speed * δ)) * radius;
+	elseif (a == STAY_COURSE)
+		radius = radius;
+    
+	x1 = radius * sin(theta);
+	x2 = radius * cos(theta);
+}
 	using Pkg
 	Pkg.activate("..")
 	Pkg.develop("GridShielding")

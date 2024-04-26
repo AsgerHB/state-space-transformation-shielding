@@ -122,43 +122,26 @@ end
 @bind gradient Select([[:black, :deepskyblue, :white], :heat, :matter, :curl, :dense, :phase, :algae])
 
 # ╔═╡ cad96c13-e9fa-45ae-b046-f976ae2ee901
-p2 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
+p2 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.01,
 	color=cgrad(gradient, 10, categorical=false),
 	xlabel="Velocity (m/s)",
 	ylabel="Position (m)",
 	colorbar_title="Mechanical Energy (J)")
 
 # ╔═╡ 490abcb1-80ea-4bbe-9b4f-b8133d22d9dd
-p1 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
-	color=cgrad(gradient, 10, categorical=true),
+p1 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.01 ,
+	color=cgrad(gradient, 20, categorical=true),
 	xlabel="Velocity (m/s)",
 	ylabel="Position (m)",
 	colorbar_title="Mechanical Energy (J)")
 
-# ╔═╡ 00c40a94-4165-4fec-b7f4-edd531b3044c
-p3 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
-		color=cgrad(gradient, 10, categorical=true))
-
-# ╔═╡ 6b442e46-afc3-4b01-9205-7826f192f5c8
- p4 = begin 
-	 draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.05,
-		color=cgrad(gradient, 10, categorical=true),
-		xlabel="Velocity (m/s)",
-		ylabel="Position (m)",
-		colorbar_title="Mechanical Energy (J)");
-	 plot!(Shape([(-4, 4), (-4, 10), (15, 10), (15, 4)]), alpha=0.3, color=colors.EMERALD, label="Possible to hit")
- end
-
 # ╔═╡ 2556f5de-5e22-4f88-b4bf-f3f4c87d06be
-p1, p2, p3, p4; @bind ExportButton CounterButton("Export")
+p1, p2; @bind ExportButton CounterButton("Export")
 
 # ╔═╡ 3cfe65d2-7f6b-47c9-9c5f-ebc09229a2e6
 if ExportButton > 0 let
-	png(p1, "Graphics/BB Mechanical Energy Grouped.png")
-	png(p2, "Graphics/BB Mechanical Energy Smooth.png")
-	png(p3, "Graphics/BB Mechanical Energy Grouped - No Axis Labels.png")
-	png(p4, "Graphics/Possible to Hit.png")
-	png(p5, "Graphics/Energy Gain on Swing.png")
+	Plots.svg(p1, "../Graphics/Bouncing Ball/BB Mechanical Energy Grouped.svg")
+	Plots.svg(p2, "../Graphics/Bouncing Ball/BB Mechanical Energy Smooth.svg")
 end end
 
 # ╔═╡ b527f190-ff38-48d3-97ae-aeeed8fdd273
@@ -703,84 +686,6 @@ shield, max_steps_reached = make_shield(reachability_function_precomputed, BB.Ac
 # ╔═╡ a3e566e8-6b31-4d07-a2b9-b3b90f178d63
 Bounds(box(shield, π(7, 0)))
 
-# ╔═╡ 021e2fb4-1760-4421-916b-fb2ef306cb13
-shield_plot_new_statespace = let
-	
-	partition = box(shield, π(v, p))
-
-	slice::Vector{Any} = partition.indices
-	slice[1] = slice[2] = Colon()
-	
-	p1 = draw(shield, [:, :, 2],
-		title=π_zlabel,
-		xlabel=π_xlabel,
-		ylabel=π_ylabel,
-		colors=bbshieldcolors, 
-		color_labels=bbshieldlabels,
-		legend=nothing)
-
-	p2 = draw(shield, [:, :, 1],
-		title="not $π_zlabel",
-		xlabel=π_xlabel,
-		ylabel=π_ylabel,
-		colors=bbshieldcolors, 
-		color_labels=bbshieldlabels,
-		legend=:topright)
-
-	if show_point
-		## Reachable partitions ##
-		π_point = π(v, p)
-
-		p2 = plot(p2)
-		plot!([], seriestype=:shape, 
-			color=colors.PETER_RIVER,
-			opacity=0.3,
-			label="reachable")
-
-		## Barbaric sampling endpoints ##
-		points = BruteForceSampler(partition, global_supporting_points)
-		left = []
-		right = []
-		for p in points
-			for r in SupportingPoints(samples_per_random_axis, Bounds((0,), (1,)))
-				p′ = π(BB.simulate_point(m, p, r, action)...)
-				if p′[3] == 1
-					push!(left, (p′[1], p′[2]))
-				else
-					push!(right, (p′[1], p′[2]))
-				end
-			end
-		end
-		if length(left) > 0
-			p1 = plot(p1)
-			
-			scatter!(left |> unzip,
-				marker=(1, colors.PETER_RIVER, :circle),
-				markerstrokewidth=0,
-				label="Barbaric sample endpoints")
-		end
-
-		if length(right) > 0
-			p2 = plot(p2)
-			
-			scatter!(right |> unzip,
-				marker=(1, colors.PETER_RIVER, :circle),
-				markerstrokewidth=0,
-				label="Barbaric sample endpoints")
-		end
-
-		## The actual point ##
-		if π(v, p)[3] == 1 p1 = plot(p1) else p2 = plot(p2) end
-		
-		scatter!([π_point[1]], [π_point[2]],
-			marker=(5, colors.EMERALD, :circle),
-			markerstrokewidth=0,
-			label="(v, p)")
-	end
-
-	plot(p1, p2, size=(800, 400))
-end
-
 # ╔═╡ e247dfa7-6000-4df1-8a28-328463e32c49
 length(shield)
 
@@ -803,39 +708,6 @@ reachable = boundsify.(reachability_function(partition, action))
 
 # ╔═╡ 7f4b10fe-bed4-4f0a-bc4e-0a6f0d0ca8f1
 reachable′ = boundsify.(reachability_function′(partition, action))
-
-# ╔═╡ a566b33b-7005-43c3-afce-b8793447f615
-shield_plot_old_statespace = let
-	draw_function(s -> box(shield, π(s...)) |> get_value, -15, 15, 0, 10, 0.05,
-		color=cgrad([colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS], 10, categorical=true),
-		xlabel="Velocity (m/s)",
-		ylabel="Position (m)",
-		colorbar=nothing)
-
-	plot!([], seriestype=:shape, color=colors.WET_ASPHALT, label="{}")
-	plot!([], seriestype=:shape, color=colors.AMETHYST, label="{hit}")
-	plot!([], seriestype=:shape, color=colors.CLOUDS, label="{hit, nohit}")
-
-	if show_point
-		points = BruteForceSampler(partition, global_supporting_points)
-		barbaric_sample_endpoints = []
-		for p in points
-			for r in SupportingPoints(samples_per_random_axis, Bounds((0,), (1,)))
-				push!(barbaric_sample_endpoints, BB.simulate_point(m, p, r, action))
-			end
-		end
-		scatter!(barbaric_sample_endpoints |> unzip,
-			marker=(1, colors.PETER_RIVER, :circle),
-			markerstrokewidth=0,
-			label="Barbaric sample endpoints")
-		
-		scatter!([v], [p],
-			marker=(5, colors.EMERALD, :circle),
-			markerstrokewidth=0,
-			label="(v, p)")
-	end
-	plot!()
-end
 
 # ╔═╡ 5b65f23f-ecd1-4911-98e8-57a582cdb4d3
 bounds = Bounds(partition)
@@ -1082,27 +954,187 @@ let
 	"Exported `'$filename'`." |> Markdown.parse
 end
 
+# ╔═╡ 1cce35be-253e-4e75-8f0f-fdf1aed9799d
+let
+	filename = "shield.zip"
+	
+	numpy_zip_file(shield, joinpath(target_dir, filename); 
+		variables=[π_xlabel_simple, π_ylabel_simple, π_zlabel_simple], 
+		binary_variables=[3], 
+		actions=BB.Action, 
+		env_id="Bouncing Ball")
+	
+	"Exported `'$filename'`." |> Markdown.parse
+end
+
+# ╔═╡ b62de837-53d8-4e61-97a3-d629d9388165
+md"""
+# Make the Shield 'UPPAAL friendly'
+
+Alright, so. UPPAAL uses a Runge-Kutta implementation to approximate the differential equations. This is fine  for a lot of things, but it slightly violates the mechanical energy invariant. 
+
+Due to imprecision in the calculation of $v$ and $p$, the ball will sometimes appear to lose or gain energy. In some instances, this will bring it just under the threshold between having a safe amount of mechanical energy, and an unsafe amount.
+
+For this reason, the purple _must hit_ area is made to "drip downwards" to ensure that if the ball passes slightly below a _must hit_ partition, the partition below will also force the ball to be hit.
+
+This is a very specific hack to address an innacurate simulation of the state-space. I note that the shield is perfectly safe in this notebook, and that inspecting safety violations in UPPAAL yields traces that all go ever so slightly below the partition it was supposed to actually pass through.
+"""
+
+# ╔═╡ b55d3379-4a1d-40e4-a663-ec07c119df33
+shield; @bind make_uppaal_friendly_button CounterButton("Make UPPAAL Firendly")
+
+# ╔═╡ e1cc2426-a7fe-41c9-bfdc-6bbd64126123
+function make_uppaal_friendly!(shield::Grid)
+	must_hit = actions_to_int([BB.hit])
+	updates = []
+	for partition in shield
+		if get_value(partition) != must_hit continue end
+
+		# partition below
+		indices′ = partition.indices |> collect
+		indices′[1] -= 1
+		partition′ = Partition(shield, indices′)
+		
+		set_value!(partition′, must_hit)
+	end
+	return shield
+end
+
+# ╔═╡ 1bd93c52-5484-4364-82e3-0407fb6d0779
+begin
+	🎈1 = "reactivity"
+	if make_uppaal_friendly_button == 0
+		md"This cell makes the shield 'uppaal friendly'"
+	elseif make_uppaal_friendly_button == 1
+		make_uppaal_friendly!(shield)
+		md"Made the shield 'uppaal friendly'!"
+	elseif make_uppaal_friendly_button > 1
+		md"Already made the shield 'uppaal friendly'"
+	end
+end
+
+# ╔═╡ 021e2fb4-1760-4421-916b-fb2ef306cb13
+shield_plot_new_statespace = let
+	🎈1
+	
+	partition = box(shield, π(v, p))
+
+	slice::Vector{Any} = partition.indices
+	slice[1] = slice[2] = Colon()
+	
+	p1 = draw(shield, [:, :, 2],
+		title=π_zlabel,
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
+		colors=bbshieldcolors, 
+		color_labels=bbshieldlabels,
+		legend=nothing)
+
+	p2 = draw(shield, [:, :, 1],
+		title="not $π_zlabel",
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
+		colors=bbshieldcolors, 
+		color_labels=bbshieldlabels,
+		legend=:topright)
+
+	if show_point
+		## Reachable partitions ##
+		π_point = π(v, p)
+
+		p2 = plot(p2)
+		plot!([], seriestype=:shape, 
+			color=colors.PETER_RIVER,
+			opacity=0.3,
+			label="reachable")
+
+		## Barbaric sampling endpoints ##
+		points = BruteForceSampler(partition, global_supporting_points)
+		left = []
+		right = []
+		for p in points
+			for r in SupportingPoints(samples_per_random_axis, Bounds((0,), (1,)))
+				p′ = π(BB.simulate_point(m, p, r, action)...)
+				if p′[3] == 1
+					push!(left, (p′[1], p′[2]))
+				else
+					push!(right, (p′[1], p′[2]))
+				end
+			end
+		end
+		if length(left) > 0
+			p1 = plot(p1)
+			
+			scatter!(left |> unzip,
+				marker=(1, colors.PETER_RIVER, :circle),
+				markerstrokewidth=0,
+				label="Barbaric sample endpoints")
+		end
+
+		if length(right) > 0
+			p2 = plot(p2)
+			
+			scatter!(right |> unzip,
+				marker=(1, colors.PETER_RIVER, :circle),
+				markerstrokewidth=0,
+				label="Barbaric sample endpoints")
+		end
+
+		## The actual point ##
+		if π(v, p)[3] == 1 p1 = plot(p1) else p2 = plot(p2) end
+		
+		scatter!([π_point[1]], [π_point[2]],
+			marker=(5, colors.EMERALD, :circle),
+			markerstrokewidth=0,
+			label="(v, p)")
+	end
+
+	plot(p1, p2, size=(800, 400))
+end
+
+# ╔═╡ a566b33b-7005-43c3-afce-b8793447f615
+shield_plot_old_statespace = let
+	🎈1
+	draw_function(s -> box(shield, π(s...)) |> get_value, -15, 15, 0, 10, 0.05,
+		color=cgrad([colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS], 10, categorical=true),
+		xlabel="Velocity (m/s)",
+		ylabel="Position (m)",
+		colorbar=nothing)
+
+	plot!([], seriestype=:shape, color=colors.WET_ASPHALT, label="{}")
+	plot!([], seriestype=:shape, color=colors.AMETHYST, label="{hit}")
+	plot!([], seriestype=:shape, color=colors.CLOUDS, label="{hit, nohit}")
+
+	if show_point
+		points = BruteForceSampler(partition, global_supporting_points)
+		barbaric_sample_endpoints = []
+		for p in points
+			for r in SupportingPoints(samples_per_random_axis, Bounds((0,), (1,)))
+				push!(barbaric_sample_endpoints, BB.simulate_point(m, p, r, action))
+			end
+		end
+		scatter!(barbaric_sample_endpoints |> unzip,
+			marker=(1, colors.PETER_RIVER, :circle),
+			markerstrokewidth=0,
+			label="Barbaric sample endpoints")
+		
+		scatter!([v], [p],
+			marker=(5, colors.EMERALD, :circle),
+			markerstrokewidth=0,
+			label="(v, p)")
+	end
+	plot!()
+end
+
 # ╔═╡ fbe0e11d-a06b-41fe-b349-ccbcc66ffd3f
 begin
+	🎈1
 	shield_so = "shield.so"
 	shield_so = joinpath(target_dir, shield_so)
 	
 	get_libshield(shield; destination=shield_so, force=true)
 	
 	"Exported `'$shield_so'`." |> Markdown.parse
-end
-
-# ╔═╡ 1cce35be-253e-4e75-8f0f-fdf1aed9799d
-let
-	filename = "shield.zip"
-	
-	numpy_zip_file(shield, joinpath(target_dir, filename); 
-		variables=[π_xlabel, π_ylabel], 
-		binary_variables=[π_zlabel], 
-		actions=BB.Action, 
-		env_id="Bouncing Ball")
-	
-	"Exported `'$filename'`." |> Markdown.parse
 end
 
 # ╔═╡ 700c196c-dafe-4116-bac8-1024acee9642
@@ -1205,7 +1237,7 @@ end
 # ╔═╡ e2959cd8-f3da-4a81-a539-671a59b4ddb5
 begin
 	model_file′ = copy_and_replace(model_file, target_dir ⨝ "BB.xml", 
-		[r"/\*capture 1\*/.*/\*end 1\*/" => "import $shield_so"])
+		[r"/\*capture 1\*/.*/\* end 1\*/" => "import \"$shield_so\" "])
 end
 
 # ╔═╡ 80f08a4c-ba20-4408-853e-a694df474a02
@@ -1232,7 +1264,8 @@ query |> remove_single_line_breaks |> multiline
 @bind verifyta TextField(80, default=homedir() ⨝ "opt/uppaal-5.0.0-linux64/bin/verifyta")
 
 # ╔═╡ 572dac94-aded-44af-8855-8f2c9811f94d
-discretization = 0.01
+# 0.01 is the default.
+discretization = 0.005
 
 # ╔═╡ 7efc9685-1031-4882-8202-2fcd83a728d8
 @bind working_dir TextField(80, default=mktempdir())
@@ -1256,6 +1289,11 @@ if isfile(query_file) && isfile(model_file′)
 else
 	@info "not found" isfile(query_file) isfile(model_file′)
 end
+
+# ╔═╡ 1fee975e-294c-407e-ad1a-65f91c33fbd4
+md"""
+The first query should say `(1000/1000 runs) Pr([] …) in [0.996318,1] (95% CI)`, if the shield is safe.
+"""
 
 # ╔═╡ ab63a35f-b674-4de1-bb6c-04f45f034a1d
 output[1:min(10000, length(output))] |> multiline
@@ -1313,12 +1351,10 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═52b72834-46ea-44de-8b44-013c4574f2d2
 # ╠═b60a9495-7d59-4faa-a399-ac83a83d934d
 # ╠═c1a7ffdd-767d-418d-96af-f13b357e980e
-# ╟─cad96c13-e9fa-45ae-b046-f976ae2ee901
-# ╟─490abcb1-80ea-4bbe-9b4f-b8133d22d9dd
+# ╠═cad96c13-e9fa-45ae-b046-f976ae2ee901
+# ╠═490abcb1-80ea-4bbe-9b4f-b8133d22d9dd
 # ╠═2556f5de-5e22-4f88-b4bf-f3f4c87d06be
 # ╠═3cfe65d2-7f6b-47c9-9c5f-ebc09229a2e6
-# ╠═00c40a94-4165-4fec-b7f4-edd531b3044c
-# ╠═6b442e46-afc3-4b01-9205-7826f192f5c8
 # ╟─b527f190-ff38-48d3-97ae-aeeed8fdd273
 # ╠═ff60b015-12cf-478b-9a60-93a9b93d0f5f
 # ╠═d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
@@ -1375,7 +1411,7 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═fd928206-accf-44fc-8762-599fe34c26b6
 # ╠═22d05a23-bcad-4281-8303-5082a3d8e785
 # ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
-# ╠═021e2fb4-1760-4421-916b-fb2ef306cb13
+# ╟─021e2fb4-1760-4421-916b-fb2ef306cb13
 # ╟─a566b33b-7005-43c3-afce-b8793447f615
 # ╠═e247dfa7-6000-4df1-8a28-328463e32c49
 # ╠═702172e9-59d7-4a77-b663-a89f66132a1f
@@ -1406,6 +1442,10 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═2813bdf7-9530-40a0-bdb5-ab1213f54b31
 # ╠═fbe0e11d-a06b-41fe-b349-ccbcc66ffd3f
 # ╠═1cce35be-253e-4e75-8f0f-fdf1aed9799d
+# ╟─b62de837-53d8-4e61-97a3-d629d9388165
+# ╟─b55d3379-4a1d-40e4-a663-ec07c119df33
+# ╠═e1cc2426-a7fe-41c9-bfdc-6bbd64126123
+# ╠═1bd93c52-5484-4364-82e3-0407fb6d0779
 # ╟─700c196c-dafe-4116-bac8-1024acee9642
 # ╠═aefb7e86-276d-4536-9ea0-33487a5015a8
 # ╠═3071c7f7-4d77-45fb-866f-a27f76270284
@@ -1427,6 +1467,7 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═572dac94-aded-44af-8855-8f2c9811f94d
 # ╠═c2fad765-52d9-479e-a494-faf38736d58c
 # ╠═7efc9685-1031-4882-8202-2fcd83a728d8
+# ╟─1fee975e-294c-407e-ad1a-65f91c33fbd4
 # ╠═ab63a35f-b674-4de1-bb6c-04f45f034a1d
 # ╠═6f1a76ea-5eb7-4908-9edf-c47b7595f913
 # ╠═0038f63a-d7fc-4e48-a487-6aa97df100c5
