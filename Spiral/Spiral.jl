@@ -187,11 +187,29 @@ let
 	[1/(i - 2j) for j in 1:i]
 end
 
+# ╔═╡ 0a46d16c-e86d-443b-9001-6663a65ccccc
+# ╠═╡ disabled = true
+#=╠═╡
+function animate_sequence(trace::SpiralTrace; background=plot())
+	🎈1
+	🎥 = @animate for i in 1:length(trace.states)
+		
+		plot_trace(trace, i; background)
+	end
+	gif(🎥, fps=(1/δ)*2, show_msg=false)
+end
+  ╠═╡ =#
+
 # ╔═╡ b8b4af3d-9f66-4e3a-8845-0a45703bc82a
 random(_...) = rand([move_in, stay_course, move_out])
 
 # ╔═╡ cbe5bb1f-4a78-4185-9067-ddc7aa332be5
-trace = simulate_sequence(x0, random, 6)
+trace = simulate_sequence(x0, random, 5.8)
+
+# ╔═╡ f0b44048-4c9c-475f-87a4-9ff331885c32
+#=╠═╡
+animate_sequence(trace)
+  ╠═╡ =#
 
 # ╔═╡ 7557a054-9b6d-4858-ba82-1b613c362b4b
 md"""
@@ -255,28 +273,40 @@ function plot_trace(trace::SpiralTrace, i=nothing; background=plot())
 		label=nothing)
 	
 	scatter!([trace.states[i][1]], [trace.states[i][2]], 
-		color=colors.NEPHRITIS,
+		color=is_safe(trace.states[i]) ? colors.NEPHRITIS : colors.POMEGRANATE,
 		marker=:circle,
 		markersize=4,
 		markerstrokewidth=0,
 		label=nothing)
 end
 
-# ╔═╡ 0a46d16c-e86d-443b-9001-6663a65ccccc
-function animate_sequence(trace::SpiralTrace; background=plot())
-	🎈1
-	🎥 = @animate for i in 1:length(trace.states)
-		
-		plot_trace(trace, i; background)
-	end
-	gif(🎥, fps=(1/δ)*2, show_msg=false)
-end
-
-# ╔═╡ f0b44048-4c9c-475f-87a4-9ff331885c32
-animate_sequence(trace)
-
 # ╔═╡ b67bbfee-633d-4d8b-846f-6a63ec778f93
 plot_trace(trace)
+
+# ╔═╡ e26e0fca-5a6c-4d05-8eb2-df02e1ef15f3
+begin
+	plot_trace(trace)
+	
+	plot!(Rock((-0.2, -1.3), 0.15), 
+		label=nothing,
+		seriestype=:shape,
+		color=colors.AMETHYST,
+		opacity=0.8,
+		linewidth=0)
+	
+	scatter!([],
+		markershape=:circle,
+		markerstrokewidth=0,
+		color=colors.CONCRETE, 
+		label="Obstacle")
+	
+	scatter!([],
+		markershape=:circle,
+		markerstrokewidth=0,
+		color=colors.AMETHYST, 
+		opacity=0.8,
+		label="Destination")
+end
 
 # ╔═╡ e8a5370b-e18d-4957-b695-d6c50fec1182
 begin
@@ -370,23 +400,24 @@ begin
 		label=nothing)
 	
 	scatter!([],
-		markershape=:o,
+		markershape=:circle,
 		markerstrokewidth=0,
 		color=colors.CONCRETE, 
-		label="Rock")
+		label="Obstacle")
 end
 
 # ╔═╡ 9ea2e239-00f8-4517-aeac-566415a5fa8a
 begin
 	p1 = draw(shield;
-			xlabel="x1",
-			ylabel="x2",
-			aspectratio=:equal,
-			legend=:outerright,
-			size=(800, 600),
-			clim=(no_action, any_action),
-			colors=shieldcolors, 
-			color_labels=shieldlabels,)
+		xlabel="x1",
+		ylabel="x2",
+		aspectratio=:equal,
+		legend=:outerright,
+		grid=false,
+		size=(800, 600),
+		clim=(no_action, any_action),
+		colors=shieldcolors, 
+		color_labels=shieldlabels,)
 	
 		
 	plot!(rocks, 
@@ -396,10 +427,10 @@ begin
 		label=nothing)
 	
 	scatter!([],
-		markershape=:o,
+		markershape=:circle,
 		markerstrokewidth=0,
 		color=colors.CONCRETE, 
-		label="Rock")
+		label="Obstacle")
 		
 end
 
@@ -450,13 +481,17 @@ shielded_random = apply_shield(shield, random)
 shielded_trace = simulate_sequence(x0, shielded_random, 25)
 
 # ╔═╡ 14013a0c-9a27-44c5-b9ac-5d844fd3fe30
+#=╠═╡
 animate_sequence(shielded_trace)
+  ╠═╡ =#
 
 # ╔═╡ 2f658797-0581-40c4-9054-4ed968ad143b
+#=╠═╡
 let
 	📈 = plot(p1, legend=nothing)
 	animate_sequence(shielded_trace, background=📈)
 end
+  ╠═╡ =#
 
 # ╔═╡ 531281a1-6f2d-49fc-b608-cb1f8fc966ae
 plot_trace(shielded_trace)
@@ -660,6 +695,7 @@ begin
 		aspectratio=:equal,
 		legend=:outerright,
 		size=(800, 600),
+		grid=false,
 		clim=(no_action, any_action),
 		colors=shieldcolors, 
 		color_labels=shieldlabels,)
@@ -674,10 +710,10 @@ begin
 		label=nothing)
 	
 	scatter!([],
-		markershape=:o,
+		markershape=:circle,
 		markerstrokewidth=0,
 		color=colors.CONCRETE, 
-		label="Rock")
+		label="Obstacle")
 end
 
 # ╔═╡ c5570c5b-5d4c-44bf-9dde-2d5e9a8e8ed4
@@ -800,10 +836,12 @@ a_shielded_random = a_apply_shield(a_shield, random)
 a_shielded_trace = simulate_sequence(x0, a_shielded_random, 10)
 
 # ╔═╡ 13646ad3-c39b-46d0-bddf-c16206dbb7eb
+#=╠═╡
 let
 	📈 = plot(p3, legend=nothing)
 	animate_sequence(a_shielded_trace, background=📈)
 end
+  ╠═╡ =#
 
 # ╔═╡ 87356f08-c963-4928-8a0f-48ca9b8d82b2
 plot_trace(a_shielded_trace)
@@ -1067,44 +1105,44 @@ end
 md"""
 # Sampling plot
 
-The plot that explains how sampling is done.
+The plot that explains how sampling is done using circle example.
 """
+
+# ╔═╡ 30545fb4-1d86-487f-9d2b-94465945ce77
+# Returns samples per axis but only on the edges.
+function get_edge_points(samples_per_axis, bounds)
+	samples = SupportingPoints(samples_per_axis, bounds)
+	# Have to do it like this to get a clockwise order
+	lower1 = [s for s in samples if s[1] ≈ bounds.lower[1]] |> sort
+	upper1 = [s for s in samples if s[1] ≈ bounds.upper[1]] |> sort |> reverse
+	lower2 = [s for s in samples if s[2] ≈ bounds.lower[2]] |> sort |> reverse
+	upper2 = [s for s in samples if s[2] ≈ bounds.upper[2]] |> sort
+	vcat(lower1, upper2, upper1, lower2)
+end
 
 # ╔═╡ 80934c04-60dd-4fbc-9563-0954aa72eec2
 let
-	# Overwrite successor function with custom time step
-	function apply(x, a::Action, δ)
-	    θ = atan(x...)
-	    r = sqrt(x[1]^2 + x[2]^2)
-		if a == move_out
-	    	r′ = (1 + (speed * δ)) * r
-		elseif a == move_in
-	    	r′ = (1 - (speed * δ)) * r
-		elseif a == stay_course
-			r′ = r
-		else 
-			error("Unexpected a $a")
-		end
-	    return [r′ * sin(θ), r′ * cos(θ)]
-	end
-	successor(x, a, δ) = (exp(A*δ))*apply(x, a, δ*2)
-
-	action = move_in
-	δ = 0.9
+	successor(x, a, δ) = (exp(A*δ))*[x...]
+	δ = 0.8
 	
 	a_grid = Grid(0.5, Bounds([-pi - 0.1, 0.], [pi + 0.1, 3.5]))
 	a_partition = box(a_grid, 0, 1.5)
-	a_samples = SupportingPoints(2, a_partition)
+	
+	a_bounds = Bounds(a_partition)
+	ϵ = 0.01 # Make sure only the truly reachable partitions are highlighted
+	a_bounds = Bounds(a_bounds.lower .+ ϵ, a_bounds.upper .- ϵ)
+	
+	a_samples = get_edge_points(8, a_bounds)
 
 	samples = [Tuple(f⁻¹(s)) for s in a_samples]
 	reached = [Tuple(successor(x, action, δ)) for x in samples]
 	
-	trajectories = [[Tuple(successor(x, action, δ′)) for δ′ in 0:0.01:δ] 
-		for x in samples]
+	trajectory = [Tuple(successor(f([0, 1.75]), action, δ′)) for δ′ in 0:0.01:δ]
 
 	a_reached = [Tuple(f(x)) for x in reached]
 
-	a_reached_partitions = [box(a_grid, s) for s in a_reached] |> unique
+	a_reached_partitions = [box(a_grid, s) for s in a_reached]
+	a_reached_partitions = unique(x -> x.indices, a_reached_partitions)
 
 	margin = 1
 	
@@ -1122,7 +1160,35 @@ let
 	a_ylim = (min([s[2] for s in [a_samples..., a_reached...]]...) - a_margin,
 			max([s[2] for s in [a_samples..., a_reached...]]...) + a_margin)
 	
-	📈1 = draw(a_grid, 
+	📈1 = plot(;
+		legend=:outertop,
+		ratio=1,
+		xlabel="x1",
+		ylabel="x2",
+		grid=false,
+		xlim,
+		ylim)
+	
+	plot!(unzip(samples),
+		seriestype=:shape,
+		linewidth=0,
+		label="Initial set translated to S",
+		color=colors.EMERALD)
+	
+	
+	plot!(unzip(reached),
+		seriestype=:shape,
+		linewidth=0,
+		label="Successor set in S",
+		color=colors.PETER_RIVER)
+
+	plot!(trajectory, 
+		linecolor=colors.WET_ASPHALT,
+		linestyle=:dash,
+		arrow=:cap,
+		label=nothing)
+
+	📈2 = draw(a_grid, 
 		xlabel="θ",
 		ylabel="r",
 		xlim = a_xlim,
@@ -1134,8 +1200,7 @@ let
 	plot!(Bounds(a_partition), 
 		color=colors.EMERALD, 
 		linewidth=0,
-		opacity=0.5,
-		label="initial partition")
+		label="Initial set in T")
 
 	for a_reached_partition in a_reached_partitions
 		plot!(Bounds(a_reached_partition), 
@@ -1145,55 +1210,17 @@ let
 			label=nothing) # label added later
 	end
 	
-	scatter!(unzip(a_samples), 
-		markersize=5,
-		markerstrokewidth=0,
-		label="initial samples",
-		markercolor=colors.EMERALD)
-	
-	scatter!(unzip(a_reached), 
-		markersize=5,
-		markerstrokewidth=0,
-		label="successors translated to altered state space",
-		markercolor=colors.PETER_RIVER)
+	plot!(unzip(a_reached), 
+		seriestype=:shape,
+		linewidth=0,
+		label="Successor set translated to T",
+		color=colors.PETER_RIVER)
 
 	plot!([], seriestype=:shape,
 		color=colors.PETER_RIVER, 
 		linewidth=0,
 		opacity=0.5,
-		label="partition marked as reached")
-	
-	📈2 = plot(;
-		legend=:outertop,
-		ratio=1,
-		xlabel="x1",
-		ylabel="x2",
-		grid=false,
-		xlim,
-		ylim)
-	
-	scatter!(unzip(samples), 
-		markersize=5,
-		markerstrokewidth=0,
-		label="samples in standard state space",
-		markercolor=colors.EMERALD)
-	
-	
-	scatter!(unzip(reached), 
-		markersize=5,
-		markerstrokewidth=0,
-		label="successor states",
-		markercolor=colors.PETER_RIVER)
-
-	for trajectory in trajectories
-		
-		plot!(trajectory, 
-			linecolor=colors.CONCRETE,
-			linestyle=:dash,
-			arrow=:cap,
-			label=nothing)
-	end
-	
+		label="Partitions marked as reached")
 	
 	plot(📈1, 📈2,
 		size=(600, 300))
@@ -1519,6 +1546,7 @@ end
 # ╠═cbe5bb1f-4a78-4185-9067-ddc7aa332be5
 # ╠═f0b44048-4c9c-475f-87a4-9ff331885c32
 # ╠═b67bbfee-633d-4d8b-846f-6a63ec778f93
+# ╠═e26e0fca-5a6c-4d05-8eb2-df02e1ef15f3
 # ╟─7557a054-9b6d-4858-ba82-1b613c362b4b
 # ╠═7dddbfa0-35f6-4cec-90b6-37ae41881a77
 # ╠═e8a5370b-e18d-4957-b695-d6c50fec1182
@@ -1576,7 +1604,7 @@ end
 # ╠═22501f27-54f7-452c-b253-9d4612667c54
 # ╠═4663c31a-bede-45af-876d-8650f2a5125a
 # ╠═cc8226c6-1a47-4050-af50-5c8ca7f7a3a9
-# ╟─351e2fb7-70d9-4c5e-81d5-6ba651c490e8
+# ╠═351e2fb7-70d9-4c5e-81d5-6ba651c490e8
 # ╠═c5570c5b-5d4c-44bf-9dde-2d5e9a8e8ed4
 # ╠═6c3550be-a891-4019-a97d-d4f28e3b1912
 # ╟─98822937-709b-4654-b3dc-e23342d28f0f
@@ -1616,6 +1644,7 @@ end
 # ╠═46e15850-9632-4232-9d8f-05f3a9cb4832
 # ╠═852cb308-c800-42ee-9412-412fe9b9a05e
 # ╟─641033dd-aa48-43fd-b81b-c3ad84b58327
+# ╠═30545fb4-1d86-487f-9d2b-94465945ce77
 # ╟─80934c04-60dd-4fbc-9563-0954aa72eec2
 # ╟─b65755fc-1623-4f67-9aec-54dcd3872ae0
 # ╠═52ac166d-61f6-4a4f-b65d-7b8e1db22261
