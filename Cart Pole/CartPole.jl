@@ -15,19 +15,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ cb6e988a-f263-11ee-1f3f-53192cebcad4
-beginvoid take_action(action_t action) {
-    double theta = atan2(x1, x2);
-    double radius = sqrt(x1^2 + x2^2);
-	if (a == MOVE_OUT)
-    	radius = (1 + (speed * δ)) * radius;
-	elseif (a == MOVE_IN)
-    	radius = (1 - (speed * δ)) * radius;
-	elseif (a == STAY_COURSE)
-		radius = radius;
-    
-	x1 = radius * sin(theta);
-	x2 = radius * cos(theta);
-}
+begin
 	using Pkg
 	Pkg.activate("..")
 	Pkg.develop("GridShielding")
@@ -161,6 +149,18 @@ Cart-pole code is adapted from [2].
 
 """
 
+# ╔═╡ 35605d87-4c3a-49a9-93d1-a5fceede3653
+@kwdef struct CartPoleMechanics
+	gravity = 9.8
+	cart_mass = 1.0
+	pole_mass = 0.1
+	total_mass = pole_mass + cart_mass
+	pole_length = 0.5  # actually half the pole's length
+	polemass_length = pole_mass * pole_length
+	force_mag = 10.0
+	τ = 0.02  # control cycle length
+end
+
 # ╔═╡ 86ab3957-129c-4c71-911d-a54fd80cfd2d
 begin
 	struct Action
@@ -230,18 +230,6 @@ begin
 	shieldlabels = ["{$a}" for a in shieldlabels]
 
 	zip(shieldcolors, shieldlabels) |> collect
-end
-
-# ╔═╡ 35605d87-4c3a-49a9-93d1-a5fceede3653
-@kwdef struct CartPoleMechanics
-	gravity = 9.8
-	cart_mass = 1.0
-	pole_mass = 0.1
-	total_mass = pole_mass + cart_mass
-	pole_length = 0.5  # actually half the pole's length
-	polemass_length = pole_mass * pole_length
-	force_mag = 10.0
-	τ = 0.02  # control cycle length
 end
 
 # ╔═╡ 822b3f06-613a-4992-8baf-6450a405d961
@@ -369,9 +357,6 @@ end
 # ╔═╡ 05cdc837-58e1-4112-922a-e8344bc4ee66
 get_size(Q_granularity, Q_bounds), get_size(Q_granularity, Q_bounds) |> prod
 
-# ╔═╡ 0a9c51e1-0cc3-4bb0-9fa5-0f3962aae605
-@bind episodes NumberField(0:typemax(Int64), default=5)
-
 # ╔═╡ 398af1f5-5ffb-4667-b8cc-ee1920de2997
 @bind γ NumberField(0.0001:0.0001:1, default=0.9)
 
@@ -381,24 +366,6 @@ get_size(Q_granularity, Q_bounds), get_size(Q_granularity, Q_bounds) |> prod
 # ╔═╡ 5d2064c4-a987-4296-ae30-fed483057eff
 @bind α_base NumberField(0.0001:0.0001:1, default=0.01)
 
-# ╔═╡ 2ef0dc55-796c-4c5f-89be-96872cbc3c50
-function α(t; episodes=episodes)
-	if t < episodes/2
-		α_base
-	else
-		α_base/(1 + 0.2*(t - episodes/2))
-	end
-end
-
-# ╔═╡ 742280a3-8f06-49de-aea6-79462cfeb2f8
-function ϵ(t; episodes=episodes)
-	if t < episodes/2
-		ϵ_base
-	else
-		ϵ_base/(1 + 0.2*(t - episodes/2))
-	end
-end
-
 # ╔═╡ 534b9c41-52dd-43c5-bb5d-f44dcde0f70f
 # ϵ-greedy choice from Q.
 function ϵ_greedy(ϵ::Number, Q, s)
@@ -407,28 +374,6 @@ function ϵ_greedy(ϵ::Number, Q, s)
 	else
 		return argmax((a) -> get_value(box(Q[a], s)), (left, right))
 	end
-end
-
-# ╔═╡ 33f338e1-4792-4a68-802c-c814a6c89fd6
-begin
-	p1 = plot(xlabel="t")
-	
-	plot!(y -> ϵ(y; episodes), 
-		xlim=(0, episodes), 
-		label="ϵ", 
-		color=colors.ALIZARIN)
-	
-	hline!([0], line=:black, label=nothing)
-	
-	p2 = plot(xlabel="t")
-	
-	plot!(y -> α(y; episodes), 
-		xlim=(0, episodes), 
-		label="α", 
-		color=colors.PETER_RIVER)
-	
-	hline!([0], line=:black, label=nothing)
-	plot(p1, p2, size=(600, 200))
 end
 
 # ╔═╡ 57bad1a9-9cea-4e2f-903d-004bccafffb3
@@ -455,12 +400,16 @@ md"""
 const AlteredState = MVector{4, Float64}
 
 # ╔═╡ 3aeb0922-e5f8-4311-b66d-dd42d61f18f3
-altered_state_axes = if enable_altered_state_space
-	[ "x", "P1(x, x_vel)",
-	  "θ", "P2(θ, θ_vel)", ]
+altered_state_axes, state_axes_simple = if enable_altered_state_space
+	([ "x", "P1(x, x_vel)",
+	  "θ", "P2(θ, θ_vel)", ],
+	[ "cart_pos", "poly1",
+	  "pole_ang", "poly2", ])
 else
-	[ "x", "x_vel",
-	  "θ", "θ_vel", ]
+	([ "x", "x_vel",
+	  "θ", "θ_vel", ],
+	[ "cart_pos", "cart_vel",
+	  "pole_ang", "pole_vel", ])
 end
 
 # ╔═╡ b4ddbac3-33e9-42e7-bac7-a2ec32093678
@@ -468,15 +417,6 @@ function P1(x, x_vel)
 	# Learned for x-safety only (high-resolution shield)
 	# 1st degree polynomial.
 	1.1576428742879741e-16 - 1.3323889308715684*x - x_vel
-
-	# 3rd degree polynomial.
-	#-5.825994626151625e-16 - 1.2619650186305709*x + 2.1257671487621227e-17*x^2 - 0.06534525808753018*x^3 - x_vel
-
-	# 10th degree polynomial.
-	#1.533027510694019e-16 - 1.1876989831897111*x + 3.1522767529704323e-16*x^2 - 0.0011789582554770342*x^3 - 7.598423842747513e-16*x^4 - 0.02426712723791725*x^5 + 4.568548785183162e-16*x^6 + 0.007282019873774172*x^7 - 9.6422807357472e-17*x^8 - 0.0008798254171864366*x^9 + 6.889278808967192e-18*x^10 - x_vel
-
-	# Learned for xθ-safety
-	#-2.1168409757996343e-16 - 0.45757222597230013*x + 6.961499988538256e-16*x^2 - 0.19858329583255419*x^3 - 1.852317696169052e-16*x^4 - x_vel
 end
 
 # ╔═╡ 64be4f5a-97f6-49bc-b848-450506d9ceb1
@@ -485,14 +425,7 @@ P1⁻¹(θ, P1_s) = P1(θ, 0) - P1_s
 # ╔═╡ 5645d7a7-0f23-4a02-ab30-49a6cda9ce17
 # Naming confusion: p1, p2 ... are plots. P1, P2 are polynomials
 function P2(θ, θ_vel)
-
-	# Learned for θ-safety only. (unfinished shield)
-	-8.781979992626191e-17 - 1.8785088953738132*θ + 7.544860236036361e-16*θ^2 - 23.314780003395903*θ^3 - θ_vel
-
-	# Learned for xθ-safety
-	24.301385954084634e-15 - 6.1176477949557695*θ - 2.9279391715269005e-13*θ^2 + 199.26186916220868*θ^3 + 5.590468926375508e-12*θ^4 - 5530.524211636519*θ^5 + 7.565341604012949e-11*θ^6 + 52894.465312598055*θ^7 - 2.01859815347275e-9*θ^8 - 162706.7020372233*θ^9 + 9.332997313715123e-9*θ^10 - θ_vel
-
-	return -8.781979992626191e-17 - 1.8785088953738132*θ + 7.544860236036361e-16*θ^2 - 23.314780003395903*θ^3 - θ_vel
+	- 4.550831135117032*θ - 141.6953270125445*θ^3 - θ_vel
 end
 
 # ╔═╡ d90ea6c4-316d-46b1-8688-23d95f3cca61
@@ -588,7 +521,7 @@ md"""
 # ╔═╡ 2f2a6934-b633-47f1-9a26-88b7ece30f46
 md"""
 ### 🛠 safety constraints
-`concerned_with_position =` $(@bind concerned_with_position CheckBox(default=true))
+`concerned_with_position =` $(@bind concerned_with_position CheckBox(default=false))
 
 `concerned_with_angle =` $(@bind concerned_with_angle CheckBox(default=true))
 """
@@ -694,74 +627,6 @@ end
 # ╔═╡ ea84c513-b4ca-41df-96ec-1c230fde9f3d
 animate_sequence(trace; speed=1)
 
-# ╔═╡ 40550db6-a7b9-496c-b321-b61cf1239e18
-function Q_learn()
-	Q = Dict(left => Grid(Q_granularity, Q_bounds, data_type=Float64), 
-			right => Grid(Q_granularity, Q_bounds, data_type=Float64))
-
-	# Discourage exploration; we want to stay near s0
-	for partition in Q[left]
-		set_value!(partition, -2)
-	end
-	for partition in Q[right]
-		set_value!(partition, -2)
-	end
-	
-	@progress for i ∈ 1:episodes
-		Sₜ = s0()
-		Aₜ = rand((left, right))
-		for t ∈ 0:m.τ:10
-			Sₜ₊₁ = simulate_point(m, Sₜ, Aₜ)
-			if Sₜ₊₁ ∉ Q_bounds continue end
-			Q_Sₜ_Aₜ = box(Q[Aₜ], Sₜ)
-			set_value!(Q_Sₜ_Aₜ, 
-				get_value(Q_Sₜ_Aₜ) + 
-				α(t)*(r(Sₜ) + γ*max([get_value(box(Q[a′], Sₜ₊₁)) 
-				for a′ in (left, right)]...) - get_value(Q_Sₜ_Aₜ)))
-			
-			Aₜ₊₁ = ϵ_greedy(ϵ(t), Q, Sₜ)
-			Sₜ, Aₜ = Sₜ₊₁, Aₜ₊₁
-			if Sₜ₊₁ ∉ cart_pole_bounds break end
-		end
-	end
-
-	return Q
-end
-
-# ╔═╡ 54afb933-b75d-4fb5-8b26-396c123f09ca
-Q = Q_learn()
-
-# ╔═╡ 787677e2-bdf3-43e3-ac71-563a483ef8dc
-Q_policy = s -> begin
-	if s ∉ Q[left] 
-		return rand((left, right))
-	end
-	if get_value(box(Q[left], s)) > get_value(box(Q[right], s))
-		return left
-	else
-		return right
-	end
-end
-
-# ╔═╡ 78c4dab0-3d95-462a-a214-9578f84b6cb4
-Q_trace = simulate_sequence(m, s0(), Q_policy, 4)
-
-# ╔═╡ eb53b3db-db53-4842-ad48-4272a667b7cf
-max([abs(x_vel) for (x, x_vel, θ, θ_vel, _) in Q_trace.states]...)
-
-# ╔═╡ 5bfe3632-dba7-4e12-ba21-823b9803b9df
-max([abs(θ_vel) for (x, x_vel, θ, θ_vel, _) in Q_trace.states]...)
-
-# ╔═╡ 2ac120e4-f380-4b02-bc7f-a1d5e84d7c36
-animate_sequence(Q_trace)
-
-# ╔═╡ d712571e-ced8-4f06-8b44-6874fcd3e15d
-length(Q[left].array |> unique),
-length(Q[right].array |> unique)
-
-# ╔═╡ 45785f69-c79a-4172-b8b4-9009ee08e613
-Q_trace.states[end] ∈ cart_pole_bounds
-
 # ╔═╡ 227f0131-fc76-4382-902e-18874ce66104
 cart_pole_bounds
 
@@ -799,11 +664,11 @@ md"""
 # ╔═╡ 38bc7025-9e1f-4101-a53d-a3a7ff802aa7
 grid_bounds = let
 	if enable_altered_state_space
-		lower = Float64[-2.4, -5, -0.418, -3]
-		upper = Float64[ 2.4,  5,  0.418,  3]
+		lower = Float64[-2.4, -5, -0.2095, -3]
+		upper = Float64[ 2.4,  5,  0.2095,  3]
 	else
-		lower = Float64[-2.4, -10, -0.418, -3]
-		upper = Float64[ 2.4,  10,  0.418,  3]
+		lower = Float64[-2.4, -10, -0.2095, -3]
+		upper = Float64[ 2.4,  10,  0.2095,  3]
 	end
 	Bounds(lower, upper)
 end
@@ -864,7 +729,7 @@ is_safe(f(s0()))
 
 # ╔═╡ 1aa6c36a-7884-48d1-9c5f-1dc87f1278e3
 @bind resolution PlutoUI.combine() do field
-	fields = [field("$i", NumberField(1:1000, default=10)) for i in 1:4]
+	fields = [field("$i", NumberField(1:1000, default=20)) for i in 1:4]
 	md"""
 	### 🛠 `resolution` 
 	
@@ -1228,46 +1093,6 @@ md"""
 # ╔═╡ a54f79bb-a240-47e5-9f04-8b2674ac9be1
 @bind fit_to Select(["Averaged", "Upper", "Lower"])
 
-# ╔═╡ 7a0c307f-0015-4d82-a469-419d27f052f0
-# Fit to lower border.
-function P3(x, x_vel)
-	-4.88317543737385 - 1.1876989831897105*x + 0.15131651722076384*x^2 - 0.0011789582554793075*x^3 - 0.047931945372531364*x^4 - 0.024267127237915628*x^5 + 0.03662759309950464*x^6 + 0.007282019873773756*x^7 - 0.009385631070408396*x^8 - 0.0008798254171864017*x^9 + 0.0008737448942722494*x^10 - x_vel
-end
-
-# ╔═╡ 25d88777-7351-4b9d-aae2-251bcb2cc11d
-# Fit to upper border.
-function P4(x, x_vel)
-	4.8831754373738505 - 1.1876989831897127*x - 0.15131651722076142*x^2 - 0.001178958255472992*x^3 + 0.04793194537252679*x^4 - 0.024267127237919763*x^5 - 0.03662759309950152*x^6 + 0.007282019873774767*x^7 + 0.009385631070407569*x^8 - 0.0008798254171864848*x^9 - 0.0008737448942721756*x^10 - x_vel
-	# Det man hører, er man selv.
-end
-
-# ╔═╡ d76879a6-5fc1-4550-bdfe-520138a678d6
-# Not making it easy for myself with these names.
-function f1(x, x_vel)
-	if x_vel < 0 
-		-P3(x, x_vel)
-	else
-		-P4(x, x_vel)
-	end
-end
-
-# ╔═╡ 2ba49512-9776-4d78-a954-e92d1db115b6
-function f1⁻¹(x, f1_s)
-	-1*(-P4(x, 0) - f1_s), -1*(-P3(x, 0) - f1_s)
-end
-
-# ╔═╡ bfa0c9a5-01e9-4df2-b48c-103f5f5ffae7
-x_vel, f1(x, x_vel), f1⁻¹(x, f1(x, x_vel))
-
-# ╔═╡ 474e569d-dbaa-4613-a068-4c2e283ea5b1
-# ╠═╡ disabled = true
-#=╠═╡
-let
-	plot(p3)
-	plot!(x -> f1(x, x_vel))
-end
-  ╠═╡ =#
-
 # ╔═╡ 05f7c96a-dd50-41a7-8916-293938c03b40
 # ╠═╡ disabled = true
 #=╠═╡
@@ -1505,6 +1330,208 @@ end
 # ╔═╡ 65f542c6-d5f3-40e0-be5f-ab66786eaf72
 shielded_trace.states[end]
 
+# ╔═╡ 834ab28c-a08a-4d92-8ab5-5284196cc2db
+md"""
+# Exporting the Shield
+"""
+
+# ╔═╡ 15952e74-05fb-4ffe-b6b6-97e1bd5fc815
+@bind target_dir TextField(95, default=mktempdir())
+
+# ╔═╡ 8f78d419-7c9d-4d92-9d66-a9696a203b07
+target_dir; @bind open_folder_button CounterButton("Open Folder")
+
+# ╔═╡ d7915d1f-7bd3-463e-a5bb-d31b6fe9fe23
+if open_folder_button > 0
+	run(`nautilus $target_dir`, wait=false)
+end; "This cell opens `$target_dir` in nautilus"
+
+# ╔═╡ 4e27eb77-69b4-4477-9f21-2e8a9702898c
+md"""
+### Export as serialized julia-tuple
+
+Easy export and import between julia code.
+"""
+
+# ╔═╡ 22df2512-8b9f-47c0-aaaf-ee32f3675d3d
+let
+	if enable_altered_state_space
+		state_space = "Altered State Space"
+	else
+		state_space = "Standard State Space"
+	end
+	filename = "Cart Pole - $state_space.shield"
+	robust_grid_serialization(joinpath(target_dir, filename), shield)
+	"Exported `'$filename'`." |> Markdown.parse
+end
+
+# ╔═╡ 6052d4f5-6874-4bc1-b17f-d323a07d6c54
+md"""
+### Export as a function in a shared-object library
+
+Use this library to access the shield from C and C++ code.
+
+The shield is compiled into a shared-object binary, which exports the function `int get_value(double v, double p)`. It takes the state-variables as input and returns the bit-encoded list of allowed actions. (See `int_to_actions`.)
+"""
+
+# ╔═╡ 747c5cee-f701-4c28-b7df-04efa3740d61
+let
+	if enable_altered_state_space
+		state_space = "altered_state_space"
+	else
+		state_space = "standard_state_space"
+	end
+	shield_so = "cart_pole_shield_$state_space.so"
+	shield_so = joinpath(target_dir, shield_so)
+	
+	get_libshield(shield; destination=shield_so, force=true)
+	
+	"Exported `'$shield_so'`." |> Markdown.parse
+end
+
+# ╔═╡ d2217f57-024c-4338-bcdb-361990f94d37
+md"""
+### Export to Numpy
+
+Exports a zip-file containing a serialized numpy-array along with a JSON file with details on how to read it.
+"""
+
+# ╔═╡ 2864b91e-7654-4c54-9b7a-411ef982d01d
+@enum Actions move_left move_right
+
+# ╔═╡ 0a9c51e1-0cc3-4bb0-9fa5-0f3962aae605
+@bind episodes NumberField(0:typemax(Int64), default=5)
+
+# ╔═╡ 2ef0dc55-796c-4c5f-89be-96872cbc3c50
+function α(t; episodes=episodes)
+	if t < episodes/2
+		α_base
+	else
+		α_base/(1 + 0.2*(t - episodes/2))
+	end
+end
+
+# ╔═╡ 742280a3-8f06-49de-aea6-79462cfeb2f8
+function ϵ(t; episodes=episodes)
+	if t < episodes/2
+		ϵ_base
+	else
+		ϵ_base/(1 + 0.2*(t - episodes/2))
+	end
+end
+
+# ╔═╡ 40550db6-a7b9-496c-b321-b61cf1239e18
+function Q_learn()
+	Q = Dict(left => Grid(Q_granularity, Q_bounds, data_type=Float64), 
+			right => Grid(Q_granularity, Q_bounds, data_type=Float64))
+
+	# Discourage exploration; we want to stay near s0
+	for partition in Q[left]
+		set_value!(partition, -2)
+	end
+	for partition in Q[right]
+		set_value!(partition, -2)
+	end
+	
+	@progress for i ∈ 1:episodes
+		Sₜ = s0()
+		Aₜ = rand((left, right))
+		for t ∈ 0:m.τ:10
+			Sₜ₊₁ = simulate_point(m, Sₜ, Aₜ)
+			if Sₜ₊₁ ∉ Q_bounds continue end
+			Q_Sₜ_Aₜ = box(Q[Aₜ], Sₜ)
+			set_value!(Q_Sₜ_Aₜ, 
+				get_value(Q_Sₜ_Aₜ) + 
+				α(t)*(r(Sₜ) + γ*max([get_value(box(Q[a′], Sₜ₊₁)) 
+				for a′ in (left, right)]...) - get_value(Q_Sₜ_Aₜ)))
+			
+			Aₜ₊₁ = ϵ_greedy(ϵ(t), Q, Sₜ)
+			Sₜ, Aₜ = Sₜ₊₁, Aₜ₊₁
+			if Sₜ₊₁ ∉ cart_pole_bounds break end
+		end
+	end
+
+	return Q
+end
+
+# ╔═╡ 54afb933-b75d-4fb5-8b26-396c123f09ca
+Q = Q_learn()
+
+# ╔═╡ 787677e2-bdf3-43e3-ac71-563a483ef8dc
+Q_policy = s -> begin
+	if s ∉ Q[left] 
+		return rand((left, right))
+	end
+	if get_value(box(Q[left], s)) > get_value(box(Q[right], s))
+		return left
+	else
+		return right
+	end
+end
+
+# ╔═╡ 78c4dab0-3d95-462a-a214-9578f84b6cb4
+Q_trace = simulate_sequence(m, s0(), Q_policy, 4)
+
+# ╔═╡ 45785f69-c79a-4172-b8b4-9009ee08e613
+Q_trace.states[end] ∈ cart_pole_bounds
+
+# ╔═╡ eb53b3db-db53-4842-ad48-4272a667b7cf
+max([abs(x_vel) for (x, x_vel, θ, θ_vel, _) in Q_trace.states]...)
+
+# ╔═╡ 5bfe3632-dba7-4e12-ba21-823b9803b9df
+max([abs(θ_vel) for (x, x_vel, θ, θ_vel, _) in Q_trace.states]...)
+
+# ╔═╡ 2ac120e4-f380-4b02-bc7f-a1d5e84d7c36
+animate_sequence(Q_trace)
+
+# ╔═╡ d712571e-ced8-4f06-8b44-6874fcd3e15d
+length(Q[left].array |> unique),
+length(Q[right].array |> unique)
+
+# ╔═╡ 33f338e1-4792-4a68-802c-c814a6c89fd6
+begin
+	p1 = plot(xlabel="t")
+	
+	plot!(y -> ϵ(y; episodes), 
+		xlim=(0, episodes), 
+		label="ϵ", 
+		color=colors.ALIZARIN)
+	
+	hline!([0], line=:black, label=nothing)
+	
+	p2 = plot(xlabel="t")
+	
+	plot!(y -> α(y; episodes), 
+		xlim=(0, episodes), 
+		label="α", 
+		color=colors.PETER_RIVER)
+	
+	hline!([0], line=:black, label=nothing)
+	plot(p1, p2, size=(600, 200))
+end
+
+# ╔═╡ 618ab712-95b6-413b-973f-8309405b7da9
+let
+	if enable_altered_state_space
+		state_space = "Altered State Space"
+	else
+		state_space = "Standard State Space"
+	end
+
+	meta_info = (;variables=state_axes_simple, 
+		actions=Actions,
+		env_id="Cart Pole")
+	
+	filename = "Cart Pole Shield - $state_space.zip"
+	
+	numpy_zip_file(shield, joinpath(target_dir, filename); meta_info...)
+	
+	"Exported `'$filename'`." |> Markdown.parse, meta_info
+end
+
+# ╔═╡ 3c578986-4a73-42bd-a202-fbf2bf534151
+get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
+
 # ╔═╡ Cell order:
 # ╟─2767663f-3ef8-44f5-81a2-8e480158266e
 # ╟─3115801b-0a07-4a44-a6b3-d1ab2b9c0775
@@ -1647,12 +1674,6 @@ shielded_trace.states[end]
 # ╠═acbdbfe1-66e1-45d9-81d6-96a059aafb6f
 # ╠═a54f79bb-a240-47e5-9f04-8b2674ac9be1
 # ╟─d73c2ee5-e8bf-4cc4-8855-d239224ba843
-# ╠═7a0c307f-0015-4d82-a469-419d27f052f0
-# ╠═25d88777-7351-4b9d-aae2-251bcb2cc11d
-# ╠═d76879a6-5fc1-4550-bdfe-520138a678d6
-# ╠═2ba49512-9776-4d78-a954-e92d1db115b6
-# ╠═bfa0c9a5-01e9-4df2-b48c-103f5f5ffae7
-# ╠═474e569d-dbaa-4613-a068-4c2e283ea5b1
 # ╠═05f7c96a-dd50-41a7-8916-293938c03b40
 # ╠═442a2427-e8a7-4088-8221-ec7a5dc9f1c2
 # ╠═2498792a-a7b9-4295-bfb9-7e9068a02d7d
@@ -1669,3 +1690,15 @@ shielded_trace.states[end]
 # ╠═9bad8bb4-bfa1-47a3-821c-dd3448c3f534
 # ╟─3d63e8c3-6218-4eec-86de-698bb61d8f96
 # ╠═65f542c6-d5f3-40e0-be5f-ab66786eaf72
+# ╟─834ab28c-a08a-4d92-8ab5-5284196cc2db
+# ╠═15952e74-05fb-4ffe-b6b6-97e1bd5fc815
+# ╟─8f78d419-7c9d-4d92-9d66-a9696a203b07
+# ╟─d7915d1f-7bd3-463e-a5bb-d31b6fe9fe23
+# ╟─4e27eb77-69b4-4477-9f21-2e8a9702898c
+# ╠═22df2512-8b9f-47c0-aaaf-ee32f3675d3d
+# ╟─6052d4f5-6874-4bc1-b17f-d323a07d6c54
+# ╠═747c5cee-f701-4c28-b7df-04efa3740d61
+# ╟─d2217f57-024c-4338-bcdb-361990f94d37
+# ╠═2864b91e-7654-4c54-9b7a-411ef982d01d
+# ╠═618ab712-95b6-413b-973f-8309405b7da9
+# ╠═3c578986-4a73-42bd-a202-fbf2bf534151
