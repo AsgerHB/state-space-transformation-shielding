@@ -41,18 +41,43 @@ md"""
 # ╔═╡ bffbac67-8a3b-4155-a665-0c39f93d3dd7
 TableOfContents()
 
+# ╔═╡ e59ef411-1779-4ef6-8d82-37892f1387e8
+md"""
+## Some BB-mechanics
+"""
+
 # ╔═╡ 6fee7dcf-a0ee-431a-a5b7-d31c54ffa1a6
 BB = GridShielding.BB
 
-# ╔═╡ da2f3b65-c072-4d54-99b5-83cb9d070d85
-call(f) = f()
+# ╔═╡ 67d30df1-b60a-4835-a331-94957908ae4a
+const m = BB.bbmechanics
+
+# ╔═╡ 19281cd7-e79d-4535-9c53-9e9de9882eb0
+const g = m.g
+
+# ╔═╡ dc918da4-5ab4-4795-a220-67ffbccb97d1
+position_from_e_pot(e) = e/g
+
+# ╔═╡ 0a785d98-a03f-4cb1-8d5a-1f61fda1ab4b
+md"""
+
+# A New State Space
+
+$(E_{mek},~~ v)$
+
+"""
+
+# ╔═╡ d30c6363-75e6-42f8-b3a0-4a032df063ef
+begin
+	π_xlabel = "\$E_{mek}\$"
+	π_ylabel = "v"
+	
+	π_xlabel_simple = "E_mek"
+	π_ylabel_simple = "v"
+end;
 
 # ╔═╡ 61fa5c6f-2f91-4429-a479-10266f6332c8
 md"""
-# A New State Space
-
-$(E_{mek},~~ v,~~ 𝟙(p > 4))$
-
 ## $E_{mek}$, Mechanical Energy
 
 $E_{mek} = E_{pot} + E_{kin}$
@@ -71,33 +96,15 @@ e_kin(g, v) = 0.5*v^2
 # ╔═╡ b775a061-3279-4121-806c-e99d211c36b0
 e_mek(g, v, p) = e_kin(g, v) + e_pot(g, p)
 
+# ╔═╡ 5a251063-64e8-4ced-8e28-34cb4812f931
+position_from_e_pot(e_mek(g, 0, 4))
+
 # ╔═╡ 3544f929-e518-485f-bdec-eaf1506f3226
 md"""
 `v_0 =` $(@bind v_0 NumberField(-13:1:13, default = 4))
 `p_0 =` $(@bind p_0 NumberField(0:1:13, default = 4))
 
 """
-
-# ╔═╡ 67d30df1-b60a-4835-a331-94957908ae4a
-const m = BB.bbmechanics
-
-# ╔═╡ 19281cd7-e79d-4535-9c53-9e9de9882eb0
-const g = m.g
-
-# ╔═╡ 0ad2d3c9-3a81-4582-b7dc-52225e0c99e9
-velocity_from_e_kin(e) = sqrt(2*e)
-
-# ╔═╡ 72d3376b-c91a-43c6-b237-53e83970fd4f
-velocity_from_e_kin(e_kin(g, 4))
-
-# ╔═╡ dc918da4-5ab4-4795-a220-67ffbccb97d1
-position_from_e_pot(e) = e/g
-
-# ╔═╡ 5a251063-64e8-4ced-8e28-34cb4812f931
-position_from_e_pot(e_mek(g, 0, 4))
-
-# ╔═╡ 52b72834-46ea-44de-8b44-013c4574f2d2
-vs, ps, ts = BB.simulate_sequence(m, (0, 2), (_...) -> "nohit", 8)
 
 # ╔═╡ b60a9495-7d59-4faa-a399-ac83a83d934d
 function draw_function(policy::Function, x_min, x_max, y_min, y_max, G; plotargs...)
@@ -144,14 +151,44 @@ if ExportButton > 0 let
 	Plots.svg(p2, "../Graphics/Bouncing Ball/BB Mechanical Energy Smooth.svg")
 end end
 
+# ╔═╡ 0ad2d3c9-3a81-4582-b7dc-52225e0c99e9
+velocity_from_e_kin(e) = sqrt(2*e)
+
+# ╔═╡ 72d3376b-c91a-43c6-b237-53e83970fd4f
+velocity_from_e_kin(e_kin(g, 4))
+
+# ╔═╡ a92f10f7-46c7-4e66-b406-094e66da8cfe
+velocity_from_e_kin(e_kin(g, -4))
+
+# ╔═╡ 9cbb038a-62d3-43bf-9281-e672db8fb19e
+md"""
+## Transformation Function
+
+This function is called **f** and it's inverse **f⁻¹** everywhere else. I just chose $\pi$ here  because I thought I was doing a projection initially.
+"""
+
+# ╔═╡ 78cb48d3-bedf-48e9-9479-8c71bcc10f6f
+function π(v, p) 
+	
+	return e_mek(g, v, p), v
+	
+end
+
+# ╔═╡ 236497fd-670b-45b1-8ca3-41b204a4d287
+function π⁻¹(e_mek, v)
+	p = (e_mek - 1/2*v^2)/-g
+	#if p < 0 return nothing end
+	return v, p
+end
+
 # ╔═╡ b527f190-ff38-48d3-97ae-aeeed8fdd273
 md"""
-## How traces look in the new projection
+### How traces look in the new projection
 """
 
 # ╔═╡ aad4b9e6-2fbb-46a9-9311-f9e534a17002
 md"""
-# Creating a Shield Based on New Space
+# Shielding in the Transformed State Space
 """
 
 # ╔═╡ f363e7ad-ad45-4fca-83c3-7b04ffdf48eb
@@ -161,35 +198,6 @@ bbshieldlabels = 	[
 
 # ╔═╡ 8f0f7850-c149-4735-a2d5-f58182251d34
 bbshieldcolors = [colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS];
-
-# ╔═╡ 5c3ed2b7-81c0-42e5-b157-d65e25537791
-vp_bounds = Bounds((-20, 0), (20, 13))
-
-# ╔═╡ 78cb48d3-bedf-48e9-9479-8c71bcc10f6f
-function π(v, p) 
-	
-	return e_mek(g, v, p), v, (p > 4 ? 1 : 0)
-	
-end
-
-# ╔═╡ 236497fd-670b-45b1-8ca3-41b204a4d287
-function π⁻¹(e_mek, v, p_gt_4)
-	p = (e_mek - 1/2*v^2)/-g
-	#if p < 0 return nothing end
-	if  !(p_gt_4 == 1 ? p > 4 : p < 4) return nothing end
-	return v, p
-end
-
-# ╔═╡ d30c6363-75e6-42f8-b3a0-4a032df063ef
-begin
-	π_xlabel = "\$E_{mek}\$"
-	π_ylabel = "v"
-	π_zlabel = "p > 4"
-	
-	π_xlabel_simple = "E_mek"
-	π_ylabel_simple = "v"
-	π_zlabel_simple = "p_gt_4"
-end
 
 # ╔═╡ d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
 function animate_trace(trace, shield::Union{Nothing,Grid}=nothing)
@@ -223,7 +231,7 @@ function animate_trace(trace, shield::Union{Nothing,Grid}=nothing)
 		p1 = if isnothing(shield)
 			plot()
 		else
-			p1 = draw(shield, πs[i][3] == 1 ? [:, :, 2] : [:, :, 1], 
+			p1 = draw(shield,
 				colors=bbshieldcolors, color_labels=bbshieldlabels)
 		end
 		
@@ -264,13 +272,26 @@ function animate_trace(trace, shield::Union{Nothing,Grid}=nothing)
 	gif(animation, joinpath(tempdir(), "trace.gif"), fps=10, show_msg=false)
 end
 
+# ╔═╡ 5c3ed2b7-81c0-42e5-b157-d65e25537791
+vp_bounds = Bounds((-15, 0), (15, 10))
+
+# ╔═╡ 98663ba0-e134-45eb-b700-8fb78dcc6971
+md"""
+## The Transformed Grid
+"""
+
 # ╔═╡ 2408a96c-8634-4fe9-91aa-af32ac2c7dec
 const π_bounds = let
 	e_mek_upper = e_mek(g, vp_bounds.upper...)
 	v_lower, v_upper = vp_bounds.lower[1], vp_bounds.upper[1]
 	
-	Bounds((0., v_lower, 0.), ceil.((e_mek_upper, v_upper, 2.0)))
+	Bounds((0., v_lower), ceil.((e_mek_upper, v_upper)))
 end
+
+# ╔═╡ 7b3c0c32-6845-46a6-9507-a4351c14dd47
+md"""
+### Figures Showing how the Transformed Grid Covers the Original State Space
+"""
 
 # ╔═╡ 443301cb-ef1c-40b3-a552-f86e46e0cbe8
 # ╠═╡ disabled = true
@@ -344,17 +365,24 @@ prod([samples_per_axis..., samples_per_random_axis...])
 # ╔═╡ 5bf69f54-8ec2-4561-b696-7199ce83c839
 round_8(x) = round(x, RoundNearestTiesUp, digits=8)
 
-# ╔═╡ cc66d652-a8e5-4ae1-9d72-5ccbc9d500f0
-round(2.00000002, RoundingMode.RoundNearestTiesUp, digits=8)
+# ╔═╡ 7a76b511-0462-4889-bfe6-939a89ca4702
+md"""
+!!! danger "wtf?"
+	I have no idea why there are two different reachability function variants. 
+	The changes seem arbitrary.
+	I remember I was messing around to get a better result, but I can't for the life of me remember what.
+
+	The prime-variant does not round the result afterwards, and they have different conditions for skipping a sample.
+"""
 
 # ╔═╡ 104f1f24-44c8-4ea8-9d6a-732984a96e91
 @bind spa NumberField(1:1000, default=samples_per_axis[1]/2)
 
 # ╔═╡ 6327ed76-cf69-4389-8ce2-e0e9c42eb11f
 md"""
-### Brute-force sampling
+### Deprecated: Brute-force sampling
 
-Solving these constraints can be quite tedious so what I do instead is just iterate through samplese that cover the whole state space and check for every sample if it is a member of the π-partition. Horribly inefficient, but it works for this example.
+In cases where there is no easy $π⁻¹$ function available: Just iterate through samples that cover the whole state space and check for every sample if it is a member of the π-partition. Horribly inefficient, but it works for this example.
 """
 
 # ╔═╡ 01190c0f-b8bb-403f-8eed-57d683ad302a
@@ -367,14 +395,6 @@ global_supporting_points::Vector{Tuple{Float64, Float64}} = SupportingPoints([
 		for (l, u) in zip(vp_bounds.lower, vp_bounds.upper)
 	], 
 	vp_bounds) |> collect;
-
-# ╔═╡ f9fbc97a-3b7d-45f4-a784-45d2cf515fa1
-scatter(global_supporting_points,
-	marker=(2, :red, :circle),
-	markerstrokewidth=0,
-	xlabel="v",
-	ylabel="p",
-	label="global supporting points")
 
 # ╔═╡ f351c1ed-89d0-495c-8720-7f1ffa9ddd93
 begin
@@ -404,7 +424,18 @@ begin
 			(sampler.points[i], i + 1)
 		end
 	end
+
+	BruteForceSampler
 end
+
+# ╔═╡ f9fbc97a-3b7d-45f4-a784-45d2cf515fa1
+scatter(global_supporting_points,
+	marker=(2, :red, :circle),
+	markerstrokewidth=0,
+	xlabel="v",
+	size=(300, 300),
+	ylabel="p",
+	label="global supporting points")
 
 # ╔═╡ 94ced2a5-7ad8-49e3-b1d1-e1d5b8ee9868
 md"""
@@ -520,7 +551,7 @@ end
 
 # ╔═╡ 814e17fe-4824-410d-a46f-da73729d6e8c
 function initial_value_of_π_partition(bounds::Bounds)::Int64
-	e_mek_lower, _, _ = bounds.lower
+	e_mek_lower, _ = bounds.lower
 	if e_mek_lower < 0.5
 		no_action
 	else
@@ -530,9 +561,28 @@ end
 
 # ╔═╡ 3e00e758-2e2e-42da-9152-fff188f75875
 begin
-	π_grid = Grid([4, 1, 1], π_bounds)
+	π_grid = Grid([4, 1], π_bounds)
 	initialize!(π_grid, initial_value_of_π_partition)
 	π_grid
+end
+
+# ╔═╡ d9e38cab-da45-4367-ad44-0c02ced097b7
+π_grid.bounds
+
+# ╔═╡ cc239362-e3a9-4e7b-bef7-737233e2d338
+size(π_grid), length(π_grid)
+
+# ╔═╡ 670639a2-dc12-45af-bb38-5d197ff41fd4
+let	
+	p1 = draw(π_grid,
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
+		colors=[:white, :white], 
+		#color_labels=bbshieldlabels,
+		size=(400, 400),
+		margin=4mm,
+		show_grid=true,
+		legend=:topright)
 end
 
 # ╔═╡ c2c5207f-ee2e-46fa-877a-18a9bc691e11
@@ -550,7 +600,6 @@ let
 	p1 = scatter(π_points |> unzip,
 		xlabel=π_xlabel,
 		ylabel=π_ylabel,
-		zlabel=π_zlabel,
 		label="samples")
 	
 	p2 = scatter(vp_points |> unzip,
@@ -562,43 +611,14 @@ let
 		label="bounds of (v,p) grid",
 		alpha=0.8)
 
-	plot(p1, p2, legend=:outertop)
-end
-
-# ╔═╡ d9e38cab-da45-4367-ad44-0c02ced097b7
-π_grid.bounds
-
-# ╔═╡ cc239362-e3a9-4e7b-bef7-737233e2d338
-size(π_grid), length(π_grid)
-
-# ╔═╡ 670639a2-dc12-45af-bb38-5d197ff41fd4
-let	
-	p1 = draw(π_grid, [:, :, 2],
-		title=π_zlabel,
-		xlabel=π_xlabel,
-		ylabel=π_ylabel,
-		colors=[:white, :white], 
-		#color_labels=bbshieldlabels,
-		margin=4mm,
-		show_grid=true,
-		legend=:topright)
-
-	p2 = draw(π_grid, [:, :, 1],
-		title="not $π_zlabel",
-		xlabel=π_xlabel,
-		ylabel=π_ylabel,
-		colors=[:white, :white], 
-		#color_labels=bbshieldlabels,
-		margin=4mm,
-		show_grid=true,
-		legend=:topright)
-
-	plot(p1, p2, size=(600, 300))
+	plot(p1, p2, 
+		size=(600, 300), 
+		legend=:outertop)
 end
 
 # ╔═╡ 1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
 let
-	π_grid = Grid([6, 6, 1], π_grid.bounds)
+	π_grid = Grid([6, 6], π_grid.bounds)
 	
 	p1  = plot(π_grid.bounds,
 		color=:white,
@@ -620,7 +640,6 @@ let
 		label="partition")
 
 	scatter!([π_point[1]], [π_point[2]], 
-		title=π_point[3] == 1 ? π_zlabel : "not $π_zlabel",
 		marker=(4, :green, :circle),
 		markerstrokewidth=1,
 		label="π(v, p)")
@@ -692,17 +711,6 @@ length(shield)
 # ╔═╡ 702172e9-59d7-4a77-b663-a89f66132a1f
 partition = box(shield, π(v, p))
 
-# ╔═╡ c1878b2b-8902-4d4d-ac9d-9f8f89896af8
-for π_point in SupportingPoints(samples_per_axis, partition)
-	#if π_point ∉ Bounds(partition) continue end
-	point = π⁻¹(π_point...)
-	if isnothing(point) continue end
-
-	if π(point...) ∉ partition
-		@show π_point
-	end
-end
-
 # ╔═╡ 3fdb6a5a-81e6-43ab-b3f5-4118fe2275c7
 reachable = boundsify.(reachability_function(partition, action))
 
@@ -711,72 +719,6 @@ reachable′ = boundsify.(reachability_function′(partition, action))
 
 # ╔═╡ 5b65f23f-ecd1-4911-98e8-57a582cdb4d3
 bounds = Bounds(partition)
-
-# ╔═╡ cd94ae25-f85e-4693-8eb0-d5eaa1efbe4b
-let
-	xlim = bounds.lower[1] - 4, bounds.upper[1] + 4
-	ylim = bounds.lower[2] - 2, bounds.upper[2] + 2
-	
-	plot(Bounds(partition);
-		xlim, ylim,
-		color=colors.NEPHRITIS, 
-		label="initial",
-		xlabel=π_xlabel,
-		ylabel=π_ylabel,
-		title="zoomed-in view of reachability computation")
-	
-	for r in reachable
-		plot!(r, color=colors.SUNFLOWER, label=nothing)
-	end
-	
-	plot!([], seriestype=:shape, color=colors.SUNFLOWER, 
-		label="reachable by reachability_function")
-	
-	#=
-	for r in reachable′
-		plot!(r, color=colors.AMETHYST, label=nothing)
-	end
-	
-	plot!([], seriestype=:shape, color=colors.AMETHYST, 
-		label="reachable by reachability_function′")
-	=#
-	
-	plot!()
-	sp_initial = [π_point for π_point in SupportingPoints([spa, spa, 3], partition)]
-	sp_reached = [π⁻¹(p...) for p in sp_initial]
-	sp_initial = [(e_mek, v) for (e_mek, v, p_gt_4) in sp_initial]
-	
-	sp_reached = [BB.simulate_point(m, vp, 0, action) for vp in sp_reached 
-		if !isnothing(vp)]
-	
-	sp_reached = [π(p...) for p in sp_reached]
-	sp_reached = [(p[1], p[2]) for p in sp_reached]
-	
-	scatter!(sp_initial, 
-		color=colors.EMERALD, 
-		label="sp_initial",
-		markersize=2, 
-		markerstrokewidth=0)
-	
-	scatter!(sp_reached, color=colors.PETER_RIVER,
-		label="sp_reached", 
-		markersize=2, 
-		markerstrokewidth=0)
-	
-	e_mek_initial = [e_mek for (e_mek, v) in sp_initial] |> unique |> sort
-	e_mek_reached = [e_mek for (e_mek, v) in sp_reached] |> unique |> sort
-	round′(x) = round(x, digits=8)
-	e_mek_reached_rounded = round′.(e_mek_reached) |> unique |> sort
-
-	
-	@show e_mek_initial
-	@show e_mek_reached
-	@show e_mek_reached_rounded
-	@show e_mek_initial == e_mek_reached
-	@show e_mek_initial == e_mek_reached_rounded
-
-	plot!()
-end
 
 # ╔═╡ 24350838-772a-4357-b4fd-5275d6a70393
 length(π_grid)
@@ -947,7 +889,7 @@ end; "This cell opens `$target_dir` in nautilus"
 
 # ╔═╡ 2813bdf7-9530-40a0-bdb5-ab1213f54b31
 let
-	filename = "$π_xlabel_simple, $π_ylabel_simple, $π_zlabel_simple.shield"
+	filename = "$π_xlabel_simple, $π_ylabel_simple.shield"
 	
 	robust_grid_serialization(joinpath(target_dir, filename), shield)
 	
@@ -959,7 +901,7 @@ let
 	filename = "shield.zip"
 	
 	numpy_zip_file(shield, joinpath(target_dir, filename); 
-		variables=[π_xlabel_simple, π_ylabel_simple, π_zlabel_simple], 
+		variables=[π_xlabel_simple, π_ylabel_simple],
 		binary_variables=[3], 
 		actions=BB.Action, 
 		env_id="Bouncing Ball")
@@ -1022,74 +964,48 @@ shield_plot_new_statespace = let
 	slice::Vector{Any} = partition.indices
 	slice[1] = slice[2] = Colon()
 	
-	p1 = draw(shield, [:, :, 2],
-		title=π_zlabel,
+	p1 = draw(shield,
 		xlabel=π_xlabel,
 		ylabel=π_ylabel,
 		colors=bbshieldcolors, 
 		color_labels=bbshieldlabels,
 		legend=nothing)
 
-	p2 = draw(shield, [:, :, 1],
-		title="not $π_zlabel",
-		xlabel=π_xlabel,
-		ylabel=π_ylabel,
-		colors=bbshieldcolors, 
-		color_labels=bbshieldlabels,
-		legend=:topright)
-
 	if show_point
 		## Reachable partitions ##
 		π_point = π(v, p)
 
-		p2 = plot(p2)
-		plot!([], seriestype=:shape, 
-			color=colors.PETER_RIVER,
-			opacity=0.3,
-			label="reachable")
-
 		## Barbaric sampling endpoints ##
 		points = BruteForceSampler(partition, global_supporting_points)
-		left = []
-		right = []
+		foo = []
 		for p in points
 			for r in SupportingPoints(samples_per_random_axis, Bounds((0,), (1,)))
 				p′ = π(BB.simulate_point(m, p, r, action)...)
-				if p′[3] == 1
-					push!(left, (p′[1], p′[2]))
-				else
-					push!(right, (p′[1], p′[2]))
-				end
+				push!(foo, (p′[1], p′[2]))
 			end
 		end
-		if length(left) > 0
+		if length(foo) > 0
 			p1 = plot(p1)
 			
-			scatter!(left |> unzip,
+			scatter!(foo |> unzip,
 				marker=(1, colors.PETER_RIVER, :circle),
 				markerstrokewidth=0,
 				label="Barbaric sample endpoints")
 		end
 
-		if length(right) > 0
-			p2 = plot(p2)
-			
-			scatter!(right |> unzip,
-				marker=(1, colors.PETER_RIVER, :circle),
-				markerstrokewidth=0,
-				label="Barbaric sample endpoints")
-		end
-
-		## The actual point ##
-		if π(v, p)[3] == 1 p1 = plot(p1) else p2 = plot(p2) end
+		plot!(Bounds(partition),
+			linewidth=0,
+			color=colors.EMERALD,
+			opacity=0.5)
 		
+		## The actual point ##		
 		scatter!([π_point[1]], [π_point[2]],
-			marker=(5, colors.EMERALD, :circle),
+			marker=(3, colors.EMERALD, :circle),
 			markerstrokewidth=0,
 			label="(v, p)")
 	end
 
-	plot(p1, p2, size=(800, 400))
+	plot(p1)
 end
 
 # ╔═╡ a566b33b-7005-43c3-afce-b8793447f615
@@ -1140,6 +1056,11 @@ end
 # ╔═╡ 700c196c-dafe-4116-bac8-1024acee9642
 md"""
 # Analyze safety violation in UPPAAL
+
+!!! warn "TODO"
+	All this code for parsing UPPAAL traces is now available as a package: 
+
+	[UppaalTraceParser.jl](https://github.com/AsgerHB/UppaalTraceParser.jl/)
 """
 
 # ╔═╡ aefb7e86-276d-4536-9ea0-33487a5015a8
@@ -1334,30 +1255,35 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═9c8abfbc-a5f0-11ec-3a9b-9bfd0b447638
 # ╠═af1f9e02-7ed4-476b-a01e-6a83fb850e2a
 # ╠═bffbac67-8a3b-4155-a665-0c39f93d3dd7
+# ╟─e59ef411-1779-4ef6-8d82-37892f1387e8
 # ╠═6fee7dcf-a0ee-431a-a5b7-d31c54ffa1a6
-# ╠═da2f3b65-c072-4d54-99b5-83cb9d070d85
-# ╟─61fa5c6f-2f91-4429-a479-10266f6332c8
+# ╠═67d30df1-b60a-4835-a331-94957908ae4a
+# ╠═19281cd7-e79d-4535-9c53-9e9de9882eb0
+# ╠═7802329e-9ef1-40a5-8d5f-79010fa6ac1f
+# ╠═dc918da4-5ab4-4795-a220-67ffbccb97d1
+# ╠═5a251063-64e8-4ced-8e28-34cb4812f931
+# ╟─0a785d98-a03f-4cb1-8d5a-1f61fda1ab4b
+# ╠═d30c6363-75e6-42f8-b3a0-4a032df063ef
+# ╠═61fa5c6f-2f91-4429-a479-10266f6332c8
 # ╠═f93a65f3-9bdf-493b-994c-a26f34818a96
 # ╠═a3af719b-3b92-4c39-a95e-478d5b3179a2
 # ╠═b775a061-3279-4121-806c-e99d211c36b0
 # ╟─3544f929-e518-485f-bdec-eaf1506f3226
-# ╠═67d30df1-b60a-4835-a331-94957908ae4a
-# ╠═19281cd7-e79d-4535-9c53-9e9de9882eb0
-# ╠═7802329e-9ef1-40a5-8d5f-79010fa6ac1f
-# ╠═0ad2d3c9-3a81-4582-b7dc-52225e0c99e9
-# ╠═72d3376b-c91a-43c6-b237-53e83970fd4f
-# ╠═dc918da4-5ab4-4795-a220-67ffbccb97d1
-# ╠═5a251063-64e8-4ced-8e28-34cb4812f931
-# ╠═52b72834-46ea-44de-8b44-013c4574f2d2
 # ╠═b60a9495-7d59-4faa-a399-ac83a83d934d
 # ╠═c1a7ffdd-767d-418d-96af-f13b357e980e
 # ╠═cad96c13-e9fa-45ae-b046-f976ae2ee901
 # ╠═490abcb1-80ea-4bbe-9b4f-b8133d22d9dd
 # ╠═2556f5de-5e22-4f88-b4bf-f3f4c87d06be
 # ╠═3cfe65d2-7f6b-47c9-9c5f-ebc09229a2e6
+# ╠═0ad2d3c9-3a81-4582-b7dc-52225e0c99e9
+# ╠═72d3376b-c91a-43c6-b237-53e83970fd4f
+# ╠═a92f10f7-46c7-4e66-b406-094e66da8cfe
+# ╟─9cbb038a-62d3-43bf-9281-e672db8fb19e
+# ╠═78cb48d3-bedf-48e9-9479-8c71bcc10f6f
+# ╠═236497fd-670b-45b1-8ca3-41b204a4d287
 # ╟─b527f190-ff38-48d3-97ae-aeeed8fdd273
 # ╠═ff60b015-12cf-478b-9a60-93a9b93d0f5f
-# ╠═d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
+# ╟─d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
 # ╟─87651747-c606-4f15-b335-649492faedd9
 # ╠═937afb55-7775-482d-8674-260c8de29614
 # ╟─aad4b9e6-2fbb-46a9-9311-f9e534a17002
@@ -1366,16 +1292,15 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═26092473-69d3-4777-9890-48fa928ccc94
 # ╠═5c3ed2b7-81c0-42e5-b157-d65e25537791
 # ╠═fc8619b5-8dbc-47b3-b66e-24ceeeb45f7f
-# ╠═78cb48d3-bedf-48e9-9479-8c71bcc10f6f
-# ╠═236497fd-670b-45b1-8ca3-41b204a4d287
-# ╠═c2c5207f-ee2e-46fa-877a-18a9bc691e11
 # ╠═d9e38cab-da45-4367-ad44-0c02ced097b7
-# ╠═d30c6363-75e6-42f8-b3a0-4a032df063ef
+# ╟─98663ba0-e134-45eb-b700-8fb78dcc6971
 # ╠═2408a96c-8634-4fe9-91aa-af32ac2c7dec
 # ╠═814e17fe-4824-410d-a46f-da73729d6e8c
 # ╠═3e00e758-2e2e-42da-9152-fff188f75875
 # ╠═cc239362-e3a9-4e7b-bef7-737233e2d338
 # ╟─670639a2-dc12-45af-bb38-5d197ff41fd4
+# ╟─7b3c0c32-6845-46a6-9507-a4351c14dd47
+# ╟─c2c5207f-ee2e-46fa-877a-18a9bc691e11
 # ╟─1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
 # ╟─443301cb-ef1c-40b3-a552-f86e46e0cbe8
 # ╟─898fcb77-2f6d-42b9-93c7-dce396664174
@@ -1383,20 +1308,18 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═c2d118ff-daaa-4649-8937-76f6f4de684b
 # ╠═f0612487-06c4-4330-a0f0-fc4dd367d083
 # ╠═5bf69f54-8ec2-4561-b696-7199ce83c839
-# ╠═cc66d652-a8e5-4ae1-9d72-5ccbc9d500f0
+# ╟─7a76b511-0462-4889-bfe6-939a89ca4702
 # ╠═f4364c08-d09b-4dcc-89ea-e3a58490d901
-# ╠═c1878b2b-8902-4d4d-ac9d-9f8f89896af8
-# ╠═104f1f24-44c8-4ea8-9d6a-732984a96e91
-# ╟─0335457d-5081-4f34-b086-7f597413c9f7
+# ╠═0335457d-5081-4f34-b086-7f597413c9f7
 # ╠═966304ab-8d5e-452b-9d47-c234a14626e6
 # ╠═3fdb6a5a-81e6-43ab-b3f5-4118fe2275c7
 # ╠═7f4b10fe-bed4-4f0a-bc4e-0a6f0d0ca8f1
-# ╠═cd94ae25-f85e-4693-8eb0-d5eaa1efbe4b
+# ╠═104f1f24-44c8-4ea8-9d6a-732984a96e91
 # ╟─6327ed76-cf69-4389-8ce2-e0e9c42eb11f
 # ╠═01190c0f-b8bb-403f-8eed-57d683ad302a
 # ╠═c98583c9-3105-46b3-80b4-06b84d6e1db6
-# ╠═f9fbc97a-3b7d-45f4-a784-45d2cf515fa1
-# ╠═f351c1ed-89d0-495c-8720-7f1ffa9ddd93
+# ╟─f351c1ed-89d0-495c-8720-7f1ffa9ddd93
+# ╟─f9fbc97a-3b7d-45f4-a784-45d2cf515fa1
 # ╟─94ced2a5-7ad8-49e3-b1d1-e1d5b8ee9868
 # ╠═7dad96ac-3c70-4b75-86a1-3ab374d631fa
 # ╠═77750ddb-f774-4c95-8963-a4fd45806bb6

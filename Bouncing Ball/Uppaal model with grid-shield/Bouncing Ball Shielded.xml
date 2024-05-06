@@ -18,7 +18,7 @@ const bool lazy = true;
 /** Shielding */
 /*capture 1*/ import "/home/asger/Documents/Files/Arbejde/AAU/Artikler/Physics-guided Dimensionality Reduction/Bouncing Ball/Uppaal model with grid-shield/shield.so" /* end 1*/
 {
-    int get_value(double e_mek, double v, double p_gt_4);
+    int get_value(double e_mek, double v);
 };
 
 typedef struct {
@@ -50,7 +50,7 @@ double round_8(double x) {    // Round to nearest 8th digit
 
 
 void update_allowed(){
-    int bitarray = get_value(round_8(e_mek(v, p)), round_8(v), round_8(p) &gt; 4 ? 1 : 0);
+    int bitarray = get_value(round_8(e_mek(v, p)), round_8(v));
     allowedActions_t any = {true, true};
     allowed = int_to_actions(bitarray);
     if (!allowed.hit &amp;&amp; !allowed.nohit) {
