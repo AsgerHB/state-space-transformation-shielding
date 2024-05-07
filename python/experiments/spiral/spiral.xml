@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>clock time; // For learning queries; I think they need a stop-condition.
+urgent broadcast chan urg;
+broadcast chan choose;
+broadcast chan check_collision;
+int collisions = 0;
+int visits = 0;    // How many times a destandestination has been visited
+clock x1 = 1.5;
+clock x2 = 0;
+
+typedef int[0, 2] action_t;
+const action_t STAY_COURSE = 0;
+const action_t MOVE_OUT = 1;
+const action_t MOVE_IN = 2;
+
+const double SPEED = 0.2;
+const double DELTA = 0.05;
+
+action_t action;
+
+void take_action(action_t a) {
+    double angle = atan2(x1, x2);
+    double radius = sqrt(x1*x1 + x2*x2);
+    action = a;
+    if (a == MOVE_OUT)
+        radius = (1 + (SPEED * DELTA)) * radius;
+    else if (a == MOVE_IN)
+        radius = (1 - (SPEED * DELTA)) * radius;
+    else if (a == STAY_COURSE)
+        radius = radius;
+    x1 = radius * sin(angle);
+    x2 = radius * cos(angle);
+}
+
+double distance(double p1, double p2, double q1, double q2) {
+    double x1 = p1 - q1;
+    double x2 = p2 - q2;
+    return sqrt(x1*x1 + x2*x2);
+}
+
+/** Shielding **/
+
+// [[ SHIELD_IMPORT
+import "/home/asger/Documents/Files/Arbejde/AAU/Artikler/Physics-guided Dimensionality Reduction/Spiral/spiral_shield_altered_state_space.so"
+//]]
+{
+	// [[ SHIELD_SIGNATURE
+    int get_value(double angle, double radius);
+	//]]
+};
+
+typedef struct {
+    bool stay_course;
+    bool move_out;
+    bool move_in;
+} allowed_actions_t;
+
+allowed_actions_t allowed;
+
+allowed_actions_t intToActions(int bitarray) {
+    allowed_actions_t result = { 
+        (0 != (bitarray &amp; (1 &lt;&lt; 0))),
+        (0 != (bitarray &amp; (1 &lt;&lt; 1))),
+        (0 != (bitarray &amp; (1 &lt;&lt; 2)))
+    };
+    return result;
+}
+
+int step = 0;
+bool unsafe_state_entered = 0;
+
+allowed_actions_t get_allowed(double x1, double x2) {
+    double angle = atan2(x1, x2);
+    double radius = sqrt(x1*x1 + x2*x2);
+	// [[ SHIELD_LOOKUP
+	int value = get_value(angle, radius);
+	//]]
+    allowed_actions_t allowed = intToActions(value);
+    allowed_actions_t any = {true, true, true};
+    if (!allowed.stay_course &amp;&amp; !allowed.move_in &amp;&amp; !allowed.move_out) {
+        unsafe_state_entered = true;
+        return any;
+    }
+    step++;
+    return allowed;
+}
+</declaration>
+	<template>
+		<name>Metronome</name>
+		<declaration>clock x;</declaration>
+		<location id="id0" x="-204" y="-238">
+			<label kind="invariant" x="-214" y="-221">x &lt;= 1 &amp;&amp;
+x' == 1.0/DELTA</label>
+		</location>
+		<location id="id1" x="-280" y="-246">
+			<urgent/>
+		</location>
+		<init ref="id0"/>
+		<transition id="id2" controllable="false">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-229" y="-348">x == 1</label>
+			<label kind="synchronisation" x="-238" y="-374">check_collision!</label>
+			<label kind="assignment" x="-229" y="-323">x = 0</label>
+			<nail x="-195" y="-246"/>
+			<nail x="-212" y="-297"/>
+		</transition>
+		<transition id="id3" controllable="false">
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="-323" y="-144">choose!</label>
+			<nail x="-289" y="-187"/>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">Rock</name>
+		<parameter>const double y1, const double y2, const double radius</parameter>
+		<declaration>// Place local declarations here.
+</declaration>
+		<location id="id4" x="-59" y="-204">
+			<committed/>
+		</location>
+		<location id="id5" x="-60" y="-102">
+		</location>
+		<init ref="id5"/>
+		<transition id="id6" controllable="false">
+			<source ref="id4"/>
+			<target ref="id5"/>
+			<label kind="guard" x="0" y="-255">distance(x1, x2, y1, y2) &gt;= radius</label>
+			<nail x="8" y="-272"/>
+		</transition>
+		<transition id="id7" controllable="false">
+			<source ref="id5"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="-136" y="-161">check_collision?</label>
+		</transition>
+		<transition id="id8" controllable="false">
+			<source ref="id4"/>
+			<target ref="id5"/>
+			<label kind="guard" x="34" y="-187">distance(x1, x2, y1, y2) &lt; radius</label>
+			<label kind="synchronisation" x="34" y="-170">urg!</label>
+			<label kind="assignment" x="34" y="-145">collisions++, x1 = 1.5, x2 = 0</label>
+			<nail x="25" y="-144"/>
+		</transition>
+	</template>
+	<template>
+		<name>Destination</name>
+		<parameter>double y1, double y2, const double radius</parameter>
+		<declaration>void new_pos() {
+    double radius = random(2);
+    double angle = random(2*M_PI) - M_PI;
+    y1 = radius * sin(angle);
+    y2 = radius * cos(angle);
+}</declaration>
+		<location id="id9" x="-952" y="-782">
+		</location>
+		<location id="id10" x="-1088" y="-782">
+			<urgent/>
+		</location>
+		<init ref="id10"/>
+		<transition id="id11" controllable="false">
+			<source ref="id10"/>
+			<target ref="id9"/>
+			<label kind="assignment" x="-1062" y="-799">new_pos()</label>
+		</transition>
+		<transition id="id12" controllable="false">
+			<source ref="id9"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-850" y="-824">distance(x1, x2, y1, y2) &lt; radius</label>
+			<label kind="synchronisation" x="-850" y="-807">urg!</label>
+			<label kind="assignment" x="-850" y="-782">visits++, new_pos()</label>
+			<nail x="-867" y="-824"/>
+			<nail x="-867" y="-740"/>
+		</transition>
+	</template>
+	<template>
+		<name>Agent</name>
+		<location id="id13" x="0" y="170">
+			<name x="8" y="136">Choose</name>
+			<urgent/>
+		</location>
+		<location id="id14" x="0" y="8">
+			<name x="17" y="0">Wait</name>
+			<label kind="invariant" x="-34" y="-51">x1' == -x2 &amp;&amp;
+x2' == x1</label>
+		</location>
+		<init ref="id14"/>
+		<transition id="id15">
+			<source ref="id13"/>
+			<target ref="id14"/>
+			<label kind="guard" x="-195" y="93">allowed.stay_course</label>
+			<label kind="assignment" x="-238" y="76">take_action(STAY_COURSE)</label>
+			<nail x="-17" y="85"/>
+		</transition>
+		<transition id="id16">
+			<source ref="id13"/>
+			<target ref="id14"/>
+			<label kind="guard" x="-263" y="195">allowed.move_in</label>
+			<label kind="assignment" x="-263" y="178">take_action(MOVE_IN)</label>
+			<nail x="-263" y="170"/>
+			<nail x="-263" y="8"/>
+		</transition>
+		<transition id="id17">
+			<source ref="id13"/>
+			<target ref="id14"/>
+			<label kind="guard" x="25" y="187">allowed.move_out</label>
+			<label kind="assignment" x="25" y="170">take_action(MOVE_OUT)</label>
+			<nail x="323" y="170"/>
+			<nail x="323" y="8"/>
+		</transition>
+		<transition id="id18" controllable="false">
+			<source ref="id14"/>
+			<target ref="id13"/>
+			<label kind="synchronisation" x="25" y="76">choose?</label>
+			<label kind="assignment" x="17" y="42">allowed = get_allowed(x1, x2)</label>
+			<nail x="8" y="76"/>
+		</transition>
+	</template>
+	<system>// Place template instantiations here.
+Rock1 = Rock(0, 0, 0.1);
+Rock2 = Rock(1.2, 1.2, 0.1);
+Rock3 = Rock(-0.5, 0.7, 0.1);
+Rock4 = Rock(1.4, -0.7, 0.1);
+Rock5 = Rock(-1.2, -0.4, 0.1);
+Destination1 = Destination(0, 0, 0.15);
+// List one or more processes to be composed into a system.
+system Agent, Metronome, Rock1, Rock2, Rock3, Rock4, Rock5, Destination1;
+</system>
+	<queries>
+		<option key="--total-runs" value="5000"/>
+		<option key="--discretization" value="0.001"/>
+		<option key="--max-iterations" value="1"/>
+		<option key="--good-runs" value="5000"/>
+		<option key="--eval-runs" value="1"/>
+		<option key="--truncation-time-error" value="0.001"/>
+		<option key="--runs-pr-state" value="5000"/>
+		<option key="--diagnostic" value="0"/>
+		<option key="--truncation-error" value="0.001"/>
+		<query>
+			<formula>simulate[&lt;=100;1] {x1, x2}</formula>
+			<comment>There's no way to plot one value as a function of the other, but these values should describe a sine and cosine curve, respectively.</comment>
+		</query>
+		<query>
+			<formula>simulate[&lt;=100;1] {atan2(x1, x2), sqrt(x1*x1 + x2*x2)}</formula>
+			<comment>Angle, Radius</comment>
+		</query>
+		<query>
+			<formula>simulate[&lt;=100;1] {distance(x1, x2, Rock2.y1, Rock2.y2), collisions}</formula>
+			<comment>Sanity check: Distance to the middle rock should be the same as radius</comment>
+		</query>
+		<query>
+			<formula>Pr[&lt;=100;100] (&lt;&gt; unsafe_state_entered)</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>Pr[&lt;=100;100] (&lt;&gt; collisions &gt; 0)</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>strategy ObservingStandardStateSpace = maxE(visits)[&lt;=100] {} -&gt; {x1, x2, Destination1.y1, Destination1.y2} : &lt;&gt; time &gt;= 100</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>strategy ObservingAlteredStateSpace = maxE(visits)[&lt;=100] {} -&gt; {atan2(x1, x2), sqrt(x1*x1+x2*x2), atan2(Destination1.y1, Destination1.y2), sqrt(Destination1.y1*Destination1.y1+Destination1.y2*Destination1.y2)} : &lt;&gt; time &gt;= 100</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>E[&lt;=100;1000] (max:visits)</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>E[&lt;=100;1000] (max:visits) under ObservingStandardStateSpace</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>E[&lt;=100;1000] (max:visits) under ObservingAlteredStateSpace</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+	</queries>
+</nta>
