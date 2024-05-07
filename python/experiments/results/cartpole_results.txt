@@ -1,0 +1,9 @@
+CartPole 1x1x20x20 - Altered State Space
+	('strategy S = minE (num_cart_gone) [<=10] {} -> {cart_pos,cart_vel,pole_ang,pole_vel}: <> time >= 10', True)
+	('E[<=10;100] (max: num_deaths) under S', (0.02, 0.027919))
+	('E[<=10;100] (max: num_pole_fell) under S', (0.0, 0.0))
+	('E[<=10;100] (max: num_cart_gone) under S', (0.02, 0.027919))
+	('strategy S = minE (num_deaths) [<=10] {} -> {cart_pos,cart_vel,pole_ang,pole_vel}: <> time >= 10', True)
+	('E[<=10;100] (max: num_deaths) under S', (0.0, 0.0))
+	('E[<=10;100] (max: num_pole_fell) under S', (0.0, 0.0))
+	('E[<=10;100] (max: num_cart_gone) under S', (0.0, 0.0))

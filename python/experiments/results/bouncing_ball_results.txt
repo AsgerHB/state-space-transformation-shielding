@@ -1,0 +1,13 @@
+[
+    [
+        ('strategy S = minE (swings) [<=120] {} -> {p,v}: <> time >= 120', True),
+        ('E[<=120;100] (max:swings) under S', (59.61, 1.77157)),
+        ('E[<=120;100] (max:hits) under S', (60.5, 1.23206)), 
+        ('E[<=120;100] (max:number_deaths) under S', (0.64, 0.142471)),
+
+        ('strategy S = minE (swings) [<=120] {} -> {getMemory(0)}: <> time >= 120', True),
+        ('E[<=120;100] (max:swings) under S', (59.42, 1.77992)),
+        ('E[<=120;100] (max:hits) under S', (62.08, 1.26524)),
+        ('E[<=120;100] (max:number_deaths) under S', (0.46, 0.139367))
+    ]
+]

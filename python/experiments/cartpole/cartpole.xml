@@ -1,0 +1,433 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>/**
+Implementation of the classical CartPole environment.
+Author: Andreas Holck Høeg-Petersen
+
+Based on the Gymnasium env (https://github.com/Farama-Foundation/Gymnasium/blob/main/gymnasium/envs/classic_control/cartpole.py)
+which uses the equations from Florian, R. 2007 (https://coneural.org/florian/papers/05_cart_pole.pdf)
+
+The system models a cart that can be pushed left or right with a pole balancing
+on top of the cart. The objective of the learning agent is to keep the pole
+from falling for 10 seconds and not pushing the cart to far in either 
+direction. Every time the agent fails, the system is reset and time continues. 
+We thus count the number of deaths during a single run and seek to minimize 
+this number.
+**/
+
+broadcast chan left, right;
+clock time;
+
+
+/// count the number of times the pole falls (minimization objective)
+int num_deaths = 0;
+
+int num_pole_fell = 0;
+int num_cart_gone = 0;
+
+/// force applied to cart (control variable)
+double force = 0;
+
+/// position and angle of the cart, angle and velocity of the pole (state variables)
+clock cart_pos, cart_vel, pole_ang, pole_vel;
+
+/// thresholds (+/-) for when the game is considered lost
+const double cart_thresh = 2.4;
+const double pole_thresh = (12 * 2 * M_PI) / 360;
+
+/// constants for physics
+const double G = 9.8;           /// gravity
+const double mc = 1.0;          /// mass cart
+const double mp = 0.1;          /// mass pole
+const double l = 0.5;           /// pole length (half)
+const double mass = mp + mc;    /// total mass
+const double mp_l = mp * l;     /// pole mass times its length
+const double force_mag = 10.0;  /// magnitude of force applied
+
+/// value to be used in both acceleration equations
+double temp() {
+    return (force + mp_l * pow(pole_vel, 2) * sin(pole_ang)) / mass;
+}
+
+/// pole acceleration
+double poleAcc() {
+    return (G * sin(pole_ang) - cos(pole_ang) * temp()) / (
+        l * (4.0 / 3.0 - (mp * pow(cos(pole_ang), 2) / mass))
+    );
+}
+
+/// cart acceleration
+double cartAcc() {
+    return temp() - mp_l * poleAcc() * cos(pole_ang) / mass;
+}
+
+/// Altered state space
+
+
+double P2(double pole_ang, double pole_vel) {
+    return -4.550831135117032*pole_ang - 141.6953270125445*(pole_ang * pole_ang * pole_ang) - pole_vel;
+}
+
+/// Shielding
+
+// [ SHIELD_PATH
+import "/home/andreashhp/Documents/university/projects/Physics-guided-Dimensionality-Reduction/python/cartpole_CartPole 1x1x20x20 - Altered State Space.so"
+// ]
+// [ SHIELD_SIGNATURE
+int shield(double cart_pos, double cart_vel, double pole_ang, double poly2);
+// ]
+
+const bool shield_enabled = // [ ENABLE_SHIELD
+    true
+// ]
+;
+
+// Shield decisions
+const int NOTHING = 0, ONLY_LEFT = 1, ONLY_RIGHT = 2, EVERYTHING = 3;
+
+// Struct to register allowed actions
+typedef struct {
+    bool left;
+    bool right;
+} allowedActions_t;
+allowedActions_t allowed;
+
+
+// Update allowed actions
+void updateAllowed() {
+
+    int decision = // [ SHIELD_CALL
+        shield(0.0, 0.0, pole_ang, P2(pole_ang, pole_vel))
+    // ]
+    ;
+
+    bool left   = (decision == ONLY_LEFT || decision == EVERYTHING);
+    bool right  = (decision == ONLY_RIGHT || decision == EVERYTHING);
+
+    if (!shield_enabled || (!left &amp;&amp; !right)) {
+        allowedActions_t result = { true, true };
+        allowed = result;
+    }
+    else { allowedActions_t result = { left, right }; allowed = result; }
+}
+</declaration>
+	<template>
+		<name>Agent</name>
+		<declaration>clock t;</declaration>
+		<location id="id0" x="-76" y="-68">
+			<name x="-86" y="-102">Move</name>
+			<committed/>
+		</location>
+		<location id="id1" x="-76" y="33">
+			<name x="-86" y="-1">W</name>
+			<label kind="invariant" x="-59" y="42">t&lt;=1 &amp;&amp; t' == 1.0/0.02</label>
+			<label kind="exponentialrate" x="-93" y="51">1</label>
+		</location>
+		<init ref="id1"/>
+		<transition id="id2">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-289" y="-42">allowed.left</label>
+			<label kind="synchronisation" x="-229" y="-26">left!</label>
+			<nail x="-187" y="-68"/>
+			<nail x="-187" y="33"/>
+		</transition>
+		<transition id="id3">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="guard" x="42" y="-42">allowed.right</label>
+			<label kind="synchronisation" x="43" y="-26">right!</label>
+			<nail x="43" y="-68"/>
+			<nail x="43" y="33"/>
+		</transition>
+		<transition id="id4" controllable="false">
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<label kind="guard" x="-68" y="-9">t==1</label>
+			<label kind="assignment" x="-68" y="-42">t=0.0,
+updateAllowed()</label>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">CartPole</name>
+		<location id="id5" x="-229" y="-357">
+			<name x="-280" y="-400">Terminated</name>
+			<label kind="invariant" x="-340" y="-442">cart_pos' == 0 &amp;&amp; cart_vel' == 0 &amp;&amp;
+pole_ang' == 0 &amp;&amp; pole_vel' == 0</label>
+			<committed/>
+		</location>
+		<location id="id6" x="-229" y="-17">
+			<name x="-280" y="-42">Alive</name>
+			<label kind="invariant" x="-212" y="-8">cart_pos' == cart_vel &amp;&amp; cart_vel' == cartAcc() &amp;&amp;
+pole_ang' == pole_vel &amp;&amp; pole_vel' == poleAcc()</label>
+		</location>
+		<location id="id7" x="-229" y="102">
+			<name x="-239" y="68">Initial</name>
+			<urgent/>
+		</location>
+		<location id="id8" x="-229" y="-161">
+			<name x="-221" y="-153">IsDead</name>
+			<committed/>
+		</location>
+		<location id="id9" x="-603" y="-289">
+			<name x="-637" y="-323">CartToFarLeft</name>
+			<committed/>
+		</location>
+		<location id="id10" x="-408" y="-289">
+			<name x="-442" y="-323">CartToFarRight</name>
+			<committed/>
+		</location>
+		<location id="id11" x="-34" y="-289">
+			<name x="-93" y="-323">PoleToLowLeft</name>
+			<committed/>
+		</location>
+		<location id="id12" x="136" y="-289">
+			<name x="102" y="-323">PoleToLowRight</name>
+			<committed/>
+		</location>
+		<init ref="id7"/>
+		<transition id="id13" controllable="false">
+			<source ref="id8"/>
+			<target ref="id12"/>
+			<label kind="guard" x="-25" y="-229">pole_ang &gt; pole_thresh</label>
+		</transition>
+		<transition id="id14" controllable="false">
+			<source ref="id8"/>
+			<target ref="id11"/>
+			<label kind="guard" x="-221" y="-272">pole_ang &lt; -pole_thresh</label>
+		</transition>
+		<transition id="id15" controllable="false">
+			<source ref="id8"/>
+			<target ref="id10"/>
+			<label kind="guard" x="-459" y="-272">cart_pos &gt; cart_thresh</label>
+		</transition>
+		<transition id="id16" controllable="false">
+			<source ref="id8"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-612" y="-229">cart_pos &lt; -cart_thresh</label>
+		</transition>
+		<transition id="id17" controllable="false">
+			<source ref="id12"/>
+			<target ref="id5"/>
+			<label kind="assignment" x="-211" y="-323">num_pole_fell++</label>
+		</transition>
+		<transition id="id18" controllable="false">
+			<source ref="id11"/>
+			<target ref="id5"/>
+			<label kind="assignment" x="-59" y="-348">num_pole_fell++</label>
+		</transition>
+		<transition id="id19" controllable="false">
+			<source ref="id10"/>
+			<target ref="id5"/>
+			<label kind="assignment" x="-348" y="-340">num_cart_gone++</label>
+		</transition>
+		<transition id="id20" controllable="false">
+			<source ref="id9"/>
+			<target ref="id5"/>
+			<label kind="assignment" x="-569" y="-340">num_cart_gone++</label>
+		</transition>
+		<transition id="id21" controllable="false">
+			<source ref="id8"/>
+			<target ref="id6"/>
+			<label kind="guard" x="-221" y="-127">cart_pos &gt;= -cart_thresh &amp;&amp;
+cart_pos &lt;= cart_thresh &amp;&amp;
+pole_ang &gt;= -1 * pole_thresh &amp;&amp; 
+pole_ang &lt;= pole_thresh</label>
+		</transition>
+		<transition id="id22" controllable="false">
+			<source ref="id5"/>
+			<target ref="id7"/>
+			<label kind="assignment" x="-773" y="-127">num_deaths++</label>
+			<nail x="-671" y="-357"/>
+			<nail x="-671" y="102"/>
+		</transition>
+		<transition id="id23" controllable="false">
+			<source ref="id7"/>
+			<target ref="id6"/>
+			<label kind="assignment" x="-204" y="93">cart_pos = -0.05 + random(0.1), cart_vel = -0.05 + random(0.1),
+pole_ang = -0.05 + random(0.1), pole_vel = -0.05 + random(0.1)</label>
+		</transition>
+		<transition id="id24">
+			<source ref="id6"/>
+			<target ref="id8"/>
+			<label kind="synchronisation" x="59" y="-102">left?</label>
+			<label kind="assignment" x="59" y="-85">force = -1 * force_mag</label>
+			<nail x="42" y="-17"/>
+			<nail x="42" y="-161"/>
+		</transition>
+		<transition id="id25">
+			<source ref="id6"/>
+			<target ref="id8"/>
+			<label kind="synchronisation" x="-510" y="-76">right?</label>
+			<label kind="assignment" x="-510" y="-59">force = force_mag</label>
+			<nail x="-357" y="-17"/>
+			<nail x="-357" y="-161"/>
+		</transition>
+	</template>
+	<system>system Agent, CartPole;
+</system>
+	<queries>
+		<query>
+			<formula>// How often do we die with random control?</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>E[&lt;=10;100] (max: num_pole_fell)</formula>
+			<comment>Expected number of deaths with random control.
+Should finish in a couple of seconds and be around 23.</comment>
+			<result outcome="success" type="quantity" value="≈ 0" timestamp="2024-04-29 11:33:15 +0200">
+				<details>≈ 0</details>
+				<plot title="Probability Density Distribution" xaxis="max: num_pole_fell" yaxis="probability density">
+					<series title="density" type="b(1.000000)" color="0x0000ff" encoding="csv">0.0,1.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0,0.0
+0.0,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=1
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 0]
+Mean estimate of displayed sample: ≈ 0</comment>
+				</plot>
+				<plot title="Probability Distribution" xaxis="max: num_pole_fell" yaxis="probability">
+					<series title="probability" type="b(1.000000)" color="0x0000ff" encoding="csv">0.0,1.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0,0.0
+0.0,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=1
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 0]
+Mean estimate of displayed sample: ≈ 0</comment>
+				</plot>
+				<plot title="Cumulative Probability Distribution" xaxis="max: num_pole_fell" yaxis="probability">
+					<series title="cumulative" type="l" color="0x000000" encoding="csv">0.0,0.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0,0.0
+0.0,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=1
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 0]
+Mean estimate of displayed sample: ≈ 0</comment>
+				</plot>
+				<plot title="Cumulative Probability Confidence Intervals" xaxis="max: num_pole_fell" yaxis="probability">
+					<series title="upper limit" type="k" color="0x0000dd" encoding="csv">0.0,0.03621669264517642
+					</series>
+					<series title="lower limit" type="k" color="0xdd0000" encoding="csv">0.0,0.0
+					</series>
+					<series title="cumulative" type="l" color="0x000000" encoding="csv">0.0,0.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0,0.0
+0.0,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=1
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 0]
+Mean estimate of displayed sample: ≈ 0</comment>
+				</plot>
+				<plot title="Frequency Histogram" xaxis="max: num_pole_fell" yaxis="count">
+					<series title="count" type="b(1.000000)" color="0x0000ff" encoding="csv">0.0,100.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0,0.0
+0.0,100.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=1
+Runs: 100 in total, 100 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 0]
+Mean estimate of displayed sample: ≈ 0</comment>
+				</plot>
+			</result>
+		</query>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+		<query>
+			<formula>// Train strategy</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>strategy StayAlive = minE (num_deaths) [&lt;=10] {} -&gt; {cart_pos, cart_vel, pole_ang, pole_vel}: &lt;&gt; time &gt;= 10</formula>
+			<comment>Train a strategy from a partially observable state space that minimizes the number of deaths over a 10 seconds run.
+Should find a strategy within a minute.</comment>
+			<result outcome="success" type="quality" timestamp="2024-04-26 15:44:26 +0200">
+			</result>
+		</query>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+		<query>
+			<formula>// How often do we die with trained controller?</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>E[&lt;=10;1000] (max: num_deaths) under StayAlive</formula>
+			<comment>Expected number of deaths under the well trained agent.
+Should finish in a couple of seconds and be around 0.01.</comment>
+			<result outcome="success" type="quantity" value="≈ 0" timestamp="2024-04-26 15:44:43 +0200">
+				<details>≈ 0</details>
+				<plot title="Probability Density Distribution" xaxis="max: num_deaths" yaxis="probability density">
+					<series title="density" type="b(1.000000)" color="0x0000ff" encoding="csv">0.0,1.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0,0.0
+0.0,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=1
+Runs: 1000 in total, 1000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 0]
+Mean estimate of displayed sample: ≈ 0</comment>
+				</plot>
+				<plot title="Probability Distribution" xaxis="max: num_deaths" yaxis="probability">
+					<series title="probability" type="b(1.000000)" color="0x0000ff" encoding="csv">0.0,1.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0,0.0
+0.0,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=1
+Runs: 1000 in total, 1000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 0]
+Mean estimate of displayed sample: ≈ 0</comment>
+				</plot>
+				<plot title="Cumulative Probability Distribution" xaxis="max: num_deaths" yaxis="probability">
+					<series title="cumulative" type="l" color="0x000000" encoding="csv">0.0,0.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0,0.0
+0.0,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=1
+Runs: 1000 in total, 1000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 0]
+Mean estimate of displayed sample: ≈ 0</comment>
+				</plot>
+				<plot title="Cumulative Probability Confidence Intervals" xaxis="max: num_deaths" yaxis="probability">
+					<series title="upper limit" type="k" color="0x0000dd" encoding="csv">0.0,0.003682083896865672
+					</series>
+					<series title="lower limit" type="k" color="0xdd0000" encoding="csv">0.0,0.0
+					</series>
+					<series title="cumulative" type="l" color="0x000000" encoding="csv">0.0,0.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0,0.0
+0.0,1.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=1
+Runs: 1000 in total, 1000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 0]
+Mean estimate of displayed sample: ≈ 0</comment>
+				</plot>
+				<plot title="Frequency Histogram" xaxis="max: num_deaths" yaxis="count">
+					<series title="count" type="b(1.000000)" color="0x0000ff" encoding="csv">0.0,1000.0
+					</series>
+					<series title="average" type="pl" color="0x00dd00" encoding="csv">0.0,0.0
+0.0,1000.0
+					</series>
+					<comment>Parameters: α=0.05, ε=0.05, bucket width=1, bucket count=1
+Runs: 1000 in total, 1000 (100%) displayed, 0 (0%) remaining
+Span of displayed sample: [0, 0]
+Mean estimate of displayed sample: ≈ 0</comment>
+				</plot>
+			</result>
+		</query>
+	</queries>
+</nta>
