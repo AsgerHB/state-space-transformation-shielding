@@ -1,0 +1,38 @@
+Spiral Shield - Standard State Space
+	176400
+	4913
+	('strategy S = maxE (visits) [<= 100] {} -> {x1,x2}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (1.076, 0.077052))
+	('E[<=100;1000] (min:visits) under S', (0.0, 0.0))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))
+	('strategy S = maxE (visits) [<= 100] {} -> {atan2(x1, x2),sqrt(x1*x1 + x2*x2)}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (0.743, 0.0562536))
+	('E[<=100;1000] (min:visits) under S', (0.0, 0.0))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))
+	('strategy S = maxE (visits) [<= 100] {} -> {x1,x2,Destination1.y1,Destination1.y2}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (0.467, 0.0516063))
+	('E[<=100;1000] (min:visits) under S', (0.0, 0.0))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))
+	('strategy S = maxE (visits) [<= 100] {} -> {atan2(x1, x2),sqrt(x1*x1+x2*x2),atan2(Destination1.y1, Destination1.y2),sqrt(Destination1.y1*Destination1.y1+Destination1.y2*Destination1.y2)}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (0.537, 0.0542187))
+	('E[<=100;1000] (min:visits) under S', (0.0, 0.0))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))
+Spiral Shield - Altered State Space
+	45500
+	544
+	('strategy S = maxE (visits) [<= 100] {} -> {x1,x2}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (1.31, 0.0686293))
+	('E[<=100;1000] (min:visits) under S', (0.0, 0.0))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))
+	('strategy S = maxE (visits) [<= 100] {} -> {atan2(x1, x2),sqrt(x1*x1 + x2*x2)}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (1.183, 0.0660422))
+	('E[<=100;1000] (min:visits) under S', (0.0, 0.0))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))
+	('strategy S = maxE (visits) [<= 100] {} -> {x1,x2,Destination1.y1,Destination1.y2}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (0.581, 0.0548129))
+	('E[<=100;1000] (min:visits) under S', (0.0, 0.0))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))
+	('strategy S = maxE (visits) [<= 100] {} -> {atan2(x1, x2),sqrt(x1*x1+x2*x2),atan2(Destination1.y1, Destination1.y2),sqrt(Destination1.y1*Destination1.y1+Destination1.y2*Destination1.y2)}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (0.444, 0.0508521))
+	('E[<=100;1000] (min:visits) under S', (0.0, 0.0))
+	('E[<=100;1000] (max:collisions) under S', (0.03, 0.0339547))
