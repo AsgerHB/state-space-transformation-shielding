@@ -1,5 +1,6 @@
 import json
 import pathlib
+import numpy as np
 
 from experiments.utils import Shield, UPPAALInstance
 
@@ -9,32 +10,38 @@ def run_from_config(config_path, results_dir):
         conf = json.load(f)
 
     for model in conf:
-        if model != 'cartpole':
-            continue
+        print()
 
-        model_file = conf[model]['model_file']
+        model_dir = conf[model]['model_dir']
+        uppaal_file = conf[model]['uppaal_file']
         state_vars = conf[model]['state_vars']
         shields = conf[model]['shields']
         training_costs = conf[model]['training_costs']
         training_bound = conf[model]['training_bound']
         training_goal = conf[model]['training_goal']
+        training_optimizer = conf[model]['training_optimizer']
         queries = conf[model]['queries']
 
         model_slug = model.replace(' ', '_')
         model_results = []
 
-        instance = UPPAALInstance(model_file)
+        print(f"experiment on '{model_slug}'")
+
+        instance = UPPAALInstance(model_dir + uppaal_file)
 
         for cost in training_costs:
             for svars in state_vars:
                 features = '{} -> {' + ','.join(svars) + '}'
                 instance.add_training_query(
-                    training_bound, features, training_goal, cost=cost
+                    training_bound, features, training_goal,
+                    cost=cost, exp=training_optimizer
                 )
                 for query in queries:
                     instance.add_query(query)
 
         for shield_name in shields:
+            print()
+            print(shield_name)
             model_results.append(shield_name)
 
             shield_path = shields[shield_name]['path']
@@ -50,10 +57,14 @@ def run_from_config(config_path, results_dir):
             # run with shield
             else:
                 shield_call = shields[shield_name]['shield_call']
+                print('load shield and minimize tree')
 
                 shield = Shield(shield_path, make_tree=True)
+                model_results.append(
+                    [np.prod(shield.grid.shape), shield.tree.n_leaves]
+                )
                 shield_signature = shield.get_signature()
-                so_path = model_slug + f'_{shield_name}.so'
+                so_path = model_dir + model_slug + f'_{shield_name}.so'
                 shield.compile_so(so_path)
 
                 shield_path = pathlib.Path(so_path).resolve()
@@ -64,7 +75,9 @@ def run_from_config(config_path, results_dir):
                 instance.update_tag('SHIELD_CALL', shield_call)
 
             # run model and add results to results list
-            output = instance.run('-Wsqy')
+            print('run the UPPAAL instance...')
+            extra_args = shields[shield_name].get('extra_verifyta_args', [])
+            output = instance.run('-Wsqy', *extra_args)
             parsed_output = instance.parse_ouput(output)
             model_results.append(parsed_output)
 
