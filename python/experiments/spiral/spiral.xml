@@ -42,14 +42,19 @@ double distance(double p1, double p2, double q1, double q2) {
 
 /** Shielding **/
 
-// [[ SHIELD_IMPORT
+// [ SHIELD_PATH
 import "/home/asger/Documents/Files/Arbejde/AAU/Artikler/Physics-guided Dimensionality Reduction/Spiral/spiral_shield_altered_state_space.so"
-//]]
+// ]
 {
-	// [[ SHIELD_SIGNATURE
-    int get_value(double angle, double radius);
-	//]]
+    // [ SHIELD_SIGNATURE
+    int shield(double angle, double radius);
+	// ]
 };
+
+const bool shield_enabled = // [ ENABLE_SHIELD
+    true
+// ]
+;
 
 typedef struct {
     bool stay_course;
@@ -74,11 +79,13 @@ bool unsafe_state_entered = 0;
 allowed_actions_t get_allowed(double x1, double x2) {
     double angle = atan2(x1, x2);
     double radius = sqrt(x1*x1 + x2*x2);
-	// [[ SHIELD_LOOKUP
-	int value = get_value(angle, radius);
-	//]]
+	int value = // [ SHIELD_CALL
+	    shield(angle, radius)
+	// ]
+    ;
     allowed_actions_t allowed = intToActions(value);
     allowed_actions_t any = {true, true, true};
+    if (!shield_enabled) { return any; }
     if (!allowed.stay_course &amp;&amp; !allowed.move_in &amp;&amp; !allowed.move_out) {
         unsafe_state_entered = true;
         return any;
