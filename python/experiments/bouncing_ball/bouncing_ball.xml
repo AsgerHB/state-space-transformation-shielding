@@ -246,7 +246,9 @@ system Ball,
 		</plot-widget>
 	</simulator>
 	<queries>
-		<option key="--diagnostic" value="-1"/>
+		<option key="--discretization" value="0.005"/>
+		<option key="--truncation-time-error" value="0.005"/>
+		<option key="--truncation-error" value="0.005"/>
 		<query>
 			<formula>// Reference queries</formula>
 			<comment/>
