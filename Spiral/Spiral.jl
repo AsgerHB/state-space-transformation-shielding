@@ -62,7 +62,8 @@ md"""
 
 # ╔═╡ d355823b-cc1c-40b9-96e0-a09cd79be7ff
 # system definition
-const A = [0.0 -1; 1 0]  # dynamics matrix of the standard oscillator
+const A = [0.0 1; 
+			-1 0]  # dynamics matrix of the standard oscillator
 
 # ╔═╡ 52be2607-df01-458b-898e-901406747e3e
 const δ = 0.05  # time step
@@ -95,7 +96,7 @@ end
 
 # ╔═╡ 88ffd438-a6b3-4b11-82d8-af9ce61ed222
 function apply(x, a::Action)
-    θ = atan(x...)
+    θ = atan(x[2], x[1])
     r = sqrt(x[1]^2 + x[2]^2)
 	if a == move_out
     	r′ = (1 + (speed * δ)) * r
@@ -106,8 +107,11 @@ function apply(x, a::Action)
 	else 
 		error("Unexpected a $a")
 	end
-    return [r′ * sin(θ), r′ * cos(θ)]
+    return [r′ * cos(θ), r′ * sin(θ)]
 end
+
+# ╔═╡ d8cd7fce-f4d4-4c52-b604-ad32178b68ca
+apply((0.54, 0.5), stay_course)
 
 # ╔═╡ bb1ff345-58ba-498a-8035-88ef1db7d917
 const expAδ = exp(A*δ)
@@ -245,10 +249,10 @@ end
 # ╔═╡ 9ff397e2-9aa7-433f-9a59-a4d3cb38a9bb
 function plot_trace(trace::SpiralTrace, i=nothing; background=plot())
 	i = something(i, length(trace.states))
-	path_colors = [is_safe(x) ? colors.PETER_RIVER : colors.POMEGRANATE 
+	path_colors = [is_safe(x) ? colors.PETER_RIVER : colors.ORANGE 
 		for x in trace.states[1:i]]
 
-	alphas = [10/(i - j) for j in 1:i]
+	alphas = [is_safe(x) ? 10/(i - j) : 80/(i - j) for (j, x) in enumerate(trace.states[1:i])]
 
 	plot(background)
 	
@@ -256,7 +260,7 @@ function plot_trace(trace::SpiralTrace, i=nothing; background=plot())
 		label=nothing,
 		seriestype=:shape,
 		linewidth=0,
-		color=colors.CONCRETE)
+		color=colors.ALIZARIN)
 	
 	plot!([(x[1], x[2]) for x in trace.states[1:i]],
 		xlabel="x1",
@@ -273,7 +277,7 @@ function plot_trace(trace::SpiralTrace, i=nothing; background=plot())
 		label=nothing)
 	
 	scatter!([trace.states[i][1]], [trace.states[i][2]], 
-		color=is_safe(trace.states[i]) ? colors.NEPHRITIS : colors.POMEGRANATE,
+		color=is_safe(trace.states[i]) ? colors.NEPHRITIS : colors.ORANGE,
 		marker=:circle,
 		markersize=4,
 		markerstrokewidth=0,
@@ -621,8 +625,8 @@ AlteredState = SVector{2, Float64}
 
 # ╔═╡ 508f0e5e-b668-400b-95d3-c484477fc855
 function f(x)::AlteredState
-	θ = atan(x...)
-	r = euclidean(zeros(2), x)
+	θ = atan(x[2], x[1])
+	r = √(x[1]^2 + x[2]^2)
 	θ, r
 end
 
@@ -632,7 +636,7 @@ f(x0)
 # ╔═╡ e2cd27b9-79bf-400f-a8b5-3dc895d98ff1
 function f⁻¹(x)::SpiralState
 	θ, r = x
-	r*sin(θ), r*cos(θ)
+	r*cos(θ), r*sin(θ)
 end
 
 # ╔═╡ a8c248b4-e1b5-45f8-9ed3-1d81239f063f
@@ -699,21 +703,6 @@ begin
 		clim=(no_action, any_action),
 		colors=shieldcolors, 
 		color_labels=shieldlabels,)
-
-	a_rocks = [Rock(f(rock.position), rock.radius) for rock in rocks
-		if rock.position != [0, 0]]
-
-	plot!(a_rocks, 
-		seriestype=:shape,
-		color=colors.CONCRETE,
-		linewidth=0,
-		label=nothing)
-	
-	scatter!([],
-		markershape=:circle,
-		markerstrokewidth=0,
-		color=colors.CONCRETE, 
-		label="Obstacle")
 end
 
 # ╔═╡ c5570c5b-5d4c-44bf-9dde-2d5e9a8e8ed4
@@ -982,12 +971,9 @@ let
 	""")
 end
 
-# ╔═╡ 4ec52885-8315-403d-8eeb-d49a4eac8f16
-
-
 # ╔═╡ f47335e6-999d-449d-bf95-1f184b898042
 md"""
-# Exporting the Shield
+# Exporting the Shields
 """
 
 # ╔═╡ e514a65b-eb40-4193-92cd-406273e43d9b
@@ -1412,20 +1398,21 @@ let
 	action = stay_course
 	
 	# before
-x1 = -1.3120041233945752
-x2 = 0.18522502698172874
+x1 = -0.8744410850195898
+x2 = 0.34489584579408605
 	x = (x1, x2)
 	# after
-x1 = -1.3196053587033947
-x2 = 0.11941916379615652
+x1 = -0.8560892378186624
+x2 = 0.38815897982088693
 	x′ = (x1, x2)
 
 	partition = box(a_shield, f(x))
 	partition′ = box(a_shield, f(x′))
 
 	reachable = a_reachability_function(partition, action)
-	@info partition′.indices ∈ reachable
-	@info get_value(partition′)
+	@info "partition′ in reachable?" partition′.indices ∈ reachable
+	@info "Actions in partition" int_to_actions(Action, get_value(partition))
+	@info "Actions in partition′" int_to_actions(Action, get_value(partition′))
 	reachable = [Partition(a_shield, i) for i in reachable]
 
 	plot(Bounds(partition), color=colors.NEPHRITIS, label=nothing)
@@ -1434,7 +1421,7 @@ x2 = 0.11941916379615652
 	end
 	plot!(Bounds(partition′), color=colors.ALIZARIN, opacity=0.5, label=nothing)
 
-	supporting_points = SupportingPoints(6, partition)
+	supporting_points = SupportingPoints(samples_per_axis, partition)
 	successors = [f(successor(f⁻¹(x), action)) for x in supporting_points]
 	scatter!([Tuple(x) for x in supporting_points], color=colors.EMERALD, label=nothing)
 	scatter!([Tuple(x) for x in successors], color=colors.PETER_RIVER, label=nothing)
@@ -1452,21 +1439,17 @@ end
 
 # ╔═╡ 140850b6-a3b4-4e07-a17a-5ad77e31df79
 let
-	
-	# Overwrite successor function with higher time step
-	successor′(x, δ) = (exp(A*δ))*[x...]
-	
 	# Reachability in original state space.
-	# Paste in states from uppaal and write the correct action
-	action = move_out
+	# Enter action and paste in states from uppaal.
+action = stay_course
 	
 	# before
-x1 = -0.5310075417723606
-x2 = 0.8102798596338565
+x1 = -0.8744410850195898
+x2 = 0.34489584579408605
 	x = (x1, x2)
 	# after
-x1 = -0.5651185227456723
-x2 = 0.7748812344580948
+x1 = -0.8560892378186624
+x2 = 0.38815897982088693
 	x′ = (x1, x2)
 
 	partition = box(shield, x)
@@ -1478,36 +1461,53 @@ x2 = 0.7748812344580948
 	@info "actoins partition" int_to_actions(Action, get_value(partition))
 	reachable = [Partition(shield, i) for i in reachable]
 
-	plot(xlim=(x[1] - 0.1, x[1] + 0.1), ylim=(x[2] - 0.1, x[2] + 0.1),)
+	plot(xlim=(x[1] - 0.1, x[1] + 0.1), ylim=(x[2] - 0.1, x[2] + 0.1), ratio=1)
+
+	# Initial partition
 	plot!(Bounds(partition), color=colors.NEPHRITIS, label=nothing)
-		
+
+	# Rocks
 	plot!(rocks;
 		seriestype=:shape,
 		color=colors.CONCRETE,
 		linewidth=0,
 		label=nothing)
-	
+
+	# Reachable partitions (according to reachability function)
 	for partition″ in reachable
 		plot!(Bounds(partition″), color=colors.BELIZE_HOLE, label=nothing)
 	end
+
+	# The partition it actually reached.
 	plot!(Bounds(partition′), color=colors.ALIZARIN, opacity=0.5, label=nothing)
 
 	supporting_points = SupportingPoints(6, partition)
 	successors = [successor(x, action) for x in supporting_points]
-	scatter!([Tuple(x) for x in supporting_points], color=colors.EMERALD, label=nothing)
-	scatter!([Tuple(x) for x in successors], color=colors.PETER_RIVER, label=nothing)
-	
+
+	# Supporting Points (start)
+	scatter!([Tuple(x) for x in supporting_points], 
+		color=colors.EMERALD,
+		opacity=0.2,
+		label=nothing)
+
+	# Supporting Points (end)
+	scatter!([Tuple(x) for x in successors], 
+		color=colors.PETER_RIVER,
+		label=nothing,
+		opacity=0.2)
+
+	# Start and end points
 	plot!([Tuple(x), Tuple(x′)],
 		linewidth=3,
 		linestyle=:dot,
 		color=colors.WET_ASPHALT,
 		marker=:circle,
-		ratio=1, 
 		xlabel="x1",
 		ylabel="x2",
 		label=nothing)	
 
-	plot!([Tuple(successor′(x′, δ′)) for δ′ in 0:0.01:δ],
+	
+	plot!([Tuple(apply(x, action)), Tuple(successor(apply(x, action), stay_course))],
 		label=nothing,
 		linestyle=:dash,
 		color=colors.WET_ASPHALT)
@@ -1627,7 +1627,6 @@ end
 # ╠═3061a25a-bae8-4763-b84b-59e3536fd63c
 # ╠═150a3ed4-3a97-4a75-b836-3c990d127f8f
 # ╟─c9412832-1653-449b-bff3-99147ec7f3a6
-# ╠═4ec52885-8315-403d-8eeb-d49a4eac8f16
 # ╟─f47335e6-999d-449d-bf95-1f184b898042
 # ╠═e514a65b-eb40-4193-92cd-406273e43d9b
 # ╟─3b0d8736-713c-4fde-85db-7cfb239c45fe

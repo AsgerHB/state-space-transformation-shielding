@@ -11,11 +11,11 @@ And while it is easy to generate a shield that keeps *either* the cart's positio
 Safety strategies could be created in decent resolution for just the position or angle, it's just that with the 4 dimensions together, it becomes infeasible. The safety strategy for position alone is shown in @position_regular, and the safety strategy for the angle in @angle_regular. These shields are of size $150 times 150$.
 
 #grid(columns: 2, 
-  [#figure(image("Graphics/Cart Pole/Position Regular.png", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Position Regular.png", fit:"cover"), 
       caption: "Shield for position only.") 
     <position_regular>],
 
-  [#figure(image("Graphics/Cart Pole/Angle Regular.png", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Angle Regular.png", fit:"cover"), 
       caption: "Shield for angle only.") 
     <angle_regular>],
 
@@ -27,11 +27,11 @@ For each shield, we can see some similarity in the shape of the upper and lower 
 The idea then was to fit a polynomial to the decision boundaries. @position_polynomial_fitting_top shows a polynomial fit to the topmost decision boundary. #footnote[I wrote a function that took a 2D-grid and two values, and returned samples from the middle of partitions that had the first values and which bordered a partition that had the second value.] Since the two boundaries aren't exactly alike, I used the average values of the two decision boundaries to fit a polynomial, as shown in @position_polynomial_fitting_average.
 
 #grid(columns: 2, 
-  [#figure(image("Graphics/Cart Pole/Position Polynomial Fitting Top.png", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Position Polynomial Fitting Top.png", fit:"cover"), 
       caption: "Fitting a polynomial to the topmost decision border of the position-shield.") 
     <position_polynomial_fitting_top>],
 
-  [#figure(image("Graphics/Cart Pole/Position Polynomial Fitting Average.png", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Position Polynomial Fitting Average.png", fit:"cover"), 
       caption: "Fitting a polynomial to the average of the two decision borders") 
     <position_polynomial_fitting_average>],
 
@@ -59,19 +59,19 @@ The 1st degree polynomial used for the position state space was: $P_1(x, dot(x))
 $P_1(x, dot(x))  - 1.1877*x - 0.0012*x^3 - 0.0243*x^5 + 0.0073*x^7 - 0.0009*x^9 - dot(x) $
 
 #grid(columns: 2,
-  [#figure(image("Graphics/Cart Pole/Position 10th Degree Polynomial.png", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Position 10th Degree Polynomial.png", fit:"cover"), 
       caption: [x-shield produced by using a 10th degree polynomial from @position_polynomial_fitting_average.]) 
     <position_10th_degree_polynomial>],
 
-  [#figure(image("Graphics/Cart Pole/Position 1st Degree Polynomial.png", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Position 1st Degree Polynomial.png", fit:"cover"), 
       caption: [x-shield produced by using a 1rst degree polynomial from @position_polynomial_fitting_average.]) 
     <position_1st_degree_polynomial>],
 
-  [#figure(image("Graphics/Cart Pole/Position 1st Degree Polynomial Coarse.png", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Position 1st Degree Polynomial Coarse.png", fit:"cover"), 
       caption: [A $30 times 30$ x-shield using the altered state space of @position_1st_degree_polynomial.])
     <position_1st_degree_polynomial_coarse>],
 
-  [#figure(image("Graphics/Cart Pole/Position 1st Degree Polynomial Very Coarse.png", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Position 1st Degree Polynomial Very Coarse.png", fit:"cover"), 
       caption: [A $10 times 30$ x-shield using the altered state space of @position_1st_degree_polynomial. Using the regular state space with a grid of this size does not produce a viable safety strategy. ]) 
     <position_1st_degree_polynomial_very_coarse>],
 
@@ -79,19 +79,19 @@ $P_1(x, dot(x))  - 1.1877*x - 0.0012*x^3 - 0.0243*x^5 + 0.0073*x^7 - 0.0009*x^9 
 
 
 #grid(columns: 2,
-  [#figure(image("Graphics/Cart Pole/Angle 10th Degree Polynomial.png", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Angle 10th Degree Polynomial.png", fit:"cover"), 
       caption: [θ-shield produced by using the 10th degree polynomial from @position_polynomial_fitting_average.])
     <angle_10th_degree_polynomial>],
 
-  [#figure(image("Graphics/Cart Pole/Angle 1st Degree Polynomial.png", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Angle 1st Degree Polynomial.png", fit:"cover"), 
       caption: [θ-shield produced by using the 1st degree polynomial from @position_polynomial_fitting_average.])
     <angle_1st_degree_polynomial>],
 
-  [#figure(image("Graphics/Cart Pole/Angle 1st Degree Polynomial Coarse.png", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Angle 1st Degree Polynomial Coarse.png", fit:"cover"), 
       caption: [A $30 times 30$ θ-shield using the altered state space of @position_1st_degree_polynomial.])
     <angle_1st_degree_polynomial_coarse>],
 
-  [#figure(image("Graphics/Cart Pole/Angle 1st Degree Polynomial Very Coarse.png", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Angle 1st Degree Polynomial Very Coarse.png", fit:"cover"), 
       caption: [A $10 times 30$ θ-shield using the altered state space of @position_1st_degree_polynomial. Using the regular state space with a grid of this size does not produce a viable safety strategy.]) 
     <angle_1st_degree_polynomial_very_coarse>],
 
@@ -112,16 +112,16 @@ A finer granulairty or a better state-space could reduce the over-approximation 
 
 
 #grid(columns: 2,
-  [#figure(image("Graphics/Cart Pole/No Safe Strategy.svg", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/No Safe Strategy.svg", fit:"cover"), 
       caption: "No partition is considered safe at an abstraction this coarse.") 
     <no_safe_strategy>],
 
-  [#figure(image("Graphics/Cart Pole/Fitting Polynomial to Unfinished Shield.svg", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Fitting Polynomial to Unfinished Shield.svg", fit:"cover"), 
       caption: "The result of taking four steps in the fixed-point iteration. A 3rd-degree polynomial is fit to the average between the two decision boundaries.") 
     <unfinished_shield>],
 
 
-  [#figure(image("Graphics/Cart Pole/Angle Polynomial from Unfinished Shield.svg", fit:"cover"), 
+  [#figure(image("../Graphics/Cart Pole/Angle Polynomial from Unfinished Shield.svg", fit:"cover"), 
       caption: [A safety strategy for the 3rd degree polynomial learned in @unfinished_shield.]) 
     <angle_unfinished_shield_polynomial>],
 )
