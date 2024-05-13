@@ -62,7 +62,8 @@ md"""
 
 # ╔═╡ d355823b-cc1c-40b9-96e0-a09cd79be7ff
 # system definition
-const A = [0.0 -1; 1 0]  # dynamics matrix of the standard oscillator
+const A = [0.0 1; 
+			-1 0]  # dynamics matrix of the standard oscillator
 
 # ╔═╡ 52be2607-df01-458b-898e-901406747e3e
 const δ = 0.05  # time step
@@ -621,8 +622,8 @@ AlteredState = SVector{2, Float64}
 
 # ╔═╡ 508f0e5e-b668-400b-95d3-c484477fc855
 function f(x)::AlteredState
-	θ = atan(x...)
-	r = euclidean(zeros(2), x)
+	θ = atan(x[2], x[1])
+	r = √(x[1]^2 + x[2]^2)
 	θ, r
 end
 
@@ -632,7 +633,7 @@ f(x0)
 # ╔═╡ e2cd27b9-79bf-400f-a8b5-3dc895d98ff1
 function f⁻¹(x)::SpiralState
 	θ, r = x
-	r*sin(θ), r*cos(θ)
+	r*cos(θ), r*sin(θ)
 end
 
 # ╔═╡ a8c248b4-e1b5-45f8-9ed3-1d81239f063f
@@ -699,21 +700,6 @@ begin
 		clim=(no_action, any_action),
 		colors=shieldcolors, 
 		color_labels=shieldlabels,)
-
-	a_rocks = [Rock(f(rock.position), rock.radius) for rock in rocks
-		if rock.position != [0, 0]]
-
-	plot!(a_rocks, 
-		seriestype=:shape,
-		color=colors.CONCRETE,
-		linewidth=0,
-		label=nothing)
-	
-	scatter!([],
-		markershape=:circle,
-		markerstrokewidth=0,
-		color=colors.CONCRETE, 
-		label="Obstacle")
 end
 
 # ╔═╡ c5570c5b-5d4c-44bf-9dde-2d5e9a8e8ed4
@@ -1452,10 +1438,6 @@ end
 
 # ╔═╡ 140850b6-a3b4-4e07-a17a-5ad77e31df79
 let
-	
-	# Overwrite successor function with higher time step
-	successor′(x, δ) = (exp(A*δ))*[x...]
-	
 	# Reachability in original state space.
 	# Paste in states from uppaal and write the correct action
 	action = move_out
@@ -1478,7 +1460,7 @@ x2 = 0.7748812344580948
 	@info "actoins partition" int_to_actions(Action, get_value(partition))
 	reachable = [Partition(shield, i) for i in reachable]
 
-	plot(xlim=(x[1] - 0.1, x[1] + 0.1), ylim=(x[2] - 0.1, x[2] + 0.1),)
+	plot(xlim=(x[1] - 0.1, x[1] + 0.1), ylim=(x[2] - 0.1, x[2] + 0.1), ratio=1)
 	plot!(Bounds(partition), color=colors.NEPHRITIS, label=nothing)
 		
 	plot!(rocks;
@@ -1502,12 +1484,11 @@ x2 = 0.7748812344580948
 		linestyle=:dot,
 		color=colors.WET_ASPHALT,
 		marker=:circle,
-		ratio=1, 
 		xlabel="x1",
 		ylabel="x2",
 		label=nothing)	
 
-	plot!([Tuple(successor′(x′, δ′)) for δ′ in 0:0.01:δ],
+	plot!([x′, Tuple(successor(x′, stay_course))],
 		label=nothing,
 		linestyle=:dash,
 		color=colors.WET_ASPHALT)
