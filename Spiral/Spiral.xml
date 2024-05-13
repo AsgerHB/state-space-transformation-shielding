@@ -43,7 +43,7 @@ double distance(double p1, double p2, double q1, double q2) {
 /** Shielding **/
 
 // [[ SHIELD_IMPORT
-import "/home/asger/Documents/Files/Arbejde/AAU/Artikler/Physics-guided Dimensionality Reduction/Spiral/spiral_shield_altered_state_space.so"
+import "/home/asger/Documents/Files/Arbejde/AAU/Artikler/Physics-guided Dimensionality Reduction/Spiral/spiral_shield_altered_state_space_uppaal_friendly.so"
 //]]
 {
 	// [[ SHIELD_SIGNATURE
@@ -68,11 +68,10 @@ allowed_actions_t intToActions(int bitarray) {
     return result;
 }
 
-int step = 0;
 bool unsafe_state_entered = 0;
 
 allowed_actions_t get_allowed(double x1, double x2) {
-    double angle = atan2(x1, x2);
+    double angle = atan2(x2, x1);
     double radius = sqrt(x1*x1 + x2*x2);
 	// [[ SHIELD_LOOKUP
 	int value = get_value(angle, radius);
@@ -83,7 +82,6 @@ allowed_actions_t get_allowed(double x1, double x2) {
         unsafe_state_entered = true;
         return any;
     }
-    step++;
     return allowed;
 }
 </declaration>
@@ -183,8 +181,8 @@ x' == 1.0/DELTA</label>
 		</location>
 		<location id="id14" x="0" y="8">
 			<name x="17" y="0">Wait</name>
-			<label kind="invariant" x="-34" y="-51">x1' == -x2 &amp;&amp;
-x2' == x1</label>
+			<label kind="invariant" x="-34" y="-51">x1' == x2 &amp;&amp;
+x2' == -x1</label>
 		</location>
 		<init ref="id14"/>
 		<transition id="id15">
@@ -283,11 +281,11 @@ system Agent, Metronome, Rock1, Rock2, Rock3, Rock4, Rock5, Destination1;
 			<comment/>
 		</query>
 		<query>
-			<formula/>
+			<formula>strategy S = maxE (visits) [&lt;= 100] {} -&gt; {atan2(x1, x2),sqrt(x1*x1+x2*x2),atan2(Destination1.y1, Destination1.y2),sqrt(Destination1.y1*Destination1.y1+Destination1.y2*Destination1.y2)}: &lt;&gt; time &gt;= 100</formula>
 			<comment/>
 		</query>
 		<query>
-			<formula/>
+			<formula>Pr[&lt;=100;1000] (&lt;&gt; collisions &gt; 0) under S</formula>
 			<comment/>
 		</query>
 		<query>

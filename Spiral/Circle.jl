@@ -142,14 +142,11 @@ md"""
 # Shielding
 """
 
-# ╔═╡ 68d0f861-1a11-47d9-b798-3979edccb696
-const margin = 0.1
-
 # ╔═╡ 7dddbfa0-35f6-4cec-90b6-37ae41881a77
 begin
 	function is_safe(x::SpiralState)
 		r = √(x[1]^2 + x[2]^2)
-		return (r0 - margin < r < r0 + margin)
+		return r > 0.1
 	end
 
 	function is_safe(bounds::Bounds)
@@ -195,6 +192,8 @@ function plot_trace(trace::SpiralTrace, i=nothing; background=plot())
 end
 
 # ╔═╡ 0a46d16c-e86d-443b-9001-6663a65ccccc
+# ╠═╡ disabled = true
+#=╠═╡
 function animate_sequence(trace::SpiralTrace; background=plot())
 	🎥 = @animate for i in 1:length(trace.states)
 		
@@ -202,6 +201,7 @@ function animate_sequence(trace::SpiralTrace; background=plot())
 	end
 	gif(🎥, fps=(1/δ)*2, show_msg=false)
 end
+  ╠═╡ =#
 
 # ╔═╡ e7d0c667-4b01-4fd6-b7a0-d9fa5198412a
 @enum Action step
@@ -213,7 +213,9 @@ donothing(_...) = step
 trace = simulate_sequence(x0, donothing, 6)
 
 # ╔═╡ f0b44048-4c9c-475f-87a4-9ff331885c32
+#=╠═╡
 animate_sequence(trace)
+  ╠═╡ =#
 
 # ╔═╡ b67bbfee-633d-4d8b-846f-6a63ec778f93
 plot_trace(trace)
@@ -226,11 +228,11 @@ begin
 end
 
 # ╔═╡ 01c9a1be-4258-4aef-9855-db55874f6ae0
-granularity = 0.05
+granularity = 0.00025
 
 # ╔═╡ 0f42e2d4-6446-401e-a062-b5aa893e9ac5
 begin
-	grid = Grid(granularity, Bounds(Float64[-2.1, -2.1], Float64[2.1, 2.1]))
+	grid = Grid(granularity, Bounds(Float64[-0.2, -0.2], Float64[0.2, 0.2]))
 	initialize!(grid, x -> is_safe(x) ? any_action : no_action)
 	grid
 end
@@ -241,11 +243,8 @@ size(grid)
 # ╔═╡ 3c15b3dc-d3f0-4a0c-89cd-da2bbd6e4865
 size(grid) |> prod
 
-# ╔═╡ 5084de0e-e5e8-435b-9264-d858362957fb
-action = stay_course
-
 # ╔═╡ 7d5ba76c-e4cb-4c12-928e-2b9c30435288
-x = [1, 1.1]
+x = [0.2, -0.24]
 
 # ╔═╡ 1ce94535-be9e-4f07-b0f3-062509540516
 partition = box(grid, x)
@@ -357,10 +356,12 @@ shielded_donothing = apply_shield(shield, donothing)
 shielded_trace = simulate_sequence(x0, shielded_donothing, 25)
 
 # ╔═╡ 2f658797-0581-40c4-9054-4ed968ad143b
+#=╠═╡
 let
 	📈 = plot(p1, legend=nothing)
 	animate_sequence(shielded_trace, background=📈)
 end
+  ╠═╡ =#
 
 # ╔═╡ 531281a1-6f2d-49fc-b608-cb1f8fc966ae
 plot_trace(shielded_trace)
@@ -608,10 +609,12 @@ a_shielded_donothing = a_apply_shield(a_shield, donothing)
 a_shielded_trace = simulate_sequence(x0, a_shielded_donothing, 6)
 
 # ╔═╡ 13646ad3-c39b-46d0-bddf-c16206dbb7eb
+#=╠═╡
 let
 	📈 = plot(p3, legend=nothing)
 	animate_sequence(a_shielded_trace, background=📈)
 end
+  ╠═╡ =#
 
 # ╔═╡ 87356f08-c963-4928-8a0f-48ca9b8d82b2
 plot_trace(a_shielded_trace)
@@ -767,7 +770,6 @@ end
 # ╠═f0b44048-4c9c-475f-87a4-9ff331885c32
 # ╠═b67bbfee-633d-4d8b-846f-6a63ec778f93
 # ╟─7557a054-9b6d-4858-ba82-1b613c362b4b
-# ╠═68d0f861-1a11-47d9-b798-3979edccb696
 # ╠═7dddbfa0-35f6-4cec-90b6-37ae41881a77
 # ╠═e7d0c667-4b01-4fd6-b7a0-d9fa5198412a
 # ╠═e8a5370b-e18d-4957-b695-d6c50fec1182
@@ -776,7 +778,6 @@ end
 # ╠═1c429eaf-f72f-4197-8242-12f41db29f81
 # ╠═3c15b3dc-d3f0-4a0c-89cd-da2bbd6e4865
 # ╟─332ac25d-b07f-40ee-ab7d-e6cdfb2d075f
-# ╠═5084de0e-e5e8-435b-9264-d858362957fb
 # ╠═1ce94535-be9e-4f07-b0f3-062509540516
 # ╠═7d5ba76c-e4cb-4c12-928e-2b9c30435288
 # ╠═44db0342-b1f1-4e0c-a422-b95bf4c78dbe
