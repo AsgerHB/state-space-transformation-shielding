@@ -96,7 +96,7 @@ end
 
 # ╔═╡ 88ffd438-a6b3-4b11-82d8-af9ce61ed222
 function apply(x, a::Action)
-    θ = atan(x...)
+    θ = atan(x[2], x[1])
     r = sqrt(x[1]^2 + x[2]^2)
 	if a == move_out
     	r′ = (1 + (speed * δ)) * r
@@ -107,8 +107,11 @@ function apply(x, a::Action)
 	else 
 		error("Unexpected a $a")
 	end
-    return [r′ * sin(θ), r′ * cos(θ)]
+    return [r′ * cos(θ), r′ * sin(θ)]
 end
+
+# ╔═╡ d8cd7fce-f4d4-4c52-b604-ad32178b68ca
+apply((0.54, 0.5), stay_course)
 
 # ╔═╡ bb1ff345-58ba-498a-8035-88ef1db7d917
 const expAδ = exp(A*δ)

@@ -21,7 +21,7 @@ const double DELTA = 0.05;
 action_t action;
 
 void take_action(action_t a) {
-    double angle = atan2(x1, x2);
+    double angle = atan2(x2, x1);
     double radius = sqrt(x1*x1 + x2*x2);
     action = a;
     if (a == MOVE_OUT)
