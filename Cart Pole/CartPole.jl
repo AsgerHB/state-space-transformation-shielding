@@ -401,13 +401,13 @@ const AlteredState = MVector{4, Float64}
 
 # ╔═╡ 3aeb0922-e5f8-4311-b66d-dd42d61f18f3
 altered_state_axes, state_axes_simple = if enable_altered_state_space
-	([ "x", "P1(x, x_vel)",
-	  "θ", "P2(θ, θ_vel)", ],
+	([ "x", "p",
+	  "θ", "p", ],
 	[ "cart_pos", "poly1",
 	  "pole_ang", "poly2", ])
 else
-	([ "x", "x_vel",
-	  "θ", "θ_vel", ],
+	([ "x", "v",
+	  "θ", "ω", ],
 	[ "cart_pos", "cart_vel",
 	  "pole_ang", "pole_vel", ])
 end
@@ -416,20 +416,20 @@ end
 function P1(x, x_vel)
 	# Learned for x-safety only (high-resolution shield)
 	# 1st degree polynomial.
-	1.1576428742879741e-16 - 1.3323889308715684*x - x_vel
+	x_vel - (1.1576428742879741e-16 - 1.3323889308715684*x) 
 end
 
 # ╔═╡ 64be4f5a-97f6-49bc-b848-450506d9ceb1
-P1⁻¹(θ, P1_s) = P1(θ, 0) - P1_s 
+P1⁻¹(θ, P1_s) = P1_s - P1(θ, 0)
 
 # ╔═╡ 5645d7a7-0f23-4a02-ab30-49a6cda9ce17
 # Naming confusion: p1, p2 ... are plots. P1, P2 are polynomials
 function P2(θ, θ_vel)
-	- 4.550831135117032*θ - 141.6953270125445*θ^3 - θ_vel
+	θ_vel - (- 4.550831135117032*θ - 141.6953270125445*θ^3)
 end
 
 # ╔═╡ d90ea6c4-316d-46b1-8688-23d95f3cca61
-P2⁻¹(θ, P2_s) = P2(θ, 0) - P2_s 
+P2⁻¹(θ, P2_s) = P2_s - P2(θ, 0)
 
 # ╔═╡ 6eedcd3c-1aa5-4d8b-9e5f-8465e608f6c7
 if enable_altered_state_space
