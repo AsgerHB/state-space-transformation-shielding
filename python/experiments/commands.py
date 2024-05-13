@@ -4,6 +4,9 @@ import numpy as np
 
 from experiments.utils import Shield, UPPAALInstance
 
+from trees.advanced import minimize_tree
+from trees.models import QTree
+
 
 def run_from_config(config_path, results_dir):
     with open(config_path, 'r') as f:
@@ -24,6 +27,7 @@ def run_from_config(config_path, results_dir):
 
         model_slug = model.replace(' ', '_')
         model_results = []
+        saved_strategies = []
 
         print(f"experiment on '{model_slug}'")
 
@@ -31,10 +35,14 @@ def run_from_config(config_path, results_dir):
 
         for cost in training_costs:
             for svars in state_vars:
+                store_path = '{}/saved_strategies/strat_{}_{}.json'.format(
+                    model_dir, model_slug, '-'.join(svars)
+                )
+                saved_strategies.append(store_path)
                 features = '{} -> {' + ','.join(svars) + '}'
                 instance.add_training_query(
                     training_bound, features, training_goal,
-                    cost=cost, exp=training_optimizer
+                    cost=cost, exp=training_optimizer, store_path=store_path
                 )
                 for query in queries:
                     instance.add_query(query)
@@ -60,9 +68,13 @@ def run_from_config(config_path, results_dir):
                 print('load shield and minimize tree')
 
                 shield = Shield(shield_path, make_tree=True)
-                model_results.append(
-                    [np.prod(shield.grid.shape), shield.tree.n_leaves]
-                )
+                red_black_size = shield.tree.n_leaves
+                shield.grid[shield.grid == 0] = len(shield.amap) - 1
+                model_results.append([
+                    np.prod(shield.grid.shape),
+                    red_black_size,
+                    shield.tree.n_leaves
+                ])
                 shield_signature = shield.get_signature()
                 so_path = model_dir + model_slug + f'_{shield_name}.so'
                 shield.compile_so(so_path)
@@ -76,10 +88,35 @@ def run_from_config(config_path, results_dir):
 
             # run model and add results to results list
             print('run the UPPAAL instance...')
-            extra_args = shields[shield_name].get('extra_verifyta_args', [])
-            output = instance.run('-Wsqy', *extra_args)
-            parsed_output = instance.parse_ouput(output)
+            # extra_args = shields[shield_name].get('extra_verifyta_args', [])
+            output = instance.run('-Wsqy')
+            try:
+                parsed_output = instance.parse_ouput(output)
+            except:
+                print('parsing failed, here is the raw output:')
+                print(output)
+
             model_results.append(parsed_output)
+
+            print('sizes:')
+            size_results = []
+            for strat in saved_strategies:
+                qtree = QTree(strat)
+                q_size = qtree.n_leaves
+
+                try:
+                    dtree = qtree.to_decision_tree()
+                    d_size = dtree.n_leaves
+                except:
+                    d_size = -1
+
+                try:
+                    ntree, _ = minimize_tree(dtree, verbose=False)
+                    n_size = ntree.n_leaves
+                except:
+                    n_size = -1
+
+                print([strat, q_size, d_size, n_leaves])
 
         results_path = pathlib.Path(results_dir + f'/{model_slug}_results.txt')
         with open(results_path, 'w') as f:

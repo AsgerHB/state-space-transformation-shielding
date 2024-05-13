@@ -43,7 +43,6 @@
             ["mecEnergy(p, v)", "p", "v"],
             ["mecEnergy(p, v)", "delta_e_mek(p, v)"],
             ["kinEnergy(v)", "potEnergy(p)"],
-            ["getMemory(0)", "v"],
             ["getMemory(0)"],
             ["getMemory(0)", "getMemory(1)"],
             ["getMemory(0)", "getMemory(1)", "getMemory(2)"],
@@ -89,7 +88,6 @@
             "E[<=10;100] (max: num_cart_gone) under S"
         ],
         "shields": {
-            "noshield": { "path": null },
             "CartPole 1x1x30x30 - Standard State Space": {
                 "path": "./experiments/cartpole/Cartpole 1x1x30x30 - Standard State Space.zip",
                 "signature": "",

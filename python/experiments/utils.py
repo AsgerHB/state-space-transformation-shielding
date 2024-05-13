@@ -122,7 +122,10 @@ class UPPAALInstance:
         """
         self.queries.append(query + '\n')
 
-    def add_training_query(self, bound, features, goal, exp='minE', strat_name='S', cost=None):
+    def add_training_query(
+        self, bound, features, goal, exp='minE', strat_name='S', cost=None,
+        store_path=None
+    ):
         cost = cost or self.cost
         if cost is None:
             raise ValueError('`cost` cannot be None')
@@ -131,6 +134,9 @@ class UPPAALInstance:
             strat_name, exp, cost, bound, features, goal
         )
         self.add_query(query)
+        if store_path is not None:
+            path = pathlib.Path(store_path)
+            self.add_query(f'saveStrategy("{path.resolve()}", {strat_name})')
 
     def run(self, *args):
 
