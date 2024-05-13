@@ -101,7 +101,7 @@ end;
 
 # ╔═╡ 35c76906-f2dd-4f4d-af43-0fafe69d211b
 begin
-	paper_font = "Bookman Light" 	# https://gr-framework.org/fonts.html
+	paper_font = "serif-roman" 	# https://gr-framework.org/fonts.html
 	paper_size = (300, 220)
 	paper_margin = 0mm
 end;
@@ -401,13 +401,13 @@ const AlteredState = MVector{4, Float64}
 
 # ╔═╡ 3aeb0922-e5f8-4311-b66d-dd42d61f18f3
 altered_state_axes, state_axes_simple = if enable_altered_state_space
-	([ "x", "p",
-	  "θ", "p", ],
+	([ "\$x\$", "\$p\$",
+	  "\$θ\$", "\$p\$", ],
 	[ "cart_pos", "poly1",
 	  "pole_ang", "poly2", ])
 else
-	([ "x", "v",
-	  "θ", "ω", ],
+	([ "\$x\$", "\$v\$",
+	  "\$θ\$", "\$ω\$", ],
 	[ "cart_pos", "cart_vel",
 	  "pole_ang", "pole_vel", ])
 end
@@ -736,38 +736,6 @@ is_safe(f(s0()))
 	$fields"""
 end
 
-# ╔═╡ 5dde6492-564f-46cb-848d-8a28ea2adb5f
-granularity = let
-	l, u = grid_bounds.lower, grid_bounds.upper
-	span = u .- l
-
-	if concerned_with_angle && concerned_with_position
-		Float64[
-			span[1]/resolution[1],
-			span[2]/resolution[2],
-			span[3]/resolution[3],
-			span[4]/resolution[4]]
-	elseif concerned_with_angle
-		Float64[
-			span[1],
-			span[2],
-			span[3]/resolution[3],
-			span[4]/resolution[4]]
-	elseif concerned_with_position
-		Float64[
-			span[1]/resolution[1],
-			span[2]/resolution[2],
-			span[3],
-			span[4]]
-	else # Not really valid
-		Float64[
-			span[1],
-			span[2],
-			span[3],
-			span[4]]
-	end
-end
-
 # ╔═╡ bcbf4a16-ce8f-451e-b58b-0bf9d8d0d872
 get_size(granularity, cart_pole_bounds)
 
@@ -804,6 +772,12 @@ end
 
 # ╔═╡ f723aa48-e30b-4666-ad70-c20ae10fb4bb
 is_safe(Bounds(box(grid, grid.bounds.lower)))
+
+# ╔═╡ 030e5edc-0c1c-460f-b6b4-602640f5caf7
+size(grid)
+
+# ╔═╡ 7b1d742c-2b70-4aab-a032-cca6814d0d98
+length(grid)
 
 # ╔═╡ ace4eb92-b880-4fe6-9391-ad5bc586b802
 md"""
@@ -865,6 +839,9 @@ simulate_point(m, [-2.4000000000000004, 2.0, -0.41800000000000004, -1.5, 0], lef
 
 # ╔═╡ fa3ae0ca-d4b1-4961-afaa-c0d98174e0d2
 size(grid)
+
+# ╔═╡ b7980c62-7947-40e8-a8c5-195e93f4eb18
+length(grid)
 
 # ╔═╡ b79619f1-aa55-4a5c-851f-7387d411d8eb
 @bind max_steps NumberField(0:1000, default=1000)
@@ -997,11 +974,11 @@ p3 = let
 	draw(shield, slice;
 		show_grid,
 		colors=shieldcolors,
-		color_labels=shieldlabels,
+		#color_labels=shieldlabels,
 		clims=(0, 3),
 		xlabel,
 		ylabel,
-		legend=:outerright)
+		legend=:top)
 
 	if zoom
 		plot!(
@@ -1200,6 +1177,7 @@ p4 = let
 	@show p
 	
 	scatter!(upper_border,
+		legend=:topright,
 		color=colors.CONCRETE,
 		markersize=3,
 		marker=:utriangle,
@@ -1225,7 +1203,7 @@ p4 = let
 		color=colors.SILVER,
 		xlim=(shield.bounds.lower[sa1], shield.bounds.upper[sa1]),
 		ylim=(shield.bounds.lower[sa2], shield.bounds.upper[sa2]),
-		label="P")
+		label="p")
 end
 
 # ╔═╡ 2498792a-a7b9-4295-bfb9-7e9068a02d7d
@@ -1532,6 +1510,49 @@ end
 # ╔═╡ 3c578986-4a73-42bd-a202-fbf2bf534151
 get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 
+# ╔═╡ 5dde6492-564f-46cb-848d-8a28ea2adb5f
+granularity = let
+	l, u = grid_bounds.lower, grid_bounds.upper
+	span = u .- l
+
+	if concerned_with_angle && concerned_with_position
+		Float64[
+			span[1]/resolution[1],
+			span[2]/resolution[2],
+			span[3]/resolution[3],
+			span[4]/resolution[4]]
+	elseif concerned_with_angle
+		Float64[
+			span[1],
+			span[2],
+			span[3]/resolution[3],
+			span[4]/resolution[4]]
+	elseif concerned_with_position
+		Float64[
+			span[1]/resolution[1],
+			span[2]/resolution[2],
+			span[3],
+			span[4]]
+	else # Not really valid
+		Float64[
+			span[1],
+			span[2],
+			span[3],
+			span[4]]
+	end
+end
+
+# ╔═╡ 50506cd4-bdf7-4efc-a12d-6ffc9a0f70a7
+# ╠═╡ disabled = true
+#=╠═╡
+granularity = let
+	l, u = grid_bounds.lower, grid_bounds.upper
+	span = u .- l
+
+	[span[1], span[2], 0.005, 0.006]
+end
+  ╠═╡ =#
+
 # ╔═╡ Cell order:
 # ╟─2767663f-3ef8-44f5-81a2-8e480158266e
 # ╟─3115801b-0a07-4a44-a6b3-d1ab2b9c0775
@@ -1543,7 +1564,7 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╠═1d5aced4-a27a-4f3b-ab08-69b1a3b1559f
 # ╠═35c76906-f2dd-4f4d-af43-0fafe69d211b
 # ╠═8172cdb6-b9a4-4afc-844f-245e5d951bb7
-# ╟─e008fe83-3851-4061-9e5a-35e938a53ec1
+# ╠═e008fe83-3851-4061-9e5a-35e938a53ec1
 # ╟─3fd479d1-c43a-4c6f-95f8-0c74a9ffbf18
 # ╟─7dd5c185-2b95-4297-a36c-4e2ca38952ea
 # ╠═35605d87-4c3a-49a9-93d1-a5fceede3653
@@ -1630,7 +1651,8 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╟─e0892cae-9ef0-4e57-9a1c-91bf34043956
 # ╠═38bc7025-9e1f-4101-a53d-a3a7ff802aa7
 # ╟─1aa6c36a-7884-48d1-9c5f-1dc87f1278e3
-# ╟─5dde6492-564f-46cb-848d-8a28ea2adb5f
+# ╠═5dde6492-564f-46cb-848d-8a28ea2adb5f
+# ╠═50506cd4-bdf7-4efc-a12d-6ffc9a0f70a7
 # ╠═0610d08b-020e-4ec8-9815-1d0a4c592899
 # ╠═6f4c7279-43f4-4c08-8eb1-45e3d70db8cd
 # ╠═299658d1-c3df-48a2-b992-02ef94c1bb59
@@ -1638,6 +1660,8 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╠═611ba5df-6af9-413b-8e8a-b3da0c825d3e
 # ╠═26cfc8ec-1351-468f-b9dc-e76acec6e777
 # ╠═b966dc17-050f-40dc-adee-b6f9e79b4b0c
+# ╠═030e5edc-0c1c-460f-b6b4-602640f5caf7
+# ╠═7b1d742c-2b70-4aab-a032-cca6814d0d98
 # ╠═1b882558-e83e-4679-8d51-3dc54040cdf1
 # ╠═3ae14c03-d786-4e79-8744-3c52a8f4266d
 # ╠═915e0813-216c-4f01-8341-75c57198dc44
@@ -1654,9 +1678,10 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╠═a17770c5-de14-4c29-8efb-3d49f96a2950
 # ╠═e77abd9a-de23-40b8-a442-b0971339f903
 # ╠═fa3ae0ca-d4b1-4961-afaa-c0d98174e0d2
+# ╠═b7980c62-7947-40e8-a8c5-195e93f4eb18
 # ╠═0c28089a-1547-47f4-a411-e3a57cac6a6d
 # ╠═b79619f1-aa55-4a5c-851f-7387d411d8eb
-# ╟─c7a4e65c-a907-468e-b31c-ce05393d41d5
+# ╠═c7a4e65c-a907-468e-b31c-ce05393d41d5
 # ╟─abaa6617-7932-4a10-a355-b2218bad4103
 # ╟─f908b62b-4183-4ee8-9dbc-cab4a8164e70
 # ╟─6de525db-e339-435f-9f87-620fed817839

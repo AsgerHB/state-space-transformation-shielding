@@ -41,6 +41,38 @@ md"""
 # ╔═╡ bffbac67-8a3b-4155-a665-0c39f93d3dd7
 TableOfContents()
 
+# ╔═╡ 43b8a393-b906-4c46-b8fb-d277954510b3
+md"""
+## Make paper-friendly figures? 
+"""
+
+# ╔═╡ a0eeeee8-04b3-4cfd-a75f-03c53a6a91e0
+@bind make_paper_friendly_figures CheckBox(default=false)
+
+# ╔═╡ 0ddc1964-874a-4b47-ad13-0a070d42a51b
+begin
+	default_font = default(:fontfamily)
+	default_size = default(:size)
+	default_margin = default(:margin)
+	
+	paper_font = "serif-roman" 	# https://gr-framework.org/fonts.html
+	paper_size = (300, 220)
+	paper_margin = 0mm
+end;
+
+# ╔═╡ 28d80bda-7ced-4ac1-b538-9f1c5187a4a4
+theme_type = if make_paper_friendly_figures
+	Plots.default(fontfamily=paper_font)
+	Plots.default(size=paper_size)
+	Plots.default(margin=paper_margin)
+	"Paper-firendly it is!"
+else
+	Plots.default(fontfamily=default_font)
+	Plots.default(size=default_size)
+	Plots.default(margin=default_margin)
+	"Using Julia Plots defaults :-)"
+end
+
 # ╔═╡ e59ef411-1779-4ef6-8d82-37892f1387e8
 md"""
 ## Some BB-mechanics
@@ -69,10 +101,10 @@ $(E_{mek},~~ v)$
 
 # ╔═╡ d30c6363-75e6-42f8-b3a0-4a032df063ef
 begin
-	π_xlabel = "\$E_{mek}\$"
-	π_ylabel = "v"
+	π_xlabel = "\$E_{m}\$"
+	π_ylabel = "\$v\$"
 	
-	π_xlabel_simple = "E_mek"
+	π_xlabel_simple = "E_m"
 	π_ylabel_simple = "v"
 end;
 
@@ -129,14 +161,14 @@ end
 @bind gradient Select([[:black, :deepskyblue, :white], :heat, :matter, :curl, :dense, :phase, :algae])
 
 # ╔═╡ cad96c13-e9fa-45ae-b046-f976ae2ee901
-p2 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.01,
+theme_type; p2 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.01,
 	color=cgrad(gradient, 10, categorical=false),
 	xlabel="Velocity (m/s)",
 	ylabel="Position (m)",
 	colorbar_title="Mechanical Energy (J)")
 
 # ╔═╡ 490abcb1-80ea-4bbe-9b4f-b8133d22d9dd
-p1 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.01 ,
+theme_type; p1 = draw_function((vp) -> e_mek(g, vp...), -15, 15, 0, 10, 0.01 ,
 	color=cgrad(gradient, 20, categorical=true),
 	xlabel="Velocity (m/s)",
 	ylabel="Position (m)",
@@ -575,6 +607,7 @@ size(π_grid), length(π_grid)
 
 # ╔═╡ 670639a2-dc12-45af-bb38-5d197ff41fd4
 let	
+	theme_type
 	p1 = draw(π_grid,
 		xlabel=π_xlabel,
 		ylabel=π_ylabel,
@@ -588,6 +621,7 @@ end
 
 # ╔═╡ c2c5207f-ee2e-46fa-877a-18a9bc691e11
 let
+	theme_type
 	π_points = [p for p in SupportingPoints([20, 20, 3], π_grid.bounds) 
 		if p ∈ π_grid.bounds]
 	
@@ -619,6 +653,7 @@ end
 
 # ╔═╡ 1f1c79cb-d4d4-4e1b-9a34-b958ed864a7d
 let
+	theme_type
 	π_grid = Grid([6, 6], π_grid.bounds)
 	
 	p1  = plot(π_grid.bounds,
@@ -945,7 +980,7 @@ end
 
 # ╔═╡ 021e2fb4-1760-4421-916b-fb2ef306cb13
 shield_plot_new_statespace = let
-	🎈1
+	🎈1, theme_type
 	
 	partition = box(shield, π(v, p))
 
@@ -1002,19 +1037,22 @@ end
 
 # ╔═╡ a566b33b-7005-43c3-afce-b8793447f615
 shield_plot_old_statespace = let
-	🎈1
+	🎈1, theme_type
+	
 	draw_function(
 		s -> (box(shield, clamp(shield.bounds, π(s...) |> collect)) |> get_value), 
 		-13, 13, 0, 8, 0.01,
 		color=cgrad([colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS], 10, categorical=true),
-		xlabel="Velocity (m/s)",
-		ylabel="Position (m)",
+		xlabel=π_xlabel,
+		ylabel=π_ylabel,
 		colorbar=nothing)
 
+	#=
 	plot!([], seriestype=:shape, color=colors.WET_ASPHALT, label="{}")
 	plot!([], seriestype=:shape, color=colors.AMETHYST, label="{hit}")
 	plot!([], seriestype=:shape, color=colors.CLOUDS, label="{hit, nohit}")
-
+	=#
+	
 	if show_point
 		points = BruteForceSampler(partition, global_supporting_points)
 		barbaric_sample_endpoints = []
@@ -1263,6 +1301,10 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═9c8abfbc-a5f0-11ec-3a9b-9bfd0b447638
 # ╠═af1f9e02-7ed4-476b-a01e-6a83fb850e2a
 # ╠═bffbac67-8a3b-4155-a665-0c39f93d3dd7
+# ╠═43b8a393-b906-4c46-b8fb-d277954510b3
+# ╠═a0eeeee8-04b3-4cfd-a75f-03c53a6a91e0
+# ╠═0ddc1964-874a-4b47-ad13-0a070d42a51b
+# ╠═28d80bda-7ced-4ac1-b538-9f1c5187a4a4
 # ╟─e59ef411-1779-4ef6-8d82-37892f1387e8
 # ╠═6fee7dcf-a0ee-431a-a5b7-d31c54ffa1a6
 # ╠═67d30df1-b60a-4835-a331-94957908ae4a
@@ -1279,8 +1321,8 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╟─3544f929-e518-485f-bdec-eaf1506f3226
 # ╠═b60a9495-7d59-4faa-a399-ac83a83d934d
 # ╠═c1a7ffdd-767d-418d-96af-f13b357e980e
-# ╠═cad96c13-e9fa-45ae-b046-f976ae2ee901
-# ╠═490abcb1-80ea-4bbe-9b4f-b8133d22d9dd
+# ╟─cad96c13-e9fa-45ae-b046-f976ae2ee901
+# ╟─490abcb1-80ea-4bbe-9b4f-b8133d22d9dd
 # ╠═2556f5de-5e22-4f88-b4bf-f3f4c87d06be
 # ╠═3cfe65d2-7f6b-47c9-9c5f-ebc09229a2e6
 # ╠═0ad2d3c9-3a81-4582-b7dc-52225e0c99e9
@@ -1343,7 +1385,7 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═22d05a23-bcad-4281-8303-5082a3d8e785
 # ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
 # ╠═021e2fb4-1760-4421-916b-fb2ef306cb13
-# ╟─a566b33b-7005-43c3-afce-b8793447f615
+# ╠═a566b33b-7005-43c3-afce-b8793447f615
 # ╠═e247dfa7-6000-4df1-8a28-328463e32c49
 # ╠═702172e9-59d7-4a77-b663-a89f66132a1f
 # ╠═5b65f23f-ecd1-4911-98e8-57a582cdb4d3
