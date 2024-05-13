@@ -24,11 +24,11 @@
         ],
         "shields": {
             "Spiral Shield - Standard State Space": {
-                "path": "./experiments/spiral/Spiral Shield - Standard State Space.zip",
+                "path": "./experiments/spiral/Spiral Shield - Standard State Space - UPPAAL Friendly.zip",
                 "shield_call": "shield(x1, x2)"
             },
             "Spiral Shield - Altered State Space": {
-                "path": "./experiments/spiral/Spiral Shield - Altered State Space.zip",
+                "path": "./experiments/spiral/Spiral Shield - Altered State Space - UPPAAL Friendly.zip",
                 "shield_call": "shield(angle, radius)"
             }
         }
