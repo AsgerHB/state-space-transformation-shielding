@@ -988,6 +988,7 @@ shield_plot_new_statespace = let
 	slice[1] = slice[2] = Colon()
 	
 	p1 = draw(shield,
+		show_grid=true,
 		xlabel=π_xlabel,
 		ylabel=π_ylabel,
 		yflip=true,
@@ -1301,7 +1302,7 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═9c8abfbc-a5f0-11ec-3a9b-9bfd0b447638
 # ╠═af1f9e02-7ed4-476b-a01e-6a83fb850e2a
 # ╠═bffbac67-8a3b-4155-a665-0c39f93d3dd7
-# ╠═43b8a393-b906-4c46-b8fb-d277954510b3
+# ╟─43b8a393-b906-4c46-b8fb-d277954510b3
 # ╠═a0eeeee8-04b3-4cfd-a75f-03c53a6a91e0
 # ╠═0ddc1964-874a-4b47-ad13-0a070d42a51b
 # ╠═28d80bda-7ced-4ac1-b538-9f1c5187a4a4
@@ -1314,7 +1315,7 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═5a251063-64e8-4ced-8e28-34cb4812f931
 # ╟─0a785d98-a03f-4cb1-8d5a-1f61fda1ab4b
 # ╠═d30c6363-75e6-42f8-b3a0-4a032df063ef
-# ╠═61fa5c6f-2f91-4429-a479-10266f6332c8
+# ╟─61fa5c6f-2f91-4429-a479-10266f6332c8
 # ╠═f93a65f3-9bdf-493b-994c-a26f34818a96
 # ╠═a3af719b-3b92-4c39-a95e-478d5b3179a2
 # ╠═b775a061-3279-4121-806c-e99d211c36b0
