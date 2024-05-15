@@ -55,6 +55,41 @@ function multiline(str)
 	""")
 end
 
+# ╔═╡ a3172713-f030-4278-af98-864af03a30b0
+md"""
+## Make paper-friendly figures? 
+"""
+
+# ╔═╡ b65d58aa-9010-4db3-a844-a34b50eba683
+@bind make_paper_friendly_figures CheckBox(default=false)
+
+# ╔═╡ 6ee0ed94-6150-4d39-9192-41ebd92184de
+begin
+		default_font = default(:fontfamily)
+		default_size = default(:size)
+		default_margin = default(:margin)
+end;
+
+# ╔═╡ 3f363aba-f12f-4bf7-b786-ca6049b13f2c
+begin	
+	paper_font = "serif-roman" 	# https://gr-framework.org/fonts.html
+	paper_size = (300, 220)
+	paper_margin = 0mm
+end;
+
+# ╔═╡ 236c149d-2d55-4dd1-b68e-99fd460b044b
+theme_type = if make_paper_friendly_figures
+	Plots.default(fontfamily=paper_font)
+	Plots.default(size=paper_size)
+	Plots.default(margin=paper_margin)
+	"Paper-firendly it is!"
+else
+	Plots.default(fontfamily=default_font)
+	Plots.default(size=default_size)
+	Plots.default(margin=default_margin)
+	"Using Julia Plots defaults :-)"
+end
+
 # ╔═╡ 8b405589-2ba9-4046-ad9d-e2e3ccd21c84
 md"""
 # Model of the System
@@ -248,8 +283,9 @@ end
 
 # ╔═╡ 9ff397e2-9aa7-433f-9a59-a4d3cb38a9bb
 function plot_trace(trace::SpiralTrace, i=nothing; background=plot())
+	theme_type
 	i = something(i, length(trace.states))
-	path_colors = [is_safe(x) ? colors.PETER_RIVER : colors.ORANGE 
+	path_colors = [is_safe(x) ? colors.PETER_RIVER : colors.ALIZARIN 
 		for x in trace.states[1:i]]
 
 	alphas = [is_safe(x) ? 10/(i - j) : 80/(i - j) for (j, x) in enumerate(trace.states[1:i])]
@@ -260,15 +296,15 @@ function plot_trace(trace::SpiralTrace, i=nothing; background=plot())
 		label=nothing,
 		seriestype=:shape,
 		linewidth=0,
-		color=colors.ALIZARIN)
+		color=colors.CONCRETE)
 	
 	plot!([(x[1], x[2]) for x in trace.states[1:i]],
-		xlabel="x1",
-		ylabel="x2",
+		xlabel="\$x\$",
+		ylabel="\$y\$",
 		xlim=(-2.2, 2.2),
 		ylim=(-2.2, 2.2),
 		ratio=1,
-		size=(300, 300),
+		#size=(300, 300),
 		alpha=alphas,
 		color=path_colors,
 		marker=:circle,
@@ -277,7 +313,7 @@ function plot_trace(trace::SpiralTrace, i=nothing; background=plot())
 		label=nothing)
 	
 	scatter!([trace.states[i][1]], [trace.states[i][2]], 
-		color=is_safe(trace.states[i]) ? colors.NEPHRITIS : colors.ORANGE,
+		color=is_safe(trace.states[i]) ? colors.NEPHRITIS : colors.ALIZARIN,
 		marker=:circle,
 		markersize=4,
 		markerstrokewidth=0,
@@ -288,10 +324,23 @@ end
 plot_trace(trace)
 
 # ╔═╡ e26e0fca-5a6c-4d05-8eb2-df02e1ef15f3
-begin
-	plot_trace(trace)
+let
+	background = plot(Bounds([-2.1, -2.1], [2.1, 2.1]), 
+		grid=nothing,
+		color=colors.CONCRETE,
+		label=nothing,
+		linewidth=0)
+
+	plot!(circle_shape([0, 0], 2),
+		seriestype=:shape,
+		linewidth=0,
+		color=:white,
+		label=nothing)
+	
+	plot_trace(trace; background)
 	
 	plot!(Rock((-0.2, -1.3), 0.15), 
+		legend=:topleft,
 		label=nothing,
 		seriestype=:shape,
 		color=colors.AMETHYST,
@@ -300,7 +349,8 @@ begin
 	
 	scatter!([],
 		markershape=:circle,
-		markerstrokewidth=0,
+		markerstrokewidth=1,
+		markerstrokecolor=:white,
 		color=colors.CONCRETE, 
 		label="Obstacle")
 	
@@ -372,6 +422,15 @@ begin
 	shieldlabels = 	[
 		"{$(join(int_to_actions(Action, i), ", "))}"
 		for i in no_action:any_action]
+
+	if make_paper_friendly_figures
+		shieldlabels = [replace(l, 
+				"stay_course" => "ahead",
+				"move_out" => "out",
+				"move_in" => "in")
+			for l in shieldlabels]
+	end
+	
 	shieldcolors = 
 		[	colors.WET_ASPHALT, 
 			colors.CONCRETE, 
@@ -386,10 +445,13 @@ end
 
 # ╔═╡ 332ac25d-b07f-40ee-ab7d-e6cdfb2d075f
 begin
+	theme_type
 	draw(grid;
 		aspectratio=:equal,
 		legend=:outerright,
-		size=(800, 600),
+		size=(600, 800),
+		xlabel="\$x\$",
+		ylabel="\$y\$",
 		clim=(no_action, any_action),
 		colors=shieldcolors, 
 		color_labels=shieldlabels,)
@@ -412,13 +474,14 @@ end
 
 # ╔═╡ 9ea2e239-00f8-4517-aeac-566415a5fa8a
 begin
+	theme_type
 	p1 = draw(shield;
-		xlabel="x1",
-		ylabel="x2",
+		xlabel="\$x\$",
+		ylabel="\$y\$",
 		aspectratio=:equal,
 		legend=:outerright,
 		grid=false,
-		size=(800, 600),
+		size=(500, 500),
 		clim=(no_action, any_action),
 		colors=shieldcolors, 
 		color_labels=shieldlabels,)
@@ -694,11 +757,11 @@ length(grid), length(a_grid)
 # ╔═╡ 351e2fb7-70d9-4c5e-81d5-6ba651c490e8
 begin
 	p2 = draw(a_shield;
-		xlabel="θ",
-		ylabel="r",
+		xlabel="\$θ\$",
+		ylabel="\$r\$",
 		aspectratio=:equal,
-		legend=:outerright,
-		size=(800, 600),
+		legend=nothing,
+		#size=(800, 600),
 		grid=false,
 		clim=(no_action, any_action),
 		colors=shieldcolors, 
@@ -772,8 +835,8 @@ p3 = let
 			color=shieldcolors,
 			xticks=-2:1:2,
 			yticks=-2:1:2,
-			xlabel="x1",
-			ylabel="x2",
+			xlabel="x",
+			ylabel="y",
 			ratio=1,
 			size=(800, 600),
 			legend=:outerright,
@@ -1106,6 +1169,13 @@ function get_edge_points(samples_per_axis, bounds)
 	vcat(lower1, upper2, upper1, lower2)
 end
 
+# ╔═╡ 8feeb795-9fd0-42db-a4ab-dc94980b1158
+# TODO: This has been made part of the GridShielding package.
+# It can be deleted next time the notebook is run.
+function centre(bounds::Bounds)
+	bounds.lower .+ (magnitude(bounds) ./ 2)
+end
+
 # ╔═╡ 80934c04-60dd-4fbc-9563-0954aa72eec2
 let
 	successor(x, a, δ) = (exp(A*δ))*[x...]
@@ -1117,14 +1187,18 @@ let
 	a_bounds = Bounds(a_partition)
 	ϵ = 0.01 # Make sure only the truly reachable partitions are highlighted
 	a_bounds = Bounds(a_bounds.lower .+ ϵ, a_bounds.upper .- ϵ)
-	
 	a_samples = get_edge_points(8, a_bounds)
 
 	samples = [Tuple(f⁻¹(s)) for s in a_samples]
 	reached = [Tuple(successor(x, action, δ)) for x in samples]
 	
-	trajectory = [Tuple(successor(f([0, 1.75]), action, δ′)) for δ′ in 0:0.01:δ]
+	trajectory = [Tuple(successor(f⁻¹(centre(a_bounds)), action, δ′)) 
+		for δ′ in 0:0.01:δ]
+	
+	a_trajectory = [Tuple(f(successor(f⁻¹(centre(a_bounds)), action, δ′))) 
+		for δ′ in 0:δ:δ]
 
+	@show a_trajectory
 	a_reached = [Tuple(f(x)) for x in reached]
 
 	a_reached_partitions = [box(a_grid, s) for s in a_reached]
@@ -1149,8 +1223,8 @@ let
 	📈1 = plot(;
 		legend=:outertop,
 		ratio=1,
-		xlabel="x1",
-		ylabel="x2",
+		xlabel="\$x\$",
+		ylabel="\$y\$",
 		grid=false,
 		xlim,
 		ylim)
@@ -1169,14 +1243,14 @@ let
 		color=colors.PETER_RIVER)
 
 	plot!(trajectory, 
-		linecolor=colors.WET_ASPHALT,
-		linestyle=:dash,
+		linecolor=colors.AMETHYST,
+		linewidth=2,
 		arrow=:cap,
 		label=nothing)
 
 	📈2 = draw(a_grid, 
-		xlabel="θ",
-		ylabel="r",
+		xlabel="\$θ\$",
+		ylabel="\$r\$",
 		xlim = a_xlim,
 		ylim = a_ylim,
 		legend=:outertop,
@@ -1208,7 +1282,18 @@ let
 		opacity=0.5,
 		label="Partitions marked as reached")
 	
+	plot!(a_trajectory, 
+		linecolor=colors.AMETHYST,
+		linewidth=2,
+		linestyle=:dash,
+		arrow=:cap,
+		label=nothing)
+
+	l = @layout [a{0.5w} b{0.5w}]
+	
 	plot(📈1, 📈2,
+		layout=l,
+		legend=nothing,
 		size=(600, 300))
 end
 
@@ -1519,6 +1604,11 @@ end
 # ╠═19bd1463-ceb6-46ff-871f-3f0117ebeac9
 # ╠═8cf97456-6c01-4cd4-b3ac-97e1115620a8
 # ╟─a115e214-31a5-4a62-a798-07ebbc67caa1
+# ╟─a3172713-f030-4278-af98-864af03a30b0
+# ╠═b65d58aa-9010-4db3-a844-a34b50eba683
+# ╠═6ee0ed94-6150-4d39-9192-41ebd92184de
+# ╠═3f363aba-f12f-4bf7-b786-ca6049b13f2c
+# ╠═236c149d-2d55-4dd1-b68e-99fd460b044b
 # ╟─8b405589-2ba9-4046-ad9d-e2e3ccd21c84
 # ╠═d355823b-cc1c-40b9-96e0-a09cd79be7ff
 # ╠═52be2607-df01-458b-898e-901406747e3e
@@ -1530,6 +1620,7 @@ end
 # ╠═4f87cc27-d210-4273-a4fc-89622bb8ef6e
 # ╠═b047d22d-f223-446e-b58e-daf6a77b898d
 # ╠═88ffd438-a6b3-4b11-82d8-af9ce61ed222
+# ╠═d8cd7fce-f4d4-4c52-b604-ad32178b68ca
 # ╠═bb1ff345-58ba-498a-8035-88ef1db7d917
 # ╠═4937d230-e39f-4460-8071-a4cadc7e8b6f
 # ╠═bf560bb3-2fcf-4cf3-b6a4-5bacb7cbc832
@@ -1554,7 +1645,7 @@ end
 # ╠═0f42e2d4-6446-401e-a062-b5aa893e9ac5
 # ╠═1c429eaf-f72f-4197-8242-12f41db29f81
 # ╠═3c15b3dc-d3f0-4a0c-89cd-da2bbd6e4865
-# ╟─332ac25d-b07f-40ee-ab7d-e6cdfb2d075f
+# ╠═332ac25d-b07f-40ee-ab7d-e6cdfb2d075f
 # ╠═5084de0e-e5e8-435b-9264-d858362957fb
 # ╠═1ce94535-be9e-4f07-b0f3-062509540516
 # ╠═7d5ba76c-e4cb-4c12-928e-2b9c30435288
@@ -1566,7 +1657,7 @@ end
 # ╠═af490584-bd8c-4e03-a64b-32bab91afc33
 # ╠═398ce525-47fc-494a-ad4c-312b6c49c566
 # ╠═74bebc78-c912-4ac8-9c94-1f85838e836b
-# ╟─9ea2e239-00f8-4517-aeac-566415a5fa8a
+# ╠═9ea2e239-00f8-4517-aeac-566415a5fa8a
 # ╟─4bf2b834-15a3-4d1a-8314-8b851a9ca33b
 # ╠═8bb0f2ad-5802-492d-b209-158d35b66a18
 # ╠═7dadc8b9-c52b-4578-8da4-36862f4c59f0
@@ -1609,7 +1700,7 @@ end
 # ╠═6c3550be-a891-4019-a97d-d4f28e3b1912
 # ╟─98822937-709b-4654-b3dc-e23342d28f0f
 # ╠═e1a91b83-07d3-48f0-9c25-e27f3ce0258f
-# ╟─ee3c081b-9bc1-4dfc-b056-620eb305b4cd
+# ╠═ee3c081b-9bc1-4dfc-b056-620eb305b4cd
 # ╟─a5b2aa32-8267-45da-8664-98ea3afe4671
 # ╠═c8b232d3-fe05-453e-9bed-837c83a81a6e
 # ╠═aa8ebc72-8300-405b-b6da-704e39f19506
@@ -1644,7 +1735,8 @@ end
 # ╠═852cb308-c800-42ee-9412-412fe9b9a05e
 # ╟─641033dd-aa48-43fd-b81b-c3ad84b58327
 # ╠═30545fb4-1d86-487f-9d2b-94465945ce77
-# ╟─80934c04-60dd-4fbc-9563-0954aa72eec2
+# ╠═8feeb795-9fd0-42db-a4ab-dc94980b1158
+# ╠═80934c04-60dd-4fbc-9563-0954aa72eec2
 # ╟─b65755fc-1623-4f67-9aec-54dcd3872ae0
 # ╠═52ac166d-61f6-4a4f-b65d-7b8e1db22261
 # ╠═b015bc8a-bc0e-436e-8edd-52c6de7cb528

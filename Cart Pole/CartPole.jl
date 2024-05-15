@@ -122,6 +122,25 @@ end
 # ╔═╡ e008fe83-3851-4061-9e5a-35e938a53ec1
 theme_type; plot(rand(1:10, 10), xlabel="θαβ ∪⋆", ylabel="asdf")
 
+# ╔═╡ a8eefbb3-a09d-4915-9b9a-76f896636dcc
+function draw_function(policy::Function, x_min, x_max, y_min, y_max, G; plotargs...)
+	size_x, size_y = Int((x_max - x_min)/G), Int((y_max - y_min)/G)
+	matrix = Matrix(undef, size_x, size_y)
+	for i in 1:size_x
+		for j in 1:size_y
+			x, y = i*G - G + x_min, j*G - G + y_min
+
+			matrix[i, j] = policy([x, y])
+		end
+	end
+	x_tics = G+x_min:G:x_max
+	y_tics = G+y_min:G:y_max
+	middle_x, middle_y = [(x_max - x_min)/2 + x_min], [(y_max - y_min)/2 + y_min]
+	plot(;plotargs...)
+	heatmap!(x_tics, y_tics, transpose(matrix);
+			plotargs...)
+end
+
 # ╔═╡ 7dd5c185-2b95-4297-a36c-4e2ca38952ea
 md"""
 ## Simulating Cartpole
@@ -401,8 +420,8 @@ const AlteredState = MVector{4, Float64}
 
 # ╔═╡ 3aeb0922-e5f8-4311-b66d-dd42d61f18f3
 altered_state_axes, state_axes_simple = if enable_altered_state_space
-	([ "\$x\$", "\$p\$",
-	  "\$θ\$", "\$p\$", ],
+	([ "\$x\$", "\$p(x, v)\$",
+	  "\$θ\$", "\$p(\\theta, \\omega)\$", ],
 	[ "cart_pos", "poly1",
 	  "pole_ang", "poly2", ])
 else
@@ -426,6 +445,17 @@ P1⁻¹(θ, P1_s) = P1_s - P1(θ, 0)
 # Naming confusion: p1, p2 ... are plots. P1, P2 are polynomials
 function P2(θ, θ_vel)
 	θ_vel - (- 4.550831135117032*θ - 141.6953270125445*θ^3)
+end
+
+# ╔═╡ 3a87f041-76fb-4c68-aa54-792dbf050e60
+let
+	f(x) = −23.3148 * x^3 − 1.8785 * x
+
+	plot(f,
+	xlims=[-0.2,0.2],
+	label="f")
+
+	plot!(x -> P2(x, 0), label="P2")
 end
 
 # ╔═╡ d90ea6c4-316d-46b1-8688-23d95f3cca61
@@ -736,8 +766,51 @@ is_safe(f(s0()))
 	$fields"""
 end
 
+# ╔═╡ 5dde6492-564f-46cb-848d-8a28ea2adb5f
+granularity = let
+	l, u = grid_bounds.lower, grid_bounds.upper
+	span = u .- l
+
+	if concerned_with_angle && concerned_with_position
+		Float64[
+			span[1]/resolution[1],
+			span[2]/resolution[2],
+			span[3]/resolution[3],
+			span[4]/resolution[4]]
+	elseif concerned_with_angle
+		Float64[
+			span[1],
+			span[2],
+			span[3]/resolution[3],
+			span[4]/resolution[4]]
+	elseif concerned_with_position
+		Float64[
+			span[1]/resolution[1],
+			span[2]/resolution[2],
+			span[3],
+			span[4]]
+	else # Not really valid
+		Float64[
+			span[1],
+			span[2],
+			span[3],
+			span[4]]
+	end
+end
+
 # ╔═╡ bcbf4a16-ce8f-451e-b58b-0bf9d8d0d872
 get_size(granularity, cart_pole_bounds)
+
+# ╔═╡ 50506cd4-bdf7-4efc-a12d-6ffc9a0f70a7
+# ╠═╡ disabled = true
+#=╠═╡
+granularity = let
+	l, u = grid_bounds.lower, grid_bounds.upper
+	span = u .- l
+
+	[span[1], span[2], 0.005, 0.006]
+end
+  ╠═╡ =#
 
 # ╔═╡ 0610d08b-020e-4ec8-9815-1d0a4c592899
 get_size(granularity, grid_bounds)
@@ -866,6 +939,35 @@ md"""
 	[i => n for (i, n) in enumerate(altered_state_axes)],
 	default=(concerned_with_position ? 2 : 4)))
 """
+
+# ╔═╡ 551c4f5c-615e-4f99-9549-eb9926bf6450
+if enable_altered_state_space let
+	theme_type # reactivity
+	
+	if slice_axis_2 < slice_axis_1
+		sa1, sa2 = slice_axis_2, slice_axis_1
+	else
+		sa1, sa2 = slice_axis_1, slice_axis_2
+	end
+	xlabel=altered_state_axes[1]
+	ylabel=altered_state_axes[2]
+	l, u = shield.bounds.lower, shield.bounds.upper
+	
+	draw_function(
+		s -> let
+			s′ = f(CartPoleState(0, 0, s..., 4))
+			if s′ ∉ shield
+				return 0
+			else
+				return get_value(box(shield, s′))
+			end
+		end,
+		-0.2, 0.2, -3, 3, (make_paper_friendly_figures ? 0.001 : 0.005);
+		color=cgrad([colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS], 10, categorical=true),
+		xlabel="\$\\theta\$",
+		ylabel="\$\\omega\$",
+		colorbar=nothing)
+end end
 
 # ╔═╡ 6de525db-e339-435f-9f87-620fed817839
 md"""
@@ -1510,49 +1612,6 @@ end
 # ╔═╡ 3c578986-4a73-42bd-a202-fbf2bf534151
 get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 
-# ╔═╡ 5dde6492-564f-46cb-848d-8a28ea2adb5f
-granularity = let
-	l, u = grid_bounds.lower, grid_bounds.upper
-	span = u .- l
-
-	if concerned_with_angle && concerned_with_position
-		Float64[
-			span[1]/resolution[1],
-			span[2]/resolution[2],
-			span[3]/resolution[3],
-			span[4]/resolution[4]]
-	elseif concerned_with_angle
-		Float64[
-			span[1],
-			span[2],
-			span[3]/resolution[3],
-			span[4]/resolution[4]]
-	elseif concerned_with_position
-		Float64[
-			span[1]/resolution[1],
-			span[2]/resolution[2],
-			span[3],
-			span[4]]
-	else # Not really valid
-		Float64[
-			span[1],
-			span[2],
-			span[3],
-			span[4]]
-	end
-end
-
-# ╔═╡ 50506cd4-bdf7-4efc-a12d-6ffc9a0f70a7
-# ╠═╡ disabled = true
-#=╠═╡
-granularity = let
-	l, u = grid_bounds.lower, grid_bounds.upper
-	span = u .- l
-
-	[span[1], span[2], 0.005, 0.006]
-end
-  ╠═╡ =#
-
 # ╔═╡ Cell order:
 # ╟─2767663f-3ef8-44f5-81a2-8e480158266e
 # ╟─3115801b-0a07-4a44-a6b3-d1ab2b9c0775
@@ -1565,6 +1624,7 @@ end
 # ╠═35c76906-f2dd-4f4d-af43-0fafe69d211b
 # ╠═8172cdb6-b9a4-4afc-844f-245e5d951bb7
 # ╠═e008fe83-3851-4061-9e5a-35e938a53ec1
+# ╠═a8eefbb3-a09d-4915-9b9a-76f896636dcc
 # ╟─3fd479d1-c43a-4c6f-95f8-0c74a9ffbf18
 # ╟─7dd5c185-2b95-4297-a36c-4e2ca38952ea
 # ╠═35605d87-4c3a-49a9-93d1-a5fceede3653
@@ -1627,6 +1687,7 @@ end
 # ╠═338e5d40-6251-429c-9b0d-ef92460a7e52
 # ╠═3aeb0922-e5f8-4311-b66d-dd42d61f18f3
 # ╠═b4ddbac3-33e9-42e7-bac7-a2ec32093678
+# ╠═3a87f041-76fb-4c68-aa54-792dbf050e60
 # ╠═64be4f5a-97f6-49bc-b848-450506d9ceb1
 # ╠═5645d7a7-0f23-4a02-ab30-49a6cda9ce17
 # ╠═d90ea6c4-316d-46b1-8688-23d95f3cca61
@@ -1651,7 +1712,7 @@ end
 # ╟─e0892cae-9ef0-4e57-9a1c-91bf34043956
 # ╠═38bc7025-9e1f-4101-a53d-a3a7ff802aa7
 # ╟─1aa6c36a-7884-48d1-9c5f-1dc87f1278e3
-# ╠═5dde6492-564f-46cb-848d-8a28ea2adb5f
+# ╟─5dde6492-564f-46cb-848d-8a28ea2adb5f
 # ╠═50506cd4-bdf7-4efc-a12d-6ffc9a0f70a7
 # ╠═0610d08b-020e-4ec8-9815-1d0a4c592899
 # ╠═6f4c7279-43f4-4c08-8eb1-45e3d70db8cd
@@ -1681,7 +1742,8 @@ end
 # ╠═b7980c62-7947-40e8-a8c5-195e93f4eb18
 # ╠═0c28089a-1547-47f4-a411-e3a57cac6a6d
 # ╠═b79619f1-aa55-4a5c-851f-7387d411d8eb
-# ╠═c7a4e65c-a907-468e-b31c-ce05393d41d5
+# ╟─c7a4e65c-a907-468e-b31c-ce05393d41d5
+# ╟─551c4f5c-615e-4f99-9549-eb9926bf6450
 # ╟─abaa6617-7932-4a10-a355-b2218bad4103
 # ╟─f908b62b-4183-4ee8-9dbc-cab4a8164e70
 # ╟─6de525db-e339-435f-9f87-620fed817839
