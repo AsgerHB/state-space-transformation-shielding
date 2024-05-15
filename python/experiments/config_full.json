@@ -3,15 +3,24 @@
         "model_dir": "./experiments/spiral/",
         "uppaal_file": "spiral.xml",
         "state_vars": [
-            ["x1", "x2"]
+            ["x1", "x2"],
+            ["atan2(x1, x2)", "sqrt(x1*x1 + x2*x2)"],
+            ["x1", "x2", "Destination1.y1", "Destination1.y2"],
+            [
+                "atan2(x1, x2)",
+                "sqrt(x1*x1+x2*x2)",
+                "atan2(Destination1.y1, Destination1.y2)",
+                "sqrt(Destination1.y1*Destination1.y1+Destination1.y2*Destination1.y2)"
+            ]
         ],
         "training_costs": ["visits"],
         "training_bound": "<= 100",
         "training_goal": "time >= 100",
         "training_optimizer": "maxE",
         "queries": [
-            "E[<=100;100] (max:visits) under S",
-            "E[<=100;100] (max:collisions) under S"
+            "E[<=100;1000] (max:visits) under S",
+            "E[<=100;1000] (min:visits) under S",
+            "E[<=100;1000] (max:collisions) under S"
         ],
         "shields": {
             "Spiral Shield - Standard State Space": {
@@ -29,7 +38,16 @@
         "uppaal_file": "bouncing_ball.xml",
         "state_vars": [
             ["p", "v"],
-            ["mecEnergy(p, v)", "v"]
+            ["mecEnergy(p, v)"],
+            ["mecEnergy(p, v)", "p"],
+            ["mecEnergy(p, v)", "p", "v"],
+            ["mecEnergy(p, v)", "delta_e_mek(p, v)"],
+            ["kinEnergy(v)", "potEnergy(p)"],
+            ["getMemory(0)"],
+            ["getMemory(0)", "getMemory(1)"],
+            ["getMemory(0)", "getMemory(1)", "getMemory(2)"],
+            ["getMemory(0)", "getMemory(1)", "getMemory(2)", "getMemory(3)"],
+            ["getMemory(0)", "getMemory(1)", "getMemory(2)", "getMemory(3)", "getMemory(4)"]
         ],
         "training_costs": ["swings", "swings + (number_deaths * 1000)"],
         "training_bound": "<=120",
@@ -49,7 +67,8 @@
             "BB Shield - Altered State Space": {
                 "path": "./experiments/bouncing_ball/BB Shield - Altered State Space.zip",
                 "signature": "",
-                "shield_call": "shield(mecEnergy(p, v), v, p_thresh(p))"
+                "shield_call": "shield(mecEnergy(p, v), v, p_thresh(p))",
+                "extra_verifyta_args": ["-D", "0.005"]
             }
         }
     },
