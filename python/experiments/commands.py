@@ -37,16 +37,10 @@ def run_from_config(config_path, results_dir):
 
         for cost in training_costs:
             for svars in state_vars:
-                store_path = '{}/saved_strategies/strat_{}_{}.json'.format(
-                    model_dir, model_slug, '-'.join(svars)
-                )
-                if store_path not in saved_strategies:
-                    saved_strategies.append(store_path)
-
                 features = '{} -> {' + ','.join(svars) + '}'
                 instance.add_training_query(
                     training_bound, features, training_goal,
-                    cost=cost, exp=training_optimizer, store_path=store_path
+                    cost=cost, exp=training_optimizer
                 )
                 for query in queries:
                     instance.add_query(query)
@@ -100,26 +94,6 @@ def run_from_config(config_path, results_dir):
             except:
                 print('parsing failed, here is the raw output:')
                 print(output)
-
-            print('sizes:')
-            size_results = []
-            for strat in saved_strategies:
-                qtree = QTree(strat)
-                q_size = qtree.n_leaves
-
-                try:
-                    dtree = qtree.to_decision_tree()
-                    d_size = dtree.n_leaves
-                except:
-                    d_size = -1
-
-                try:
-                    ntree, _ = minimize_tree(dtree, verbose=False)
-                    n_size = ntree.n_leaves
-                except:
-                    n_size = -1
-
-                print([strat, q_size, d_size, n_size])
 
         results_path = pathlib.Path(results_dir + f'/{model_slug}_results.txt')
         with open(results_path, 'w') as f:
