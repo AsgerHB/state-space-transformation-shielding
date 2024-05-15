@@ -103,11 +103,11 @@ class UPPAALInstance:
             self.content = f.read()
 
     def extract_tags(self):
-        pattern = rf'// \[ (\w+)\n([\S\s]+?)(?=// ])'
+        pattern = rf'// \[ (\w+)(?:\r\n|\r|\n)([\S\s]+?)(?=// ])'
         return dict(re.findall(pattern, self.content))
 
     def update_tag(self, tag, value):
-        pattern = rf'(// \[ {tag}\n)([\S\s]+?)(?=// ])'
+        pattern = rf'(// \[ {tag}(?:\r\n|\r|\n))([\S\s]+?)(?=// ])'
         repl = rf'\1{value}\n'
         result, subs = re.subn(pattern, repl, self.content)
 
@@ -178,6 +178,9 @@ class UPPAALInstance:
             query = query.strip()
             if 'strategy S' in query:
                 parsed_output.append((query, 'Formula is satisfied' in match))
+                continue
+
+            if 'loadStrat' in query:
                 continue
 
             res_matches = re.search(res_pattern, match).groups()
