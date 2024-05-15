@@ -13,8 +13,6 @@ def run_from_config(config_path, results_dir):
         conf = json.load(f)
 
     for model in conf:
-        if not model == 'bouncing_ball':
-            continue
         print()
 
         model_dir = conf[model]['model_dir']
@@ -86,7 +84,6 @@ def run_from_config(config_path, results_dir):
 
             # run model and add results to results list
             print('run the UPPAAL instance...')
-            # extra_args = shields[shield_name].get('extra_verifyta_args', [])
             output = instance.run('-Wsqy')
             try:
                 parsed_output = instance.parse_ouput(output)
