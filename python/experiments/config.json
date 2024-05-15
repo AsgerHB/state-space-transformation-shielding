@@ -3,17 +3,19 @@
         "model_dir": "./experiments/spiral/",
         "uppaal_file": "spiral.xml",
         "state_vars": [
-            ["x1", "x2"]
+            ["x1", "x2"],
+            ["atan2(x2, x1)", "sqrt(x1*x1 + x2*x2)"]
         ],
-        "training_costs": ["visits"],
+        "training_costs": ["visits - (collisions * 1000)"],
         "training_bound": "<= 100",
         "training_goal": "time >= 100",
         "training_optimizer": "maxE",
         "queries": [
-            "E[<=100;100] (max:visits) under S",
-            "E[<=100;100] (max:collisions) under S"
+            "E[<=100;1000] (max:visits) under S",
+            "E[<=100;1000] (max:collisions) under S"
         ],
         "shields": {
+            "noshield": { "path": null },
             "Spiral Shield - Standard State Space": {
                 "path": "./experiments/spiral/Spiral Shield - Standard State Space - UPPAAL Friendly.zip",
                 "shield_call": "shield(x1, x2)"
@@ -31,14 +33,14 @@
             ["p", "v"],
             ["mecEnergy(p, v)", "v"]
         ],
-        "training_costs": ["swings", "swings + (number_deaths * 1000)"],
+        "training_costs": ["swings + (number_deaths * 1000)"],
         "training_bound": "<=120",
         "training_goal": "time >= 120",
         "training_optimizer": "minE",
         "queries": [
-            "E[<=120;100] (max:swings) under S",
-            "E[<=120;100] (max:hits) under S",           
-            "E[<=120;100] (max:number_deaths) under S"
+            "E[<=120;1000] (max:swings) under S",
+            "E[<=120;1000] (max:hits) under S",           
+            "E[<=120;1000] (max:number_deaths) under S"
         ],
         "shields": {
             "BB Shield - Standard State Space": {
@@ -49,7 +51,7 @@
             "BB Shield - Altered State Space": {
                 "path": "./experiments/bouncing_ball/BB Shield - Altered State Space.zip",
                 "signature": "",
-                "shield_call": "shield(mecEnergy(p, v), v, p_thresh(p))"
+                "shield_call": "shield(mecEnergy(p, v), v)"
             }
         }
     },
@@ -57,18 +59,20 @@
         "model_dir": "./experiments/cartpole/",
         "uppaal_file": "cartpole.xml",
         "state_vars": [
-            ["cart_pos", "cart_vel", "pole_ang", "pole_vel"]
+            ["cart_pos", "cart_vel", "pole_ang", "pole_vel"],
+            ["cart_pos", "cart_vel", "pole_ang", "P2(pole_ang, pole_vel)"]
         ],
-        "training_costs": ["num_cart_gone", "num_deaths"],
+        "training_costs": ["num_deaths"],
         "training_bound": "<=10",
         "training_goal": "time >= 10",
         "training_optimizer": "minE",
         "queries": [
-            "E[<=10;100] (max: num_deaths) under S",
-            "E[<=10;100] (max: num_pole_fell) under S",
-            "E[<=10;100] (max: num_cart_gone) under S"
+            "E[<=10;1000] (max: num_deaths) under S",
+            "E[<=10;1000] (max: num_pole_fell) under S",
+            "E[<=10;1000] (max: num_cart_gone) under S"
         ],
         "shields": {
+            "noshield": { "path": null },
             "CartPole 1x1x30x30 - Standard State Space": {
                 "path": "./experiments/cartpole/Cartpole 1x1x30x30 - Standard State Space.zip",
                 "signature": "",
