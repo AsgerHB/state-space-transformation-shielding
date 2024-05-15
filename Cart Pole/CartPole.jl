@@ -412,7 +412,7 @@ md"""
 md"""
 ### 🛠 Toggle altered state space
 
-`enable_altered_state_space =` $(@bind enable_altered_state_space CheckBox(default=true))
+`enable_altered_state_space =` $(@bind enable_altered_state_space CheckBox(default=false))
 """
 
 # ╔═╡ 338e5d40-6251-429c-9b0d-ef92460a7e52
@@ -1264,11 +1264,12 @@ p4 = let
 	end
 	
 	plot(p3)
-	lower_border = border_points(shield, 1, 3, slice) |> sort
-	upper_border = border_points(shield, 2, 3, slice) |> sort
+	lower_border = border_points(shield, 1, 3, slice)
+	upper_border = border_points(shield, 2, 3, slice)
 	
 	averaged_border = [(x1, (l + u)/2) 
-			for ((x1, l), (x2, u)) in zip(upper_border, lower_border)
+			for (x1, l) in lower_border 
+			for (x2, u) in upper_border
 			if x1 == x2]
 
 	to_fit_to = fit_to == "Upper" ? upper_border :
