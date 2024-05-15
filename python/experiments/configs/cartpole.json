@@ -1,0 +1,32 @@
+{
+    "cartpole": {
+        "model_dir": "./experiments/cartpole/",
+        "uppaal_file": "cartpole.xml",
+        "state_vars": [
+            ["cart_pos", "cart_vel", "pole_ang", "pole_vel"],
+            ["cart_pos", "cart_vel", "pole_ang", "P2(pole_ang, pole_vel)"]
+        ],
+        "training_costs": ["num_deaths"],
+        "training_bound": "<=10",
+        "training_goal": "time >= 10",
+        "training_optimizer": "minE",
+        "queries": [
+            "E[<=10;1000] (max: num_deaths) under S",
+            "E[<=10;1000] (max: num_pole_fell) under S",
+            "E[<=10;1000] (max: num_cart_gone) under S"
+        ],
+        "shields": {
+            "noshield": { "path": null },
+            "CartPole 1x1x30x30 - Standard State Space": {
+                "path": "./experiments/cartpole/Cartpole 1x1x30x30 - Standard State Space.zip",
+                "signature": "",
+                "shield_call": "shield(cart_pos, cart_vel, pole_ang, pole_vel)"
+            },
+            "CartPole 1x1x20x20 - Altered State Space": {
+                "path": "./experiments/cartpole/Cartpole 1x1x20x20 - Altered State Space.zip",
+                "signature": "",
+                "shield_call": "shield(0.0, 0.0, pole_ang, P2(pole_ang, pole_vel))"
+            }
+        }
+    }
+}

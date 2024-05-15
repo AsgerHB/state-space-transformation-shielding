@@ -1,0 +1,29 @@
+{
+    "spiral": {
+        "model_dir": "./experiments/spiral/",
+        "uppaal_file": "spiral.xml",
+        "state_vars": [
+            ["x1", "x2"],
+            ["atan2(x2, x1)", "sqrt(x1*x1 + x2*x2)"]
+        ],
+        "training_costs": ["visits - (collisions * 1000)"],
+        "training_bound": "<= 100",
+        "training_goal": "time >= 100",
+        "training_optimizer": "maxE",
+        "queries": [
+            "E[<=100;1000] (max:visits) under S",
+            "E[<=100;1000] (max:collisions) under S"
+        ],
+        "shields": {
+            "noshield": { "path": null },
+            "Spiral Shield - Standard State Space": {
+                "path": "./experiments/spiral/Spiral Shield - Standard State Space - UPPAAL Friendly.zip",
+                "shield_call": "shield(x1, x2)"
+            },
+            "Spiral Shield - Altered State Space": {
+                "path": "./experiments/spiral/Spiral Shield - Altered State Space - UPPAAL Friendly.zip",
+                "shield_call": "shield(angle, radius)"
+            }
+        }
+    },
+}

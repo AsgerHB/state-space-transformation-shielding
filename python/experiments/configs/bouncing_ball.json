@@ -1,0 +1,31 @@
+{
+    "bouncing_ball": {
+        "model_dir": "./experiments/bouncing_ball/",
+        "uppaal_file": "bouncing_ball.xml",
+        "state_vars": [
+            ["p", "v"],
+            ["mecEnergy(p, v)", "v"]
+        ],
+        "training_costs": ["swings + (number_deaths * 1000)"],
+        "training_bound": "<=120",
+        "training_goal": "time >= 120",
+        "training_optimizer": "minE",
+        "queries": [
+            "E[<=120;1000] (max:swings) under S",
+            "E[<=120;1000] (max:hits) under S",           
+            "E[<=120;1000] (max:number_deaths) under S"
+        ],
+        "shields": {
+            "BB Shield - Standard State Space": {
+                "path": "./experiments/bouncing_ball/BB Shield - Standard State Space.zip",
+                "signature": "",
+                "shield_call": "shield(v, p)"
+            },
+            "BB Shield - Altered State Space": {
+                "path": "./experiments/bouncing_ball/BB Shield - Altered State Space.zip",
+                "signature": "",
+                "shield_call": "shield(mecEnergy(p, v), v)"
+            }
+        }
+    }
+}
