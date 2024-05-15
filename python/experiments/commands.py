@@ -13,6 +13,8 @@ def run_from_config(config_path, results_dir):
         conf = json.load(f)
 
     for model in conf:
+        if not model == 'bouncing_ball':
+            continue
         print()
 
         model_dir = conf[model]['model_dir']
@@ -38,7 +40,9 @@ def run_from_config(config_path, results_dir):
                 store_path = '{}/saved_strategies/strat_{}_{}.json'.format(
                     model_dir, model_slug, '-'.join(svars)
                 )
-                saved_strategies.append(store_path)
+                if store_path not in saved_strategies:
+                    saved_strategies.append(store_path)
+
                 features = '{} -> {' + ','.join(svars) + '}'
                 instance.add_training_query(
                     training_bound, features, training_goal,
@@ -92,11 +96,10 @@ def run_from_config(config_path, results_dir):
             output = instance.run('-Wsqy')
             try:
                 parsed_output = instance.parse_ouput(output)
+                model_results.append(parsed_output)
             except:
                 print('parsing failed, here is the raw output:')
                 print(output)
-
-            model_results.append(parsed_output)
 
             print('sizes:')
             size_results = []
@@ -116,7 +119,7 @@ def run_from_config(config_path, results_dir):
                 except:
                     n_size = -1
 
-                print([strat, q_size, d_size, n_leaves])
+                print([strat, q_size, d_size, n_size])
 
         results_path = pathlib.Path(results_dir + f'/{model_slug}_results.txt')
         with open(results_path, 'w') as f:
