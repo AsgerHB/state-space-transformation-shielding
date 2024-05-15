@@ -79,8 +79,9 @@ allowed_actions_t get_allowed(double x1, double x2) {
     double angle = atan2(x2, x1);
     double radius = sqrt(x1*x1 + x2*x2);
 	int value = // [ SHIELD_CALL
-		get_value(angle, radius);
+		get_value(angle, radius)
 	// ]
+    ;
     allowed_actions_t allowed = intToActions(value);
     allowed_actions_t any = {true, true, true};
 	if (!shield_enabled) { return any; }
