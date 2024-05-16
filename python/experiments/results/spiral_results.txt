@@ -1,0 +1,21 @@
+noshield
+Spiral Shield - Standard State Space
+	176400
+	4861
+	4861
+	('strategy S = maxE (visits - (collisions * 1000)) [<= 100] {} -> {x1,x2}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (0.786, 0.0583145))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))
+	('strategy S = maxE (visits - (collisions * 1000)) [<= 100] {} -> {atan2(x2, x1),sqrt(x1*x1 + x2*x2)}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (0.889, 0.0617333))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))
+Spiral Shield - Altered State Space
+	27300
+	590
+	590
+	('strategy S = maxE (visits - (collisions * 1000)) [<= 100] {} -> {x1,x2}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (1.499, 0.0683507))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))
+	('strategy S = maxE (visits - (collisions * 1000)) [<= 100] {} -> {atan2(x2, x1),sqrt(x1*x1 + x2*x2)}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (1.176, 0.0630415))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))

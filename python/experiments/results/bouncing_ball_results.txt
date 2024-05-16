@@ -1,0 +1,24 @@
+BB Shield - Standard State Space
+	600000
+	1030
+	1030
+	('strategy S = minE (swings + (number_deaths * 1000)) [<=120] {} -> {p,v}: <> time >= 120', True)
+	('E[<=120;1000] (max:swings) under S', (37.607, 0.178528))
+	('E[<=120;1000] (max:hits) under S', (37.58, 0.170658))
+	('E[<=120;1000] (max:number_deaths) under S', (0.0, 0.0))
+	('strategy S = minE (swings + (number_deaths * 1000)) [<=120] {} -> {mecEnergy(p, v),v}: <> time >= 120', True)
+	('E[<=120;1000] (max:swings) under S', (40.024, 0.183142))
+	('E[<=120;1000] (max:hits) under S', (40.06, 0.186757))
+	('E[<=120;1000] (max:number_deaths) under S', (0.0, 0.0))
+BB Shield - Altered State Space
+	650
+	49
+	49
+	('strategy S = minE (swings + (number_deaths * 1000)) [<=120] {} -> {p,v}: <> time >= 120', True)
+	('E[<=120;1000] (max:swings) under S', (36.593, 0.16232))
+	('E[<=120;1000] (max:hits) under S', (36.762, 0.16348))
+	('E[<=120;1000] (max:number_deaths) under S', (0.0, 0.0))
+	('strategy S = minE (swings + (number_deaths * 1000)) [<=120] {} -> {mecEnergy(p, v),v}: <> time >= 120', True)
+	('E[<=120;1000] (max:swings) under S', (39.099, 0.179096))
+	('E[<=120;1000] (max:hits) under S', (39.1, 0.176197))
+	('E[<=120;1000] (max:number_deaths) under S', (0.0, 0.0))

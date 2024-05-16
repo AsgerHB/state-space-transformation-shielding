@@ -1,0 +1,33 @@
+noshield
+	('strategy S = minE (num_deaths) [<=10] {} -> {cart_pos,cart_vel,pole_ang,pole_vel}: <> time >= 10', True)
+	('E[<=10;1000] (max: num_deaths) under S', (0.003, 0.00339547))
+	('E[<=10;1000] (max: num_pole_fell) under S', (0.0, 0.0))
+	('E[<=10;1000] (max: num_cart_gone) under S', (0.007, 0.00517625))
+	('strategy S = minE (num_deaths) [<=10] {} -> {cart_pos,cart_vel,pole_ang,P2(pole_ang, pole_vel)}: <> time >= 10', True)
+	('E[<=10;1000] (max: num_deaths) under S', (0.0, 0.0))
+	('E[<=10;1000] (max: num_pole_fell) under S', (0.0, 0.0))
+	('E[<=10;1000] (max: num_cart_gone) under S', (0.0, 0.0))
+CartPole 1x1x30x30 - Standard State Space
+	900
+	99
+	99
+	('strategy S = minE (num_deaths) [<=10] {} -> {cart_pos,cart_vel,pole_ang,pole_vel}: <> time >= 10', True)
+	('E[<=10;1000] (max: num_deaths) under S', (0.011, 0.00647569))
+	('E[<=10;1000] (max: num_pole_fell) under S', (0.0, 0.0))
+	('E[<=10;1000] (max: num_cart_gone) under S', (0.019, 0.00847624))
+	('strategy S = minE (num_deaths) [<=10] {} -> {cart_pos,cart_vel,pole_ang,P2(pole_ang, pole_vel)}: <> time >= 10', True)
+	('E[<=10;1000] (max: num_deaths) under S', (0.0, 0.0))
+	('E[<=10;1000] (max: num_pole_fell) under S', (0.0, 0.0))
+	('E[<=10;1000] (max: num_cart_gone) under S', (0.0, 0.0))
+CartPole 1x1x20x20 - Altered State Space
+	400
+	33
+	33
+	('strategy S = minE (num_deaths) [<=10] {} -> {cart_pos,cart_vel,pole_ang,pole_vel}: <> time >= 10', True)
+	('E[<=10;1000] (max: num_deaths) under S', (0.006, 0.00479469))
+	('E[<=10;1000] (max: num_pole_fell) under S', (0.0, 0.0))
+	('E[<=10;1000] (max: num_cart_gone) under S', (0.01, 0.00617745))
+	('strategy S = minE (num_deaths) [<=10] {} -> {cart_pos,cart_vel,pole_ang,P2(pole_ang, pole_vel)}: <> time >= 10', True)
+	('E[<=10;1000] (max: num_deaths) under S', (0.0, 0.0))
+	('E[<=10;1000] (max: num_pole_fell) under S', (0.0, 0.0))
+	('E[<=10;1000] (max: num_cart_gone) under S', (0.0, 0.0))
