@@ -64,9 +64,7 @@ double delta_e_mek(double v, double p) {
 import "/home/andreashhp/Documents/university/projects/Physics-guided-Dimensionality-Reduction/python/bouncing_ball_BB Shield - Standard State Space.so"
 // ]
 // [ SHIELD_SIGNATURE
-{
-    int shield(double v, double p);
-};
+int shield(double v, double p);
 // ]
 
 const bool shield_enabled = // [ ENABLE_SHIELD

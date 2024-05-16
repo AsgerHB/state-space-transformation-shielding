@@ -16,6 +16,7 @@
             "E[<=120;1000] (max:number_deaths) under S"
         ],
         "shields": {
+            "noshield": { "path": null },
             "BB Shield - Standard State Space": {
                 "path": "./experiments/bouncing_ball/BB Shield - Standard State Space.zip",
                 "signature": "",

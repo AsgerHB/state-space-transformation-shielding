@@ -45,11 +45,9 @@ double distance(double p1, double p2, double q1, double q2) {
 // [ SHIELD_PATH
 import "/home/asger/Documents/Files/Arbejde/AAU/Artikler/Physics-guided Dimensionality Reduction/Spiral/spiral_shield_altered_state_space_uppaal_friendly.so"
 // ]
-{
-	// [ SHIELD_SIGNATURE
-    int get_value(double angle, double radius);
-	// ]
-};
+// [ SHIELD_SIGNATURE
+int get_value(double angle, double radius);
+// ]
 
 const bool shield_enabled = // [ ENABLE_SHIELD
     true
