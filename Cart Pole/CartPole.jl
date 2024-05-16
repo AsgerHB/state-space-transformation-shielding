@@ -88,8 +88,6 @@ end
 md"""
 ### 🛠 `make_paper_friendly_figures` 
 Toggle: $(@bind make_paper_friendly_figures CheckBox(default=false))
-
-TODO: For some reason, this ruins the figures when they're imported in LaTeX :s
 """
 
 # ╔═╡ 1d5aced4-a27a-4f3b-ab08-69b1a3b1559f
