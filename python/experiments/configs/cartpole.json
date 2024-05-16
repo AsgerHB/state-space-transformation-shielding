@@ -18,7 +18,7 @@
         "shields": {
             "noshield": { "path": null },
             "CartPole 1x1x30x30 - Standard State Space": {
-                "path": "./experiments/cartpole/Cartpole 1x1x30x30 - Standard State Space.zip",
+                "path": "./experiments/cartpole/Cart Pole Shield - Standard State Space.zip",
                 "signature": "",
                 "shield_call": "shield(cart_pos, cart_vel, pole_ang, pole_vel)"
             },

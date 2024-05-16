@@ -442,18 +442,12 @@ P1⁻¹(θ, P1_s) = P1_s - P1(θ, 0)
 # ╔═╡ 5645d7a7-0f23-4a02-ab30-49a6cda9ce17
 # Naming confusion: p1, p2 ... are plots. P1, P2 are polynomials
 function P2(θ, θ_vel)
-	θ_vel - (- 4.550831135117032*θ - 141.6953270125445*θ^3)
-end
 
-# ╔═╡ 3a87f041-76fb-4c68-aa54-792dbf050e60
-let
-	f(x) = −23.3148 * x^3 − 1.8785 * x
+	# Learned from 3 steps of a 20x20 shield computation
+	return θ_vel - (- 4.550831135117032*θ - 141.6953270125445*θ^3)
 
-	plot(f,
-	xlims=[-0.2,0.2],
-	label="f")
-
-	plot!(x -> P2(x, 0), label="P2")
+	# Learned from a fully compuetd 100x100 shield
+	θ_vel - (-1.7440907420745881e-16 - 5.829601684910079*θ - 7.54337188727965e-16*θ^2 - 26.782941687007654*θ^3)
 end
 
 # ╔═╡ d90ea6c4-316d-46b1-8688-23d95f3cca61
@@ -1686,7 +1680,6 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╠═338e5d40-6251-429c-9b0d-ef92460a7e52
 # ╠═3aeb0922-e5f8-4311-b66d-dd42d61f18f3
 # ╠═b4ddbac3-33e9-42e7-bac7-a2ec32093678
-# ╠═3a87f041-76fb-4c68-aa54-792dbf050e60
 # ╠═64be4f5a-97f6-49bc-b848-450506d9ceb1
 # ╠═5645d7a7-0f23-4a02-ab30-49a6cda9ce17
 # ╠═d90ea6c4-316d-46b1-8688-23d95f3cca61
@@ -1759,7 +1752,7 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╟─973fba84-d206-454c-a743-0d9eae296c28
 # ╠═acbdbfe1-66e1-45d9-81d6-96a059aafb6f
 # ╠═a54f79bb-a240-47e5-9f04-8b2674ac9be1
-# ╟─d73c2ee5-e8bf-4cc4-8855-d239224ba843
+# ╠═d73c2ee5-e8bf-4cc4-8855-d239224ba843
 # ╠═05f7c96a-dd50-41a7-8916-293938c03b40
 # ╠═442a2427-e8a7-4088-8221-ec7a5dc9f1c2
 # ╠═2498792a-a7b9-4295-bfb9-7e9068a02d7d
