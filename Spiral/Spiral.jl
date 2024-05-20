@@ -250,6 +250,32 @@ trace = simulate_sequence(x0, random, 5.8)
 animate_sequence(trace)
   ╠═╡ =#
 
+# ╔═╡ 659fbbb9-d6aa-40a3-8e35-47a5ca6c2a9b
+let
+	x = 2
+	y = 2
+	atan(y, x), sqrt(x^2 + y ^2)
+end
+
+# ╔═╡ 641033dd-aa48-43fd-b81b-c3ad84b58327
+md"""
+# Transformation Plot
+
+The plot that explains how we compute reachability between state-spaces.
+"""
+
+# ╔═╡ 30545fb4-1d86-487f-9d2b-94465945ce77
+# Returns samples per axis but only on the edges.
+function get_edge_points(samples_per_axis, bounds)
+	samples = SupportingPoints(samples_per_axis, bounds)
+	# Have to do it like this to get a clockwise order
+	lower1 = [s for s in samples if s[1] ≈ bounds.lower[1]] |> sort
+	upper1 = [s for s in samples if s[1] ≈ bounds.upper[1]] |> sort |> reverse
+	lower2 = [s for s in samples if s[2] ≈ bounds.lower[2]] |> sort |> reverse
+	upper2 = [s for s in samples if s[2] ≈ bounds.upper[2]] |> sort
+	vcat(lower1, upper2, upper1, lower2)
+end
+
 # ╔═╡ 7557a054-9b6d-4858-ba82-1b613c362b4b
 md"""
 # Shielding
@@ -327,15 +353,16 @@ plot_trace(trace)
 let
 	background = plot(Bounds([-2.1, -2.1], [2.1, 2.1]), 
 		grid=nothing,
-		color=colors.CONCRETE,
+		color=:transparent,
 		label=nothing,
-		linewidth=0)
+		linewidth=2,
+		linecolor=colors.WET_ASPHALT)
 
-	plot!(circle_shape([0, 0], 2),
+	#=plot!(circle_shape([0, 0], 2),
 		seriestype=:shape,
 		linewidth=0,
 		color=:white,
-		label=nothing)
+		label=nothing)=#
 	
 	plot_trace(trace; background)
 	
@@ -700,6 +727,127 @@ f(x0)
 function f⁻¹(x)::SpiralState
 	θ, r = x
 	r*cos(θ), r*sin(θ)
+end
+
+# ╔═╡ 80934c04-60dd-4fbc-9563-0954aa72eec2
+let
+	successor(x, a, δ) = (exp(A*δ))*[x...]
+	δ = 0.8
+	
+	a_grid = Grid(0.5, Bounds([-pi - 0.1, 0.], [pi + 0.1, 3.5]))
+	a_partition = box(a_grid, 0, 1.5)
+	
+	a_bounds = Bounds(a_partition)
+	ϵ = 0.01 # Make sure only the truly reachable partitions are highlighted
+	a_bounds = Bounds(a_bounds.lower .+ ϵ, a_bounds.upper .- ϵ)
+	a_samples = get_edge_points(8, a_bounds)
+
+	samples = [Tuple(f⁻¹(s)) for s in a_samples]
+	reached = [Tuple(successor(x, action, δ)) for x in samples]
+	
+	trajectory = [Tuple(successor(f⁻¹(centre(a_bounds)), action, δ′)) 
+		for δ′ in 0:0.01:δ]
+	
+	a_trajectory = [Tuple(f(successor(f⁻¹(centre(a_bounds)), action, δ′))) 
+		for δ′ in 0:δ:δ]
+
+	@show a_trajectory
+	a_reached = [Tuple(f(x)) for x in reached]
+
+	a_reached_partitions = [box(a_grid, s) for s in a_reached]
+	a_reached_partitions = unique(x -> x.indices, a_reached_partitions)
+
+	margin = 1
+	
+	xlim = (min([s[1] for s in [samples..., reached...]]...) - margin,
+			max([s[1] for s in [samples..., reached...]]...) + margin)
+	
+	ylim = (min([s[2] for s in [samples..., reached...]]...) - margin,
+			max([s[2] for s in [samples..., reached...]]...) + margin)
+
+	a_margin = 1
+	
+	a_xlim = (min([s[1] for s in [a_samples..., a_reached...]]...) - a_margin,
+			max([s[1] for s in [a_samples..., a_reached...]]...) + a_margin)
+	
+	a_ylim = (min([s[2] for s in [a_samples..., a_reached...]]...) - a_margin,
+			max([s[2] for s in [a_samples..., a_reached...]]...) + a_margin)
+	
+	📈1 = plot(;
+		legend=:outertop,
+		ratio=1,
+		xlabel="\$x\$",
+		ylabel="\$y\$",
+		grid=false,
+		xlim,
+		ylim)
+	
+	plot!(unzip(samples),
+		seriestype=:shape,
+		linewidth=0,
+		label="Initial set translated to S",
+		color=colors.EMERALD)
+	
+	
+	plot!(unzip(reached),
+		seriestype=:shape,
+		linewidth=0,
+		label="Successor set in S",
+		color=colors.PETER_RIVER)
+
+	plot!(trajectory, 
+		linecolor=colors.AMETHYST,
+		linewidth=2,
+		arrow=:cap,
+		label=nothing)
+
+	📈2 = draw(a_grid, 
+		xlabel="\$θ\$",
+		ylabel="\$r\$",
+		xlim = a_xlim,
+		ylim = a_ylim,
+		legend=:outertop,
+		show_grid=true,
+		ratio=1)
+	
+	plot!(Bounds(a_partition), 
+		color=colors.EMERALD, 
+		linewidth=0,
+		label="Initial set in T")
+
+	for a_reached_partition in a_reached_partitions
+		plot!(Bounds(a_reached_partition), 
+			color=colors.PETER_RIVER, 
+			linewidth=0,
+			opacity=0.5,
+			label=nothing) # label added later
+	end
+	
+	plot!(unzip(a_reached), 
+		seriestype=:shape,
+		linewidth=0,
+		label="Successor set translated to T",
+		color=colors.PETER_RIVER)
+
+	plot!([], seriestype=:shape,
+		color=colors.PETER_RIVER, 
+		linewidth=0,
+		opacity=0.5,
+		label="Partitions marked as reached")
+	
+	plot!(a_trajectory, 
+		linecolor=colors.AMETHYST,
+		linewidth=2,
+		linestyle=:dash,
+		arrow=:cap,
+		label=nothing)
+
+	l = @layout [a{0.5w} b{0.5w}]
+	
+	plot(📈1, 📈2,
+		layout=l,
+		legend=nothing,
+		size=(600, 300))
 end
 
 # ╔═╡ a8c248b4-e1b5-45f8-9ed3-1d81239f063f
@@ -1150,153 +1298,6 @@ let
 	"Exported `'$filename'`." |> Markdown.parse
 end
 
-# ╔═╡ 641033dd-aa48-43fd-b81b-c3ad84b58327
-md"""
-# Sampling plot
-
-The plot that explains how sampling is done using circle example.
-"""
-
-# ╔═╡ 30545fb4-1d86-487f-9d2b-94465945ce77
-# Returns samples per axis but only on the edges.
-function get_edge_points(samples_per_axis, bounds)
-	samples = SupportingPoints(samples_per_axis, bounds)
-	# Have to do it like this to get a clockwise order
-	lower1 = [s for s in samples if s[1] ≈ bounds.lower[1]] |> sort
-	upper1 = [s for s in samples if s[1] ≈ bounds.upper[1]] |> sort |> reverse
-	lower2 = [s for s in samples if s[2] ≈ bounds.lower[2]] |> sort |> reverse
-	upper2 = [s for s in samples if s[2] ≈ bounds.upper[2]] |> sort
-	vcat(lower1, upper2, upper1, lower2)
-end
-
-# ╔═╡ 8feeb795-9fd0-42db-a4ab-dc94980b1158
-# TODO: This has been made part of the GridShielding package.
-# It can be deleted next time the notebook is run.
-function centre(bounds::Bounds)
-	bounds.lower .+ (magnitude(bounds) ./ 2)
-end
-
-# ╔═╡ 80934c04-60dd-4fbc-9563-0954aa72eec2
-let
-	successor(x, a, δ) = (exp(A*δ))*[x...]
-	δ = 0.8
-	
-	a_grid = Grid(0.5, Bounds([-pi - 0.1, 0.], [pi + 0.1, 3.5]))
-	a_partition = box(a_grid, 0, 1.5)
-	
-	a_bounds = Bounds(a_partition)
-	ϵ = 0.01 # Make sure only the truly reachable partitions are highlighted
-	a_bounds = Bounds(a_bounds.lower .+ ϵ, a_bounds.upper .- ϵ)
-	a_samples = get_edge_points(8, a_bounds)
-
-	samples = [Tuple(f⁻¹(s)) for s in a_samples]
-	reached = [Tuple(successor(x, action, δ)) for x in samples]
-	
-	trajectory = [Tuple(successor(f⁻¹(centre(a_bounds)), action, δ′)) 
-		for δ′ in 0:0.01:δ]
-	
-	a_trajectory = [Tuple(f(successor(f⁻¹(centre(a_bounds)), action, δ′))) 
-		for δ′ in 0:δ:δ]
-
-	@show a_trajectory
-	a_reached = [Tuple(f(x)) for x in reached]
-
-	a_reached_partitions = [box(a_grid, s) for s in a_reached]
-	a_reached_partitions = unique(x -> x.indices, a_reached_partitions)
-
-	margin = 1
-	
-	xlim = (min([s[1] for s in [samples..., reached...]]...) - margin,
-			max([s[1] for s in [samples..., reached...]]...) + margin)
-	
-	ylim = (min([s[2] for s in [samples..., reached...]]...) - margin,
-			max([s[2] for s in [samples..., reached...]]...) + margin)
-
-	a_margin = 1
-	
-	a_xlim = (min([s[1] for s in [a_samples..., a_reached...]]...) - a_margin,
-			max([s[1] for s in [a_samples..., a_reached...]]...) + a_margin)
-	
-	a_ylim = (min([s[2] for s in [a_samples..., a_reached...]]...) - a_margin,
-			max([s[2] for s in [a_samples..., a_reached...]]...) + a_margin)
-	
-	📈1 = plot(;
-		legend=:outertop,
-		ratio=1,
-		xlabel="\$x\$",
-		ylabel="\$y\$",
-		grid=false,
-		xlim,
-		ylim)
-	
-	plot!(unzip(samples),
-		seriestype=:shape,
-		linewidth=0,
-		label="Initial set translated to S",
-		color=colors.EMERALD)
-	
-	
-	plot!(unzip(reached),
-		seriestype=:shape,
-		linewidth=0,
-		label="Successor set in S",
-		color=colors.PETER_RIVER)
-
-	plot!(trajectory, 
-		linecolor=colors.AMETHYST,
-		linewidth=2,
-		arrow=:cap,
-		label=nothing)
-
-	📈2 = draw(a_grid, 
-		xlabel="\$θ\$",
-		ylabel="\$r\$",
-		xlim = a_xlim,
-		ylim = a_ylim,
-		legend=:outertop,
-		show_grid=true,
-		ratio=1)
-	
-	plot!(Bounds(a_partition), 
-		color=colors.EMERALD, 
-		linewidth=0,
-		label="Initial set in T")
-
-	for a_reached_partition in a_reached_partitions
-		plot!(Bounds(a_reached_partition), 
-			color=colors.PETER_RIVER, 
-			linewidth=0,
-			opacity=0.5,
-			label=nothing) # label added later
-	end
-	
-	plot!(unzip(a_reached), 
-		seriestype=:shape,
-		linewidth=0,
-		label="Successor set translated to T",
-		color=colors.PETER_RIVER)
-
-	plot!([], seriestype=:shape,
-		color=colors.PETER_RIVER, 
-		linewidth=0,
-		opacity=0.5,
-		label="Partitions marked as reached")
-	
-	plot!(a_trajectory, 
-		linecolor=colors.AMETHYST,
-		linewidth=2,
-		linestyle=:dash,
-		arrow=:cap,
-		label=nothing)
-
-	l = @layout [a{0.5w} b{0.5w}]
-	
-	plot(📈1, 📈2,
-		layout=l,
-		legend=nothing,
-		size=(600, 300))
-end
-
 # ╔═╡ b65755fc-1623-4f67-9aec-54dcd3872ae0
 md"""
 # Run in UPPAAL
@@ -1637,7 +1638,11 @@ end
 # ╠═cbe5bb1f-4a78-4185-9067-ddc7aa332be5
 # ╠═f0b44048-4c9c-475f-87a4-9ff331885c32
 # ╠═b67bbfee-633d-4d8b-846f-6a63ec778f93
+# ╠═659fbbb9-d6aa-40a3-8e35-47a5ca6c2a9b
 # ╠═e26e0fca-5a6c-4d05-8eb2-df02e1ef15f3
+# ╟─641033dd-aa48-43fd-b81b-c3ad84b58327
+# ╠═30545fb4-1d86-487f-9d2b-94465945ce77
+# ╠═80934c04-60dd-4fbc-9563-0954aa72eec2
 # ╟─7557a054-9b6d-4858-ba82-1b613c362b4b
 # ╠═7dddbfa0-35f6-4cec-90b6-37ae41881a77
 # ╠═e8a5370b-e18d-4957-b695-d6c50fec1182
@@ -1733,10 +1738,6 @@ end
 # ╟─e5f19917-868f-41f0-8873-6eef2d40bfaf
 # ╠═46e15850-9632-4232-9d8f-05f3a9cb4832
 # ╠═852cb308-c800-42ee-9412-412fe9b9a05e
-# ╟─641033dd-aa48-43fd-b81b-c3ad84b58327
-# ╠═30545fb4-1d86-487f-9d2b-94465945ce77
-# ╠═8feeb795-9fd0-42db-a4ab-dc94980b1158
-# ╠═80934c04-60dd-4fbc-9563-0954aa72eec2
 # ╟─b65755fc-1623-4f67-9aec-54dcd3872ae0
 # ╠═52ac166d-61f6-4a4f-b65d-7b8e1db22261
 # ╠═b015bc8a-bc0e-436e-8edd-52c6de7cb528
