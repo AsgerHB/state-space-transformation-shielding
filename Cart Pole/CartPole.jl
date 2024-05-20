@@ -593,40 +593,40 @@ end
 # ╔═╡ 4a18c6f8-b31c-487b-8a22-a8b6ed0b3b46
 trace = simulate_sequence(m, s0(), random_policy, 4)
 
-# ╔═╡ 251427d4-0aae-4a1f-a31f-71832877c749
-function animate_sequence(trace::CartPoleTrace; speed=1)
-	xs = [s[1] for s in trace.states]
-	xlims = (cart_pole_bounds.lower[1] - 0.3, cart_pole_bounds.upper[1] + 0.3)
-	🎥 = @animate for (i, s) in enumerate(trace.states)
-		x = s[1]
-		θ = π/2 - s[3]
+# ╔═╡ 58458e09-c9cf-4d75-b153-17d807b783f3
+begin
+	function plot_state!(state::CartPoleState, action::Union{Action, Nothing}; 
+			plotargs...)
 		
-		plot(;
+		xlims = (cart_pole_bounds.lower[1] - 0.3, cart_pole_bounds.upper[1] + 0.3)
+		x = state[1]
+		θ = π/2 - state[3]
+		
+		plot!(;
 			xlims,
 			ylims=(-m.pole_length, m.pole_length*3),
 			yticks=nothing,
-			aspectratio=:equal)
-
-		# Action #
-		if i <= length(trace.actions)
-			a = trace.actions[i]
-			if a.value == left.value
-				plot!([x, x - 0.3], [0, 0],
-					label=nothing,
-					marker=:ltriangle,
-					markerstrokewidth=0,
-					color=colors.EMERALD,)
-			elseif a.value == right.value
-					plot!([x, x + 0.3], [0, 0],
-					label=nothing,
-					marker=:rtriangle,
-					markerstrokewidth=0,
-					color=colors.EMERALD,)
-			else
-				error("Unexpected action value $a")
-			end
-		end
+			aspectratio=:equal,
+			plotargs...)
 		
+		# Action 
+		if action == nothing
+		elseif action.value == left.value
+			plot!([x, x - 0.3], [0, 0],
+				label=nothing,
+				marker=:ltriangle,
+				markerstrokewidth=0,
+				color=colors.EMERALD,)
+		elseif action.value == right.value
+				plot!([x, x + 0.3], [0, 0],
+				label=nothing,
+				marker=:rtriangle,
+				markerstrokewidth=0,
+				color=colors.EMERALD,)
+		else
+			error("Unexpected action value $action")
+		end
+
 		# Cart #
 		plot!(cart(x), 
 			color=colors.WET_ASPHALT,
@@ -643,11 +643,35 @@ function animate_sequence(trace::CartPoleTrace; speed=1)
 			label=nothing,
 			linewidth=4)
 	end
-	gif(🎥, fps=1/m.τ*speed, show_msg=false)
+	
+	function plot_state(state::CartPoleState, action::Union{Action, Nothing};
+			plotargs...)
+		
+		plot()
+		plot_state!(state, action; plotargs...)
+	end
 end
 
+# ╔═╡ bd006c20-2291-4e26-af86-2aaa4eeb0640
+theme_type; plot_state(rand(trace.states), rand((left, right)), xlim=(-1, 1))
+
+# ╔═╡ 251427d4-0aae-4a1f-a31f-71832877c749
+# ╠═╡ disabled = true
+#=╠═╡
+function animate_sequence(trace::CartPoleTrace; speed=1)
+	🎥 = @animate for (i, s) in enumerate(trace.states)
+
+		a = get(trace.actions, i, nothing)
+		plot_state(trace.states[i], a)
+	end
+	gif(🎥, fps=1/m.τ*speed, show_msg=false)
+end
+  ╠═╡ =#
+
 # ╔═╡ ea84c513-b4ca-41df-96ec-1c230fde9f3d
+#=╠═╡
 animate_sequence(trace; speed=1)
+  ╠═╡ =#
 
 # ╔═╡ 227f0131-fc76-4382-902e-18874ce66104
 cart_pole_bounds
@@ -1555,7 +1579,9 @@ max([abs(x_vel) for (x, x_vel, θ, θ_vel, _) in Q_trace.states]...)
 max([abs(θ_vel) for (x, x_vel, θ, θ_vel, _) in Q_trace.states]...)
 
 # ╔═╡ 2ac120e4-f380-4b02-bc7f-a1d5e84d7c36
+#=╠═╡
 animate_sequence(Q_trace)
+  ╠═╡ =#
 
 # ╔═╡ d712571e-ced8-4f06-8b44-6874fcd3e15d
 length(Q[left].array |> unique),
@@ -1645,6 +1671,8 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╠═5e1614e9-1dca-4a32-b169-5200d708396c
 # ╠═e7108be6-8280-4591-b8e3-3e6d4207aed9
 # ╠═ed4eb3ec-3947-49c6-b1a0-d0bcafb281ff
+# ╠═58458e09-c9cf-4d75-b153-17d807b783f3
+# ╠═bd006c20-2291-4e26-af86-2aaa4eeb0640
 # ╠═251427d4-0aae-4a1f-a31f-71832877c749
 # ╠═4a18c6f8-b31c-487b-8a22-a8b6ed0b3b46
 # ╠═ea84c513-b4ca-41df-96ec-1c230fde9f3d
