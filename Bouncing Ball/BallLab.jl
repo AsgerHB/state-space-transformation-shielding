@@ -509,6 +509,39 @@ BB.simulate_point(m, (v_0, p_0), action)
 # ╔═╡ 2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
 @bind p NumberField(0:0.1:8, default=7)
 
+# ╔═╡ 2565bc31-e784-4c58-b741-1ccf41813dca
+md"""
+## Visualise shield in original state-space
+"""
+
+# ╔═╡ 8c03490e-0c85-4287-b8a3-03c82ad05f07
+# Returns samples per axis but only on the edges.
+function get_edge_points(samples_per_axis, bounds)
+	samples = SupportingPoints(samples_per_axis, bounds)
+	# Have to do it like this to get a clockwise order
+	lower1 = [s for s in samples if s[1] ≈ bounds.lower[1]] |> sort
+	upper1 = [s for s in samples if s[1] ≈ bounds.upper[1]] |> sort |> reverse
+	lower2 = [s for s in samples if s[2] ≈ bounds.lower[2]] |> sort |> reverse
+	upper2 = [s for s in samples if s[2] ≈ bounds.upper[2]] |> sort
+	vcat(lower1, upper2, upper1, lower2)
+end
+
+# ╔═╡ 06ab9ae5-fe2a-4734-8929-ca5babe0d9f5
+function transformed_grid(grid, f; samples=4, outer_bounds=nothing)
+	result = Shape[]
+	for partition in grid
+		bounds = Bounds(partition)
+		points = get_edge_points(samples, bounds)
+		points = [f(p) for p in points]
+		if !isnothing(outer_bounds) && !any(p ∈ outer_bounds for p in points)
+			continue
+		end
+		shape = Shape(points)
+		push!(result, shape)
+	end
+	result
+end
+
 # ╔═╡ 080a4374-104e-4c30-b946-313475fb0c11
 any_action, no_action = actions_to_int([BB.hit BB.nohit]), actions_to_int([])
 
@@ -740,6 +773,13 @@ shield, max_steps_reached = make_shield(reachability_function_precomputed, BB.Ac
 
 # ╔═╡ a3e566e8-6b31-4d07-a2b9-b3b90f178d63
 Bounds(box(shield, π(7, 0)))
+
+# ╔═╡ ccbdaed6-0e4d-4bef-941c-9ad831b52e61
+plot(transformed_grid(shield, x -> π⁻¹(x...)), 
+	label=nothing, 
+	fill=nothing, 
+	linecolor=colors.SILVER,
+	size=(200, 200))
 
 # ╔═╡ e247dfa7-6000-4df1-8a28-328463e32c49
 length(shield)
@@ -1039,14 +1079,24 @@ end
 # ╔═╡ a566b33b-7005-43c3-afce-b8793447f615
 shield_plot_old_statespace = let
 	🎈1, theme_type
+
+	xlim = -13, 13
+	ylim = 0, 8
 	
 	draw_function(
 		s -> (box(shield, clamp(shield.bounds, π(s...) |> collect)) |> get_value), 
-		-13, 13, 0, 8, 0.01,
+		xlim..., ylim..., (make_paper_friendly_figures ? 0.01 : 0.05),
 		color=cgrad([colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS], 10, categorical=true),
-		xlabel=π_xlabel,
-		ylabel=π_ylabel,
+		xlabel="v",
+		ylabel="p",
 		colorbar=nothing)
+
+	plot!(transformed_grid(shield, x -> π⁻¹(x...); samples=3, outer_bounds=vp_bounds);
+		xlim, 
+		ylim,
+		label=nothing, 
+		fill=nothing, 
+		linecolor=colors.SILVER)
 
 	#=
 	plot!([], seriestype=:shape, color=colors.WET_ASPHALT, label="{}")
@@ -1385,7 +1435,11 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═fd928206-accf-44fc-8762-599fe34c26b6
 # ╠═22d05a23-bcad-4281-8303-5082a3d8e785
 # ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
-# ╠═021e2fb4-1760-4421-916b-fb2ef306cb13
+# ╟─021e2fb4-1760-4421-916b-fb2ef306cb13
+# ╟─2565bc31-e784-4c58-b741-1ccf41813dca
+# ╟─8c03490e-0c85-4287-b8a3-03c82ad05f07
+# ╠═06ab9ae5-fe2a-4734-8929-ca5babe0d9f5
+# ╟─ccbdaed6-0e4d-4bef-941c-9ad831b52e61
 # ╠═a566b33b-7005-43c3-afce-b8793447f615
 # ╠═e247dfa7-6000-4df1-8a28-328463e32c49
 # ╠═702172e9-59d7-4a77-b663-a89f66132a1f

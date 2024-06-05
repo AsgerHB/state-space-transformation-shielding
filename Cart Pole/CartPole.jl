@@ -126,7 +126,7 @@ function draw_function(policy::Function, x_min, x_max, y_min, y_max, G; plotargs
 	matrix = Matrix(undef, size_x, size_y)
 	for i in 1:size_x
 		for j in 1:size_y
-			x, y = i*G - G + x_min, j*G - G + y_min
+			x, y = i*G - G*0.5 + x_min, j*G - G*0.5 + y_min
 
 			matrix[i, j] = policy([x, y])
 		end
@@ -957,7 +957,7 @@ md"""
 """
 
 # ╔═╡ 551c4f5c-615e-4f99-9549-eb9926bf6450
-if enable_altered_state_space let
+p5 = if enable_altered_state_space let
 	theme_type # reactivity
 	
 	if slice_axis_2 < slice_axis_1
@@ -968,6 +968,9 @@ if enable_altered_state_space let
 	xlabel=altered_state_axes[1]
 	ylabel=altered_state_axes[2]
 	l, u = shield.bounds.lower, shield.bounds.upper
+
+	xlim = l[sa1], u[sa1]
+	ylim = l[sa2], u[sa2]
 	
 	draw_function(
 		s -> let
@@ -978,11 +981,25 @@ if enable_altered_state_space let
 				return get_value(box(shield, s′))
 			end
 		end,
-		-0.2, 0.2, -3, 3, (make_paper_friendly_figures ? 0.001 : 0.005);
+		xlim..., ylim..., (make_paper_friendly_figures ? 0.001 : 0.005);
 		color=cgrad([colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS], 10, categorical=true),
 		xlabel="\$\\theta\$",
 		ylabel="\$\\omega\$",
 		colorbar=nothing)
+	
+	vline!([v for v in shield.bounds.lower[sa1]:granularity[sa1]:shield.bounds.upper[sa1]], 
+		label=nothing,
+		color=colors.SILVER)
+
+	
+	for θ_vel in ylim[1]:granularity[sa2]:ylim[2]
+		plot!([(θ, -P2(θ, θ_vel)) for θ in xlim[1]:0.01:xlim[2]+0.01];
+			xlim,
+			ylim,
+			label=nothing,
+			color=colors.SILVER)
+	end
+	plot!()
 end end
 
 # ╔═╡ 6de525db-e339-435f-9f87-620fed817839
@@ -1092,7 +1109,7 @@ p3 = let
 	draw(shield, slice;
 		show_grid,
 		colors=shieldcolors,
-		#color_labels=shieldlabels,
+		color_labels=shieldlabels,
 		clims=(0, 3),
 		xlabel,
 		ylabel,
