@@ -1,4 +1,10 @@
 noshield
+	('strategy S = maxE (visits - (collisions * 1000)) [<= 100] {} -> {x1,x2}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (1.123, 0.0615204))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))
+	('strategy S = maxE (visits - (collisions * 1000)) [<= 100] {} -> {atan2(x2, x1),sqrt(x1*x1 + x2*x2)}: <> time >= 100', True)
+	('E[<=100;1000] (max:visits) under S', (0.917, 0.0605809))
+	('E[<=100;1000] (max:collisions) under S', (0.0, 0.0))
 Spiral Shield - Standard State Space
 	176400
 	4861
