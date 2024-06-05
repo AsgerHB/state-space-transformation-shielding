@@ -1,7 +1,9 @@
 import os
+from os.path import abspath
+from pathlib import Path
 from experiments.commands import run_from_config
 
-os.environ['VERIFYTA_PATH'] = '/opt/uppaal-5.0.0-linux64/bin/verifyta'
+os.environ['VERIFYTA_PATH'] = abspath(Path.home() / 'opt/uppaal-5.0.0-linux64/bin/verifyta')
 
 config_files = [
     './experiments/configs/bouncing_ball.json',
