@@ -656,8 +656,6 @@ end
 theme_type; plot_state(rand(trace.states), rand((left, right)), xlim=(-1, 1))
 
 # ╔═╡ 251427d4-0aae-4a1f-a31f-71832877c749
-# ╠═╡ disabled = true
-#=╠═╡
 function animate_sequence(trace::CartPoleTrace; speed=1)
 	🎥 = @animate for (i, s) in enumerate(trace.states)
 
@@ -666,12 +664,9 @@ function animate_sequence(trace::CartPoleTrace; speed=1)
 	end
 	gif(🎥, fps=1/m.τ*speed, show_msg=false)
 end
-  ╠═╡ =#
 
 # ╔═╡ ea84c513-b4ca-41df-96ec-1c230fde9f3d
-#=╠═╡
 animate_sequence(trace; speed=1)
-  ╠═╡ =#
 
 # ╔═╡ 227f0131-fc76-4382-902e-18874ce66104
 cart_pole_bounds
@@ -1205,58 +1200,6 @@ md"""
 # ╔═╡ a54f79bb-a240-47e5-9f04-8b2674ac9be1
 @bind fit_to Select(["Averaged", "Upper", "Lower"])
 
-# ╔═╡ 05f7c96a-dd50-41a7-8916-293938c03b40
-# ╠═╡ disabled = true
-#=╠═╡
-let
-	if slice_axis_2 < slice_axis_1
-		sa1, sa2 = slice_axis_2, slice_axis_1
-	else
-		sa1, sa2 = slice_axis_1, slice_axis_2
-	end
-	
-	plot(p3)
-	lower_border = border_points(shield, 2, 3, slice) |> sort
-	upper_border = border_points(shield, 1, 3, slice) |> sort
-	
-	averaged_border = [(x1, (l + u)/2) 
-			for ((x1, l), (x2, u)) in zip(upper_border, lower_border)
-			if x1 == x2]
-
-	pol1 = Polynomials.fit((averaged_border[1:15] |> unzip)..., 1)
-	pol2 = Polynomials.fit((averaged_border[16:85] |> unzip)..., 0)
-	pol3 = Polynomials.fit((averaged_border[86:end] |> unzip)..., 1)
-	@show pol1
-	@show pol2
-	@show averaged_border[15]
-	@show pol3
-	@show averaged_border[85]
-	
-	piecewise(x) =  
-			x < averaged_border[15][1] ? pol1(x) : 
-			x < averaged_border[85][1] ? pol2(x) : pol3(x)
-
-	f(x, x_vel) = piecewise(x) + x_vel
-
-	plot!([(x, f(x, x_vel)) for x in grid_bounds.lower[sa1]:0.1:grid_bounds.upper[sa1]],
-		color=colors.SILVER,
-		label="p")
-	
-	scatter!(averaged_border[1:end],
-		color=colors.ASBESTOS,
-		markersize=2,
-		markerstrokewidth=0,
-		label="average")
-
-	scatter!([x], [x_vel], 
-		color=colors.EMERALD,
-		markersize=2,
-		markerstrokewidth=0,
-		label="s")
-
-end
-  ╠═╡ =#
-
 # ╔═╡ 442a2427-e8a7-4088-8221-ec7a5dc9f1c2
 function border_points(grid::Grid, value_1, value_2, slice)
 	result = Tuple{Float64, Float64}[]
@@ -1350,12 +1293,6 @@ md"""
 ## Check Safety
 """
 
-# ╔═╡ 9fda178a-0fcd-49ad-b0b8-025523995691
-# ╠═╡ disabled = true
-#=╠═╡
-animate_sequence(shielded_trace)
-  ╠═╡ =#
-
 # ╔═╡ e2db38df-8347-4bf4-be27-d9ad19c96823
 function get_allowed(s::CartPoleState)
 	f_s = f(s)
@@ -1423,6 +1360,9 @@ cart_pole_bounds
 
 # ╔═╡ 9bad8bb4-bfa1-47a3-821c-dd3448c3f534
 deaths, shielded_trace = check_safety(m, shielded_random_policy, 10; runs)
+
+# ╔═╡ 9fda178a-0fcd-49ad-b0b8-025523995691
+animate_sequence(shielded_trace)
 
 # ╔═╡ 3d63e8c3-6218-4eec-86de-698bb61d8f96
 let
@@ -1596,9 +1536,7 @@ max([abs(x_vel) for (x, x_vel, θ, θ_vel, _) in Q_trace.states]...)
 max([abs(θ_vel) for (x, x_vel, θ, θ_vel, _) in Q_trace.states]...)
 
 # ╔═╡ 2ac120e4-f380-4b02-bc7f-a1d5e84d7c36
-#=╠═╡
 animate_sequence(Q_trace)
-  ╠═╡ =#
 
 # ╔═╡ d712571e-ced8-4f06-8b44-6874fcd3e15d
 length(Q[left].array |> unique),
@@ -1655,13 +1593,13 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╠═cd2df9dc-af72-4b37-b1ef-ff8a0dcb9e0f
 # ╠═5c808e32-0aa6-49ec-a7b1-d01e44aa48ea
 # ╟─a8aff15c-255d-498f-97dd-4c9c953ec662
+# ╟─3fd479d1-c43a-4c6f-95f8-0c74a9ffbf18
 # ╟─319eff14-0f2e-458e-99b3-b3a64eccccee
 # ╠═1d5aced4-a27a-4f3b-ab08-69b1a3b1559f
 # ╠═35c76906-f2dd-4f4d-af43-0fafe69d211b
 # ╠═8172cdb6-b9a4-4afc-844f-245e5d951bb7
 # ╠═e008fe83-3851-4061-9e5a-35e938a53ec1
 # ╠═a8eefbb3-a09d-4915-9b9a-76f896636dcc
-# ╟─3fd479d1-c43a-4c6f-95f8-0c74a9ffbf18
 # ╟─7dd5c185-2b95-4297-a36c-4e2ca38952ea
 # ╠═35605d87-4c3a-49a9-93d1-a5fceede3653
 # ╠═b52604cc-e8bc-4b53-84ad-79cf019c1667
@@ -1779,8 +1717,8 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╠═b7980c62-7947-40e8-a8c5-195e93f4eb18
 # ╠═0c28089a-1547-47f4-a411-e3a57cac6a6d
 # ╠═b79619f1-aa55-4a5c-851f-7387d411d8eb
-# ╟─c7a4e65c-a907-468e-b31c-ce05393d41d5
-# ╟─551c4f5c-615e-4f99-9549-eb9926bf6450
+# ╠═c7a4e65c-a907-468e-b31c-ce05393d41d5
+# ╠═551c4f5c-615e-4f99-9549-eb9926bf6450
 # ╟─abaa6617-7932-4a10-a355-b2218bad4103
 # ╟─f908b62b-4183-4ee8-9dbc-cab4a8164e70
 # ╟─6de525db-e339-435f-9f87-620fed817839
@@ -1798,7 +1736,6 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╠═acbdbfe1-66e1-45d9-81d6-96a059aafb6f
 # ╠═a54f79bb-a240-47e5-9f04-8b2674ac9be1
 # ╠═d73c2ee5-e8bf-4cc4-8855-d239224ba843
-# ╠═05f7c96a-dd50-41a7-8916-293938c03b40
 # ╠═442a2427-e8a7-4088-8221-ec7a5dc9f1c2
 # ╠═2498792a-a7b9-4295-bfb9-7e9068a02d7d
 # ╟─0f5f2fea-3b84-4d1d-80bc-08715f947661
