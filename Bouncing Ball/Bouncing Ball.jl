@@ -35,9 +35,6 @@ md"""
 # Preamble
 """
 
-# ╔═╡ af1f9e02-7ed4-476b-a01e-6a83fb850e2a
-#Pkg.add("ProgressLogging")
-
 # ╔═╡ bffbac67-8a3b-4155-a665-0c39f93d3dd7
 TableOfContents()
 
@@ -963,6 +960,13 @@ if open_folder_button > 0
 	run(`nautilus $target_dir`, wait=false)
 end; "This cell opens `$target_dir` in nautilus"
 
+# ╔═╡ d97db0c1-6bba-4c92-b8a6-0f60a9ea6357
+md"""
+### Export as serialized julia-tuple
+
+Easy export and import between julia code.
+"""
+
 # ╔═╡ 2813bdf7-9530-40a0-bdb5-ab1213f54b31
 let
 	filename = "$π_xlabel_simple, $π_ylabel_simple.shield"
@@ -971,6 +975,22 @@ let
 	
 	"Exported `'$filename'`." |> Markdown.parse
 end
+
+# ╔═╡ 15e42007-54fd-4af2-b7ea-b86ca62a9f19
+md"""
+### Export as a function in a shared-object library
+
+Use this library to access the shield from C and C++ code.
+
+The shield is compiled into a shared-object binary, which exports the function `int get_value(double v, double p)`. It takes the state-variables as input and returns the bit-encoded list of allowed actions. (See `int_to_actions`.)
+"""
+
+# ╔═╡ 75b00a19-f89b-4b9b-b85e-f84a7c5f2e9b
+md"""
+### Export to Numpy
+
+Exports a zip-file containing a serialized numpy-array along with a JSON file with details on how to read it.
+"""
 
 # ╔═╡ b62de837-53d8-4e61-97a3-d629d9388165
 md"""
@@ -1350,7 +1370,6 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╔═╡ Cell order:
 # ╟─c663a860-4562-4de0-9b08-edc041cde9e6
 # ╠═9c8abfbc-a5f0-11ec-3a9b-9bfd0b447638
-# ╠═af1f9e02-7ed4-476b-a01e-6a83fb850e2a
 # ╠═bffbac67-8a3b-4155-a665-0c39f93d3dd7
 # ╟─43b8a393-b906-4c46-b8fb-d277954510b3
 # ╠═a0eeeee8-04b3-4cfd-a75f-03c53a6a91e0
@@ -1467,8 +1486,11 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═9b4e88ad-2de3-4b8d-8a69-bbb8660cc293
 # ╠═1a3ebfb8-47b8-41a3-b63d-875b03187a4e
 # ╟─5789cc7e-4a58-4a83-9f3a-87c982028c59
+# ╠═d97db0c1-6bba-4c92-b8a6-0f60a9ea6357
 # ╠═2813bdf7-9530-40a0-bdb5-ab1213f54b31
+# ╠═15e42007-54fd-4af2-b7ea-b86ca62a9f19
 # ╠═fbe0e11d-a06b-41fe-b349-ccbcc66ffd3f
+# ╠═75b00a19-f89b-4b9b-b85e-f84a7c5f2e9b
 # ╠═1cce35be-253e-4e75-8f0f-fdf1aed9799d
 # ╟─b62de837-53d8-4e61-97a3-d629d9388165
 # ╟─b55d3379-4a1d-40e4-a663-ec07c119df33
