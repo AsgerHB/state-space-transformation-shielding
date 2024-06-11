@@ -18,8 +18,6 @@ end
 begin
 	using Pkg
 	Pkg.activate("..")
-	Pkg.develop("GridShielding")
-	Pkg.develop("UppaalTraceParser")
 	using GridShielding
 	using UppaalTraceParser
 	using Plots
