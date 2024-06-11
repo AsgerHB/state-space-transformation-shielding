@@ -117,9 +117,6 @@ else
 	"Using Julia Plots defaults :-)"
 end
 
-# ╔═╡ e008fe83-3851-4061-9e5a-35e938a53ec1
-theme_type; plot(rand(1:10, 10), xlabel="θαβ ∪⋆", ylabel="asdf")
-
 # ╔═╡ a8eefbb3-a09d-4915-9b9a-76f896636dcc
 function draw_function(policy::Function, x_min, x_max, y_min, y_max, G; plotargs...)
 	size_x, size_y = Int((x_max - x_min)/G), Int((y_max - y_min)/G)
@@ -348,53 +345,6 @@ end
 
 # ╔═╡ ed4eb3ec-3947-49c6-b1a0-d0bcafb281ff
 cart(0)
-
-# ╔═╡ 7f1f08f2-bdf7-4563-887c-a8e380549f94
-md"""
-## Q-learning for fun
-"""
-
-# ╔═╡ 1ebddb2c-428e-4bca-bbe1-f5f2189b5418
-Q_granularity = Float64[0.5, 1, 0.1, 0.2]
-
-# ╔═╡ 0f9da8fe-7a26-4b21-9a64-906e908d835e
-Q_bounds = Bounds([-2.2, -4.8, -0.4, -0.836],
-	[2.2, 4.8, 0.4, 0.836])
-
-# ╔═╡ 5cfb472e-8d08-48a7-bd27-c23f67a065d5
-# reward
-function r(s)
-	if s ∉ Q_bounds
-		-10
-	else
-		-abs(s[3])
-	end
-end
-
-# ╔═╡ 05cdc837-58e1-4112-922a-e8344bc4ee66
-get_size(Q_granularity, Q_bounds), get_size(Q_granularity, Q_bounds) |> prod
-
-# ╔═╡ 398af1f5-5ffb-4667-b8cc-ee1920de2997
-@bind γ NumberField(0.0001:0.0001:1, default=0.9)
-
-# ╔═╡ 4cb85ba8-86f6-436c-9479-8e162c8b7d54
-@bind ϵ_base NumberField(0.0001:0.0001:1, default=0.8)
-
-# ╔═╡ 5d2064c4-a987-4296-ae30-fed483057eff
-@bind α_base NumberField(0.0001:0.0001:1, default=0.01)
-
-# ╔═╡ 534b9c41-52dd-43c5-bb5d-f44dcde0f70f
-# ϵ-greedy choice from Q.
-function ϵ_greedy(ϵ::Number, Q, s)
-	if rand(Uniform(0, 1)) < ϵ
-		return rand((left, right))
-	else
-		return argmax((a) -> get_value(box(Q[a], s)), (left, right))
-	end
-end
-
-# ╔═╡ 57bad1a9-9cea-4e2f-903d-004bccafffb3
-s0()
 
 # ╔═╡ 6c84e1aa-f45a-453c-8a78-f3976c605385
 md"""
@@ -668,9 +618,6 @@ end
 # ╔═╡ ea84c513-b4ca-41df-96ec-1c230fde9f3d
 animate_sequence(trace; speed=1)
 
-# ╔═╡ 227f0131-fc76-4382-902e-18874ce66104
-cart_pole_bounds
-
 # ╔═╡ dfdaf4cc-3490-4b93-a8d9-9f4d01c39c09
 let
 	all_good = true
@@ -808,9 +755,6 @@ granularity = let
 			span[4]]
 	end
 end
-
-# ╔═╡ bcbf4a16-ce8f-451e-b58b-0bf9d8d0d872
-get_size(granularity, cart_pole_bounds)
 
 # ╔═╡ 50506cd4-bdf7-4efc-a12d-6ffc9a0f70a7
 # ╠═╡ disabled = true
@@ -1016,9 +960,6 @@ $(@bind θ_vel NumberField(cart_pole_bounds.lower[4]:round(granularity[4], digit
 `action =`
 $(@bind action Select([a => a.name for a in (left, right)]))
 """
-
-# ╔═╡ a5a3b815-23c4-4acd-90d5-a12c721e7866
-action
 
 # ╔═╡ 1b882558-e83e-4679-8d51-3dc54040cdf1
 s = CartPoleState(apply(action, [x, x_vel, θ, θ_vel, 0]))
@@ -1453,117 +1394,6 @@ Exports a zip-file containing a serialized numpy-array along with a JSON file wi
 # ╔═╡ 2864b91e-7654-4c54-9b7a-411ef982d01d
 @enum Actions move_left move_right
 
-# ╔═╡ 0a9c51e1-0cc3-4bb0-9fa5-0f3962aae605
-@bind episodes NumberField(0:typemax(Int64), default=5)
-
-# ╔═╡ 2ef0dc55-796c-4c5f-89be-96872cbc3c50
-function α(t; episodes=episodes)
-	if t < episodes/2
-		α_base
-	else
-		α_base/(1 + 0.2*(t - episodes/2))
-	end
-end
-
-# ╔═╡ 742280a3-8f06-49de-aea6-79462cfeb2f8
-function ϵ(t; episodes=episodes)
-	if t < episodes/2
-		ϵ_base
-	else
-		ϵ_base/(1 + 0.2*(t - episodes/2))
-	end
-end
-
-# ╔═╡ 40550db6-a7b9-496c-b321-b61cf1239e18
-function Q_learn()
-	Q = Dict(left => Grid(Q_granularity, Q_bounds, data_type=Float64), 
-			right => Grid(Q_granularity, Q_bounds, data_type=Float64))
-
-	# Discourage exploration; we want to stay near s0
-	for partition in Q[left]
-		set_value!(partition, -2)
-	end
-	for partition in Q[right]
-		set_value!(partition, -2)
-	end
-	
-	@progress for i ∈ 1:episodes
-		Sₜ = s0()
-		Aₜ = rand((left, right))
-		for t ∈ 0:m.τ:10
-			Sₜ₊₁ = simulate_point(m, Sₜ, Aₜ)
-			if Sₜ₊₁ ∉ Q_bounds continue end
-			Q_Sₜ_Aₜ = box(Q[Aₜ], Sₜ)
-			set_value!(Q_Sₜ_Aₜ, 
-				get_value(Q_Sₜ_Aₜ) + 
-				α(t)*(r(Sₜ) + γ*max([get_value(box(Q[a′], Sₜ₊₁)) 
-				for a′ in (left, right)]...) - get_value(Q_Sₜ_Aₜ)))
-			
-			Aₜ₊₁ = ϵ_greedy(ϵ(t), Q, Sₜ)
-			Sₜ, Aₜ = Sₜ₊₁, Aₜ₊₁
-			if Sₜ₊₁ ∉ cart_pole_bounds break end
-		end
-	end
-
-	return Q
-end
-
-# ╔═╡ 54afb933-b75d-4fb5-8b26-396c123f09ca
-Q = Q_learn()
-
-# ╔═╡ 787677e2-bdf3-43e3-ac71-563a483ef8dc
-Q_policy = s -> begin
-	if s ∉ Q[left] 
-		return rand((left, right))
-	end
-	if get_value(box(Q[left], s)) > get_value(box(Q[right], s))
-		return left
-	else
-		return right
-	end
-end
-
-# ╔═╡ 78c4dab0-3d95-462a-a214-9578f84b6cb4
-Q_trace = simulate_sequence(m, s0(), Q_policy, 4)
-
-# ╔═╡ 45785f69-c79a-4172-b8b4-9009ee08e613
-Q_trace.states[end] ∈ cart_pole_bounds
-
-# ╔═╡ eb53b3db-db53-4842-ad48-4272a667b7cf
-max([abs(x_vel) for (x, x_vel, θ, θ_vel, _) in Q_trace.states]...)
-
-# ╔═╡ 5bfe3632-dba7-4e12-ba21-823b9803b9df
-max([abs(θ_vel) for (x, x_vel, θ, θ_vel, _) in Q_trace.states]...)
-
-# ╔═╡ 2ac120e4-f380-4b02-bc7f-a1d5e84d7c36
-animate_sequence(Q_trace)
-
-# ╔═╡ d712571e-ced8-4f06-8b44-6874fcd3e15d
-length(Q[left].array |> unique),
-length(Q[right].array |> unique)
-
-# ╔═╡ 33f338e1-4792-4a68-802c-c814a6c89fd6
-begin
-	p1 = plot(xlabel="t")
-	
-	plot!(y -> ϵ(y; episodes), 
-		xlim=(0, episodes), 
-		label="ϵ", 
-		color=colors.ALIZARIN)
-	
-	hline!([0], line=:black, label=nothing)
-	
-	p2 = plot(xlabel="t")
-	
-	plot!(y -> α(y; episodes), 
-		xlim=(0, episodes), 
-		label="α", 
-		color=colors.PETER_RIVER)
-	
-	hline!([0], line=:black, label=nothing)
-	plot(p1, p2, size=(600, 200))
-end
-
 # ╔═╡ 618ab712-95b6-413b-973f-8309405b7da9
 let
 	if enable_altered_state_space
@@ -1598,7 +1428,6 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╠═1d5aced4-a27a-4f3b-ab08-69b1a3b1559f
 # ╠═35c76906-f2dd-4f4d-af43-0fafe69d211b
 # ╠═8172cdb6-b9a4-4afc-844f-245e5d951bb7
-# ╠═e008fe83-3851-4061-9e5a-35e938a53ec1
 # ╠═a8eefbb3-a09d-4915-9b9a-76f896636dcc
 # ╟─7dd5c185-2b95-4297-a36c-4e2ca38952ea
 # ╠═35605d87-4c3a-49a9-93d1-a5fceede3653
@@ -1631,32 +1460,6 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╠═251427d4-0aae-4a1f-a31f-71832877c749
 # ╠═4a18c6f8-b31c-487b-8a22-a8b6ed0b3b46
 # ╠═ea84c513-b4ca-41df-96ec-1c230fde9f3d
-# ╟─7f1f08f2-bdf7-4563-887c-a8e380549f94
-# ╠═bcbf4a16-ce8f-451e-b58b-0bf9d8d0d872
-# ╠═5cfb472e-8d08-48a7-bd27-c23f67a065d5
-# ╠═1ebddb2c-428e-4bca-bbe1-f5f2189b5418
-# ╠═0f9da8fe-7a26-4b21-9a64-906e908d835e
-# ╠═05cdc837-58e1-4112-922a-e8344bc4ee66
-# ╠═40550db6-a7b9-496c-b321-b61cf1239e18
-# ╠═0a9c51e1-0cc3-4bb0-9fa5-0f3962aae605
-# ╠═398af1f5-5ffb-4667-b8cc-ee1920de2997
-# ╠═4cb85ba8-86f6-436c-9479-8e162c8b7d54
-# ╠═5d2064c4-a987-4296-ae30-fed483057eff
-# ╠═2ef0dc55-796c-4c5f-89be-96872cbc3c50
-# ╠═742280a3-8f06-49de-aea6-79462cfeb2f8
-# ╠═534b9c41-52dd-43c5-bb5d-f44dcde0f70f
-# ╟─33f338e1-4792-4a68-802c-c814a6c89fd6
-# ╠═57bad1a9-9cea-4e2f-903d-004bccafffb3
-# ╠═a5a3b815-23c4-4acd-90d5-a12c721e7866
-# ╠═54afb933-b75d-4fb5-8b26-396c123f09ca
-# ╠═787677e2-bdf3-43e3-ac71-563a483ef8dc
-# ╠═d712571e-ced8-4f06-8b44-6874fcd3e15d
-# ╠═78c4dab0-3d95-462a-a214-9578f84b6cb4
-# ╠═45785f69-c79a-4172-b8b4-9009ee08e613
-# ╠═227f0131-fc76-4382-902e-18874ce66104
-# ╠═eb53b3db-db53-4842-ad48-4272a667b7cf
-# ╠═5bfe3632-dba7-4e12-ba21-823b9803b9df
-# ╠═2ac120e4-f380-4b02-bc7f-a1d5e84d7c36
 # ╟─6c84e1aa-f45a-453c-8a78-f3976c605385
 # ╟─a7296808-4eb8-4f10-8683-adc4963b21ce
 # ╟─9da1c57f-c922-420c-8c46-0d6842553f8c
