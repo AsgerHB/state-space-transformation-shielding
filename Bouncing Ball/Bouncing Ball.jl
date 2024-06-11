@@ -227,79 +227,6 @@ bbshieldlabels = 	[
 # ╔═╡ 8f0f7850-c149-4735-a2d5-f58182251d34
 bbshieldcolors = [colors.WET_ASPHALT, colors.AMETHYST, colors.SUNFLOWER, colors.CLOUDS];
 
-# ╔═╡ d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
-function animate_trace(trace, shield::Union{Nothing,Grid}=nothing)
-	vs, ps, ts = trace
-	e_kins = [e_kin(g, v) for v in vs]
-	e_pots = [e_pot(g, p) for (v, p) in zip(vs, ps)]
-	e_meks = [e_pot(g, p) + e_kin(g, v) for (v, p) in zip(vs, ps)]
-	πs = [π(v, p) for (v, p) in zip(vs, ps)]
-	layout = 2
-	
-	x1, y1 = [s[1] for s in πs], [s[2] for s in πs]
-	x1label=π_xlabel
-	y1label=π_ylabel
-
-	if isnothing(shield)
-		x1lims=(minimum(x1) - 3, maximum(x1) + 3)
-		y1lims=(minimum(y1) - 3, maximum(y1) + 3)
-	else
-		x1lims=(shield.bounds.lower[1], shield.bounds.upper[1])
-		y1lims=(shield.bounds.lower[2], shield.bounds.upper[2])
-	end
-	
-	x2, y2 = ts, ps
-	x2label="t"
-	y2label="p"
-	x2lims=(minimum(x2) - 3, maximum(x2) + 3)
-	y2lims=(minimum(y2) - 0, maximum(y2) + 3)
-
-	animation = @animate for (i, _) in enumerate(ts)
-		
-		p1 = if isnothing(shield)
-			plot()
-		else
-			p1 = draw(shield,
-				colors=bbshieldcolors, color_labels=bbshieldlabels)
-		end
-		
-		plot!(x1[1:i], y1[1:i],
-			xlims=x1lims,
-			ylims=y1lims,
-			xlabel=x1label,
-			ylabel=y1label,
-			color=colors.WET_ASPHALT,
-			linewidth=2,
-			markersize=2,
-			markeralpha=1,
-			markershape=:circle)
-		
-		scatter!([x1[i]], [y1[i]], marker=(3, :circle, :red))
-		
-		
-		p2 = plot(ts[1:i], ps[1:i],
-			xlims=x2lims,
-			ylims=y2lims,
-			xlabel=x2label,
-			ylabel=y2label,
-			color=colors.WET_ASPHALT,
-			linewidth=2,
-			markersize=2,
-			markeralpha=1,
-			markershape=:circle)
-
-		hline!([4], label=nothing, color=colors.WET_ASPHALT)
-		scatter!([x2[i]], [y2[i]], marker=(3, :circle, :red))
-		
-		plot(p1, p2, 
-			layout=layout, 
-			size=(800, 400), 
-			legend=nothing)
-	end
-	
-	gif(animation, joinpath(tempdir(), "trace.gif"), fps=10, show_msg=false)
-end
-
 # ╔═╡ 5c3ed2b7-81c0-42e5-b157-d65e25537791
 vp_bounds = Bounds((-13, 0), (13, 10))
 
@@ -767,8 +694,81 @@ end
 # ╔═╡ af696d4b-aa09-4339-b471-d9c91f065364
 shield, max_steps_reached = make_shield(reachability_function_precomputed, BB.Action, π_grid; max_steps)
 
+# ╔═╡ d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
+function animate_trace(trace; left_background=nothing, right_background=nothing)
+	vs, ps, ts = trace
+	e_kins = [e_kin(g, v) for v in vs]
+	e_pots = [e_pot(g, p) for (v, p) in zip(vs, ps)]
+	e_meks = [e_pot(g, p) + e_kin(g, v) for (v, p) in zip(vs, ps)]
+	πs = [π(v, p) for (v, p) in zip(vs, ps)]
+	layout = 2
+	
+	x1, y1 = [s[1] for s in πs], [s[2] for s in πs]
+	x1label=π_xlabel
+	y1label=π_ylabel
+
+	if isnothing(shield)
+		x1lims=(minimum(x1) - 3, maximum(x1) + 3)
+		y1lims=(minimum(y1) - 3, maximum(y1) + 3)
+	else
+		x1lims=(shield.bounds.lower[1], shield.bounds.upper[1])
+		y1lims=(shield.bounds.lower[2], shield.bounds.upper[2])
+	end
+	
+	x2, y2 = vs, ps
+	x2label="t"
+	y2label="p"
+	x2lims=(minimum(x2) - 3, maximum(x2) + 3)
+	y2lims=(minimum(y2) - 0, maximum(y2) + 3)
+
+	animation = @animate for (i, _) in enumerate(ts)
+		
+		p1 = isnothing(left_background) ? plot() : plot(left_background)
+		
+		plot!(x1[1:i], y1[1:i],
+			xlims=x1lims,
+			ylims=y1lims,
+			xlabel=x1label,
+			ylabel=y1label,
+			color=colors.WET_ASPHALT,
+			linewidth=2,
+			markersize=2,
+			markeralpha=1,
+			markershape=:circle)
+		
+		scatter!([x1[i]], [y1[i]], marker=(3, :circle, :red))
+		
+		
+		p2 = isnothing(right_background) ? plot() : plot(right_background)
+			
+		plot!(x2[1:i], y2[1:i],
+			xlims=x2lims,
+			ylims=y2lims,
+			xlabel=x2label,
+			ylabel=y2label,
+			color=colors.WET_ASPHALT,
+			linewidth=2,
+			markersize=2,
+			markeralpha=1,
+			markershape=:circle)
+
+		#hline!([4], label=nothing, color=colors.WET_ASPHALT)
+		scatter!([x2[i]], [y2[i]], marker=(3, :circle, :red))
+		
+		plot(p1, p2, 
+			layout=layout, 
+			size=(800, 400), 
+			legend=nothing)
+	end
+	
+	gif(animation, joinpath(tempdir(), "trace.gif"), fps=10, show_msg=false)
+end
+
 # ╔═╡ a3e566e8-6b31-4d07-a2b9-b3b90f178d63
 Bounds(box(shield, π(7, 0)))
+
+# ╔═╡ 74c833b3-f3b9-4f3e-b579-b34ff2b17220
+shield.array |> unique
 
 # ╔═╡ ccbdaed6-0e4d-4bef-941c-9ad831b52e61
 plot(transformed_grid(shield, x -> π⁻¹(x...)), 
@@ -829,7 +829,7 @@ end
 random(s...) = if (rand(1:10) == 1) BB.hit else BB.nohit end
 
 # ╔═╡ ff60b015-12cf-478b-9a60-93a9b93d0f5f
-trace = BB.simulate_sequence(m, (0, 10), random, 20)
+trace = BB.simulate_sequence(m, (0, 10), random, 10)
 
 # ╔═╡ 87651747-c606-4f15-b335-649492faedd9
 plot(); BB.animate_trace(trace...)
@@ -857,7 +857,7 @@ function check_safety(mechanics, policy, duration; runs=1000)
 	deaths = 0
 	example_trace = nothing
 	@progress for run in 1:runs
-		trace = BB.simulate_sequence(m, (0, 10), policy, duration)
+		trace = BB.simulate_sequence(m, (0, 7), policy, duration)
 		for (v, p) in zip(trace...)
 			if abs(v) < 1 && p == 0
 				deaths += 1
@@ -937,11 +937,6 @@ begin
 	trace_to = something(trace_to, length(shielded_trace[1]))
 	trace_from = max(1, trace_to - 250)
 end
-
-# ╔═╡ b097e128-a1df-44f0-8fb7-347d9317abfc
-animate_trace((shielded_trace[1][trace_from:trace_to],
-	shielded_trace[2][trace_from:trace_to],
-	shielded_trace[3][trace_from:trace_to]), shield)
 
 # ╔═╡ 048a3a18-64c5-4ef3-9b25-23306e100dd2
 md"""
@@ -1051,7 +1046,7 @@ shield_plot_new_statespace = let
 		xlabel=π_xlabel,
 		ylabel=π_ylabel,
 		yflip=true,
-		colors=bbshieldcolors,
+		colors=[colors.WET_ASPHALT, colors.AMETHYST,  colors.SUNFLOWER, colors.CLOUDS],
 		legend=:bottomright)
 
 	plot!([], seriestype=:shape, color=colors.WET_ASPHALT, label="{}")
@@ -1143,6 +1138,13 @@ shield_plot_old_statespace = let
 	end
 	plot!()
 end
+
+# ╔═╡ b097e128-a1df-44f0-8fb7-347d9317abfc
+animate_trace((shielded_trace[1][trace_from:trace_to],
+		shielded_trace[2][trace_from:trace_to],
+		shielded_trace[3][trace_from:trace_to]), 
+	left_background=shield_plot_new_statespace,
+	right_background=shield_plot_old_statespace)
 
 # ╔═╡ fbe0e11d-a06b-41fe-b349-ccbcc66ffd3f
 begin
@@ -1402,7 +1404,7 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═236497fd-670b-45b1-8ca3-41b204a4d287
 # ╟─b527f190-ff38-48d3-97ae-aeeed8fdd273
 # ╠═ff60b015-12cf-478b-9a60-93a9b93d0f5f
-# ╟─d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
+# ╠═d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
 # ╟─87651747-c606-4f15-b335-649492faedd9
 # ╠═937afb55-7775-482d-8674-260c8de29614
 # ╟─aad4b9e6-2fbb-46a9-9311-f9e534a17002
@@ -1453,7 +1455,8 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═fd928206-accf-44fc-8762-599fe34c26b6
 # ╠═22d05a23-bcad-4281-8303-5082a3d8e785
 # ╠═2a4c1d40-bd6d-4e83-94d8-c6a3cfa8aee0
-# ╟─021e2fb4-1760-4421-916b-fb2ef306cb13
+# ╠═74c833b3-f3b9-4f3e-b579-b34ff2b17220
+# ╠═021e2fb4-1760-4421-916b-fb2ef306cb13
 # ╟─2565bc31-e784-4c58-b741-1ccf41813dca
 # ╟─8c03490e-0c85-4287-b8a3-03c82ad05f07
 # ╠═06ab9ae5-fe2a-4734-8929-ca5babe0d9f5

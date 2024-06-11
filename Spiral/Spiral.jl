@@ -224,29 +224,11 @@ let
 	[1/(i - 2j) for j in 1:i]
 end
 
-# ╔═╡ 0a46d16c-e86d-443b-9001-6663a65ccccc
-# ╠═╡ disabled = true
-#=╠═╡
-function animate_sequence(trace::SpiralTrace; background=plot())
-	🎈1
-	🎥 = @animate for i in 1:length(trace.states)
-		
-		plot_trace(trace, i; background)
-	end
-	gif(🎥, fps=(1/δ)*2, show_msg=false)
-end
-  ╠═╡ =#
-
 # ╔═╡ b8b4af3d-9f66-4e3a-8845-0a45703bc82a
-random(_...) = rand([move_in, stay_course, move_out])
+random(_...) = rand([move_in, move_in, move_in, move_in, stay_course, move_out])
 
 # ╔═╡ cbe5bb1f-4a78-4185-9067-ddc7aa332be5
 trace = simulate_sequence(x0, random, 5.8)
-
-# ╔═╡ f0b44048-4c9c-475f-87a4-9ff331885c32
-#=╠═╡
-animate_sequence(trace)
-  ╠═╡ =#
 
 # ╔═╡ 659fbbb9-d6aa-40a3-8e35-47a5ca6c2a9b
 let
@@ -343,6 +325,19 @@ function plot_trace(trace::SpiralTrace, i=nothing; background=plot())
 		markerstrokewidth=0,
 		label=nothing)
 end
+
+# ╔═╡ 0a46d16c-e86d-443b-9001-6663a65ccccc
+function animate_sequence(trace::SpiralTrace; background=plot())
+	🎈1
+	🎥 = @animate for i in 1:length(trace.states)
+		
+		plot_trace(trace, i; background)
+	end
+	gif(🎥, fps=(1/δ)*2, show_msg=false)
+end
+
+# ╔═╡ f0b44048-4c9c-475f-87a4-9ff331885c32
+animate_sequence(trace)
 
 # ╔═╡ b67bbfee-633d-4d8b-846f-6a63ec778f93
 plot_trace(trace)
@@ -573,17 +568,13 @@ shielded_random = apply_shield(shield, random)
 shielded_trace = simulate_sequence(x0, shielded_random, 25)
 
 # ╔═╡ 14013a0c-9a27-44c5-b9ac-5d844fd3fe30
-#=╠═╡
 animate_sequence(shielded_trace)
-  ╠═╡ =#
 
 # ╔═╡ 2f658797-0581-40c4-9054-4ed968ad143b
-#=╠═╡
 let
 	📈 = plot(p1, legend=nothing)
 	animate_sequence(shielded_trace, background=📈)
 end
-  ╠═╡ =#
 
 # ╔═╡ 531281a1-6f2d-49fc-b608-cb1f8fc966ae
 plot_trace(shielded_trace)
@@ -1034,12 +1025,10 @@ a_shielded_random = a_apply_shield(a_shield, random)
 a_shielded_trace = simulate_sequence(x0, a_shielded_random, 10)
 
 # ╔═╡ 13646ad3-c39b-46d0-bddf-c16206dbb7eb
-#=╠═╡
 let
 	📈 = plot(p3, legend=nothing)
 	animate_sequence(a_shielded_trace, background=📈)
 end
-  ╠═╡ =#
 
 # ╔═╡ 87356f08-c963-4928-8a0f-48ca9b8d82b2
 plot_trace(a_shielded_trace)
@@ -1056,7 +1045,7 @@ function a_plot_trace!(trace::SpiralTrace, i=nothing)
 		xlabel="θ",
 		ylabel="r",
 		ratio=1,
-		size=(300, 300),
+		#size=(300, 300),
 		alpha=alphas,
 		color=path_colors,
 		marker=:circle,
@@ -1076,8 +1065,8 @@ end
 function a_animate_sequence(trace::SpiralTrace)
 	🎈1
 	background = draw(a_shield;
-				xlabel="θ",
-				ylabel="r",
+				xlabel="\$θ\$",
+				ylabel="\$r\$",
 				clim=(no_action, any_action),
 				colors=shieldcolors, 
 				color_labels=shieldlabels,

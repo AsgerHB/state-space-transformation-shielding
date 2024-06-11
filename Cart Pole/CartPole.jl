@@ -28,11 +28,9 @@ begin
 	using StaticArrays
 	using Polynomials
 	using Unzip
+	using Measures
 	include("../Shared Code/FlatUI.jl")
 end
-
-# ╔═╡ 5c808e32-0aa6-49ec-a7b1-d01e44aa48ea
-using Measures
 
 # ╔═╡ 2767663f-3ef8-44f5-81a2-8e480158266e
 md"""
@@ -46,6 +44,9 @@ md"""
 
 # ╔═╡ cd2df9dc-af72-4b37-b1ef-ff8a0dcb9e0f
 TableOfContents()
+
+# ╔═╡ 5c808e32-0aa6-49ec-a7b1-d01e44aa48ea
+
 
 # ╔═╡ a8aff15c-255d-498f-97dd-4c9c953ec662
 begin
@@ -446,7 +447,7 @@ function P2(θ, θ_vel)
 	return θ_vel - (- 4.550831135117032*θ - 141.6953270125445*θ^3)
 
 	# Learned from a fully compuetd 100x100 shield
-	θ_vel - (-1.7440907420745881e-16 - 5.829601684910079*θ - 7.54337188727965e-16*θ^2 - 26.782941687007654*θ^3)
+	# return θ_vel - (-1.7440907420745881e-16 - 5.829601684910079*θ - 7.54337188727965e-16*θ^2 - 26.782941687007654*θ^3)
 end
 
 # ╔═╡ d90ea6c4-316d-46b1-8688-23d95f3cca61
@@ -1424,7 +1425,7 @@ md"""
 
 Use this library to access the shield from C and C++ code.
 
-The shield is compiled into a shared-object binary, which exports the function `int get_value(double v, double p)`. It takes the state-variables as input and returns the bit-encoded list of allowed actions. (See `int_to_actions`.)
+The shield is compiled into a shared-object binary, which exports the function `int get_value(double theta, double theta_vel)`. It takes the state-variables as input and returns the bit-encoded list of allowed actions. (See `int_to_actions`.)
 """
 
 # ╔═╡ 747c5cee-f701-4c28-b7df-04efa3740d61
