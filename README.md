@@ -34,6 +34,12 @@ Activate the virtual environment to run code in this folder. Do this by
 	mv julia-1.10.4/ ~/julia-1.10.4
 	sudo ln -s ~/julia-1.10.4/bin/julia /usr/local/bin/julia
 
+Be sure numpy is installed in your global python install, which is needed for Julia's PyCall. 
+
+	sudo apt install python3-numpy
+
+Alternatively, set `ENV["PYTHON"]` to the path/name of the python executable you want to use. Doing this requires re-building Pycall, which will be done in the next step. It is also done by running `Pkg.build("PyCall")`.
+
 Download dependencies for this repository. Note that the `]` key activates the package manager interface. Once done, press backspace to exit the package manager, and type `exit()` to quit the REPL.
 
 	cd <</path/to/this/repository>>
