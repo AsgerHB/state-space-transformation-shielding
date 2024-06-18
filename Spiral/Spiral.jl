@@ -687,6 +687,15 @@ md"""
 # ╔═╡ 60a01054-37be-4bcd-98fb-023350073ecf
 runs = 1000
 
+# ╔═╡ cfaaa0f7-d52a-4cf5-bc66-6faa31f747d3
+function generate_trace()
+	trace = simulate_sequence((r0, 0), shielded_random, 100)
+	(trace.states, trace.actions)
+end
+
+# ╔═╡ b0a97735-ec20-4fa0-acf9-13f653bda2cb
+evaluate_safety(generate_trace, is_safe, runs)
+
 # ╔═╡ ba2fadc7-7677-4a50-a07b-5a542beb5b8a
 md"""
 # Shield with Altered State Space
@@ -1111,63 +1120,14 @@ md"""
 # ╔═╡ cda1ca0f-b02b-42cf-85fb-20175578396b
 a_runs = 1000
 
-# ╔═╡ 3061a25a-bae8-4763-b84b-59e3536fd63c
-function check_safety(policy, duration; runs=1000)
-	deaths = 0
-	example_trace = nothing
-	@progress for run in 1:runs
-		trace = simulate_sequence((r0, 0), policy, duration)
-		for s in trace.states
-			if !is_safe(s)
-				deaths += 1
-				example_trace = trace
-				break
-			end
-		end
-		example_trace = something(example_trace, trace)
-	end
-	deaths, example_trace
-end
-
-# ╔═╡ 4c6ca97b-4871-4f4c-85e8-ee02719a2433
-deaths, example_trace = check_safety(shielded_random, 100; runs)
-
-# ╔═╡ c780a26f-d6c8-4573-b919-2500b9e4d8f4
-let
-	header = if deaths > 0
-		"""!!! danger "Shield unsafe"
-
-		"""
-	else
-		"""!!! success "Shield safe"
-
-		"""
-	end
-
-	Markdown.parse("""$header
-		Out of **$runs** runs, **$deaths** of them contained a safety violation.
-	""")
-end
-
 # ╔═╡ 150a3ed4-3a97-4a75-b836-3c990d127f8f
-a_deaths, a_example_trace = check_safety(a_shielded_random, 100; runs=a_runs)
+function a_generate_trace()
+	trace = simulate_sequence((r0, 0), a_shielded_random, 100)
+	(trace.states, trace.actions)
+end
 
 # ╔═╡ c9412832-1653-449b-bff3-99147ec7f3a6
-let
-	header = if a_deaths > 0
-		"""!!! danger "Shield unsafe"
-
-		"""
-	else
-		"""!!! success "Shield safe"
-
-		"""
-	end
-
-	Markdown.parse("""$header
-		Out of **$runs** runs, **$a_deaths** of them contained a safety violation.
-	""")
-end
+evaluate_safety(a_generate_trace, is_safe, a_runs)
 
 # ╔═╡ f47335e6-999d-449d-bf95-1f184b898042
 md"""
@@ -1667,8 +1627,8 @@ end
 # ╠═d9506fdc-4bd4-40f6-9686-0403628eecf7
 # ╟─19e227b0-df36-4835-9a4d-514490c67062
 # ╠═60a01054-37be-4bcd-98fb-023350073ecf
-# ╠═4c6ca97b-4871-4f4c-85e8-ee02719a2433
-# ╟─c780a26f-d6c8-4573-b919-2500b9e4d8f4
+# ╠═cfaaa0f7-d52a-4cf5-bc66-6faa31f747d3
+# ╠═b0a97735-ec20-4fa0-acf9-13f653bda2cb
 # ╟─ba2fadc7-7677-4a50-a07b-5a542beb5b8a
 # ╟─eae9e329-e241-46b3-aaf3-378d3067cd5a
 # ╠═096bd467-1eb3-44f7-9b39-fc6490cedd57
@@ -1707,9 +1667,8 @@ end
 # ╠═a7b0f796-6532-4a87-979c-f9c8759813f6
 # ╟─ddf10c36-f525-4384-b5ac-731abc9d2b1e
 # ╠═cda1ca0f-b02b-42cf-85fb-20175578396b
-# ╠═3061a25a-bae8-4763-b84b-59e3536fd63c
 # ╠═150a3ed4-3a97-4a75-b836-3c990d127f8f
-# ╟─c9412832-1653-449b-bff3-99147ec7f3a6
+# ╠═c9412832-1653-449b-bff3-99147ec7f3a6
 # ╟─f47335e6-999d-449d-bf95-1f184b898042
 # ╠═e514a65b-eb40-4193-92cd-406273e43d9b
 # ╟─3b0d8736-713c-4fde-85db-7cfb239c45fe

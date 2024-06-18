@@ -14,7 +14,27 @@ macro bind(def, element)
     end
 end
 
+# ╔═╡ 31e40674-af05-4193-932a-f4aae9219d3a
+begin
+	using Pkg
+	Pkg.activate("..")
+	using GridShielding
+	using OrdinaryDiffEq
+end
+
+# ╔═╡ 2767663f-3ef8-44f5-81a2-8e480158266e
+md"""
+# Cart Pole Problem
+"""
+
+# ╔═╡ 3115801b-0a07-4a44-a6b3-d1ab2b9c0775
+md"""
+## Preliminaries
+"""
+
 # ╔═╡ cb6e988a-f263-11ee-1f3f-53192cebcad4
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	using Pkg
 	Pkg.activate("..")
@@ -31,16 +51,7 @@ begin
 	using Measures
 	include("../Shared Code/FlatUI.jl")
 end
-
-# ╔═╡ 2767663f-3ef8-44f5-81a2-8e480158266e
-md"""
-# Cart Pole Problem
-"""
-
-# ╔═╡ 3115801b-0a07-4a44-a6b3-d1ab2b9c0775
-md"""
-## Preliminaries
-"""
+  ╠═╡ =#
 
 # ╔═╡ cd2df9dc-af72-4b37-b1ef-ff8a0dcb9e0f
 TableOfContents()
@@ -1272,6 +1283,14 @@ get_allowed(s0_const)
 # ╔═╡ 2dbb749a-cd7e-4092-b662-519b10d9552d
 runs = 100
 
+# ╔═╡ 2e0b5605-917e-4aee-b002-2c5c853290c2
+function generate_trace()
+	trace = simulate_sequence(m, s0(), shielded_random_policy, 10)
+end
+
+# ╔═╡ 808c1127-1b54-4fd0-8a72-b5c3259a1213
+
+
 # ╔═╡ 08d65223-892b-4921-9d09-af959524bb7a
 function check_safety(m::CartPoleMechanics, policy, duration; runs=1000)
 	deaths = 0
@@ -1419,6 +1438,7 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╔═╡ Cell order:
 # ╟─2767663f-3ef8-44f5-81a2-8e480158266e
 # ╟─3115801b-0a07-4a44-a6b3-d1ab2b9c0775
+# ╠═31e40674-af05-4193-932a-f4aae9219d3a
 # ╠═cb6e988a-f263-11ee-1f3f-53192cebcad4
 # ╠═cd2df9dc-af72-4b37-b1ef-ff8a0dcb9e0f
 # ╠═5c808e32-0aa6-49ec-a7b1-d01e44aa48ea
@@ -1549,6 +1569,8 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╠═d6ee45cf-765a-41d6-8bc7-b74662ac9243
 # ╠═d3f51f26-92da-4e23-9316-13a249079100
 # ╠═2dbb749a-cd7e-4092-b662-519b10d9552d
+# ╠═2e0b5605-917e-4aee-b002-2c5c853290c2
+# ╠═808c1127-1b54-4fd0-8a72-b5c3259a1213
 # ╠═08d65223-892b-4921-9d09-af959524bb7a
 # ╠═84734786-a79c-484a-95a9-5de041436c2f
 # ╠═9bad8bb4-bfa1-47a3-821c-dd3448c3f534

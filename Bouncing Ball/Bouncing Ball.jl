@@ -695,8 +695,12 @@ end
 shield, max_steps_reached = make_shield(reachability_function_precomputed, BB.Action, π_grid; max_steps)
 
 # ╔═╡ d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
-function animate_trace(trace; left_background=nothing, right_background=nothing)
-	vs, ps, ts = trace
+function animate_trace(states, times; 
+		left_background=nothing, 
+		right_background=nothing)
+	
+	vs = [v for (v, p) in states]
+	ps = [p for (v, p) in states]
 	e_kins = [e_kin(g, v) for v in vs]
 	e_pots = [e_pot(g, p) for (v, p) in zip(vs, ps)]
 	e_meks = [e_pot(g, p) + e_kin(g, v) for (v, p) in zip(vs, ps)]
@@ -721,7 +725,7 @@ function animate_trace(trace; left_background=nothing, right_background=nothing)
 	x2lims=(minimum(x2) - 3, maximum(x2) + 3)
 	y2lims=(minimum(y2) - 0, maximum(y2) + 3)
 
-	animation = @animate for (i, _) in enumerate(ts)
+	animation = @animate for (i, _) in enumerate(times)
 		
 		p1 = isnothing(left_background) ? plot() : plot(left_background)
 		
@@ -832,10 +836,10 @@ random(s...) = if (rand(1:10) == 1) BB.hit else BB.nohit end
 trace = BB.simulate_sequence(m, (0, 10), random, 10)
 
 # ╔═╡ 87651747-c606-4f15-b335-649492faedd9
-plot(); BB.animate_trace(trace...)
+plot(); BB.animate_trace(trace.states, trace.times)
 
 # ╔═╡ 937afb55-7775-482d-8674-260c8de29614
-animate_trace(trace)
+animate_trace(trace.states, trace.times)
 
 # ╔═╡ 087cbfb4-9f42-4f9a-85cd-e92ff2004cc8
 shielded_random = apply_shield(shield, random)
@@ -851,92 +855,69 @@ md"""
 # Evaluation
 """
 
-# ╔═╡ 76af8821-a3ae-41ce-9859-363f5ef4711c
-function check_safety(mechanics, policy, duration; runs=1000)
-	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
-	deaths = 0
-	example_trace = nothing
-	@progress for run in 1:runs
-		trace = BB.simulate_sequence(m, (0, 7), policy, duration)
-		for (v, p) in zip(trace...)
-			if abs(v) < 1 && p == 0
-				deaths += 1
-				example_trace = trace
-				break
-			end
-		end
-		example_trace = something(example_trace, trace)
-	end
-	deaths, example_trace
-end
-
-# ╔═╡ 05b5e4d4-9bea-49b5-ae51-0daa2fb8478d
-runs = 100
-
-# ╔═╡ c995f805-fc9b-47c1-bfa9-5dbcc9400806
-lazy(_...) = BB.nohit
-
-# ╔═╡ 568bbecc-0726-43d2-ba8e-cc2c468c44b2
-shielded_lazy = apply_shield(shield, lazy)
-
-# ╔═╡ b2a050b0-2548-4a34-80ae-89f3a0bcb056
-deaths, shielded_trace = check_safety(m, shielded_lazy, 120; runs)
-
 # ╔═╡ cf85b021-ab85-4926-86c4-16854fbbe545
 let
-	unsafe_state = nothing
+	unsafe_initial_state = nothing
 	v = 0
 	for p in 7:0.1:10
 		partition = box(shield, π(v, p))
 		if get_value(partition) == no_action
-			unsafe_state = (v, p)
+			unsafe_initial_state = (v, p)
 		end
 	end
-	unsafe_state
+	unsafe_initial_state
 
-	if isnothing(unsafe_state)
+	if isnothing(unsafe_initial_state)
 		md"""!!! success "Initial states safe."
 			🖒
 		"""
 	else
 		Markdown.parse("""!!! warning "Initial state unsafe."
 			The shield is too conservative and considers some of the initial states unsafe. 
-			Example: **$(unsafe_state)**
+			Example: **$(unsafe_initial_state)**
 		""")
 	end
 end
 
-# ╔═╡ 976cb35a-2274-4378-94d7-6276d000c6d8
-let
-	header = if deaths > 0
-		"""!!! danger "Shield unsafe"
+# ╔═╡ cb82c3f3-a4c7-435d-af89-7dc8785d4c51
+lazy(state) = BB.nohit
 
-		"""
-	else
-		"""!!! success "Shield safe"
+# ╔═╡ 568bbecc-0726-43d2-ba8e-cc2c468c44b2
+shielded_lazy = apply_shield(shield, lazy)
 
-		"""
-	end
-
-	Markdown.parse("""$header
-		Out of **$runs** runs, **$deaths** of them contained a safety violation.
-	""")
+# ╔═╡ 2a7637b1-4a00-43e5-b601-e1f1bf7144bb
+function generate_shielded_trace()
+	trace = BB.simulate_sequence(m, (0, rand(7:0.01:10)), shielded_lazy, 120)
+	trace.states, trace.actions
 end
 
-# ╔═╡ a6796796-6f4f-470f-ad47-1b655d332905
-shielded_trace
+# ╔═╡ e4dd2de5-f959-4bcf-b67e-a12fe3c9d188
+function is_safe(state)
+	v, p = state
+	return !(p == 0 && abs(v) < 1)
+end
+
+# ╔═╡ 05b5e4d4-9bea-49b5-ae51-0daa2fb8478d
+@bind checks NumberField(1:10^20, default=1000)
+
+# ╔═╡ 10782c73-e1ef-4576-b139-485b559f6ba6
+safety_report = evaluate_safety(generate_shielded_trace, is_safe, checks)
+
+# ╔═╡ 777c1274-e8f8-441d-a79c-17248c85dd39
+shielded_trace = safety_report.example_trace[1]
 
 # ╔═╡ 4f238ba9-035c-4046-ba45-604bf514be67
 begin
-	trace_to = findfirst(==((0,0)),  # first unsafe state
-		zip(shielded_trace[1], shielded_trace[2]) |> collect)
+	trace_to = findfirst(s -> !is_safe(s), shielded_trace)
 
-	trace_to = something(trace_to, length(shielded_trace[1]))
-	trace_to = min(trace_to - 100, length(shielded_trace[1]))
+	trace_to = something(trace_to, length(shielded_trace))
 
-	trace_to = something(trace_to, length(shielded_trace[1]))
-	trace_from = max(1, trace_to - 250)
+	trace_from = max(1, trace_to - 100)
+	(;trace_from, trace_to)
 end
+
+# ╔═╡ 62a83575-a88a-4ce3-8d03-0a88a4864762
+length(collect(1:BB.bbmechanics.t_hit:120))
 
 # ╔═╡ 048a3a18-64c5-4ef3-9b25-23306e100dd2
 md"""
@@ -1140,9 +1121,8 @@ shield_plot_old_statespace = let
 end
 
 # ╔═╡ b097e128-a1df-44f0-8fb7-347d9317abfc
-animate_trace((shielded_trace[1][trace_from:trace_to],
-		shielded_trace[2][trace_from:trace_to],
-		shielded_trace[3][trace_from:trace_to]), 
+animate_trace(shielded_trace[trace_from:trace_to], 
+	[i*BB.bbmechanics.t_hit for (i, _) in enumerate(shielded_trace)][trace_from:trace_to], 
 	left_background=shield_plot_new_statespace,
 	right_background=shield_plot_old_statespace)
 
@@ -1406,7 +1386,7 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═ff60b015-12cf-478b-9a60-93a9b93d0f5f
 # ╠═d0dd5ad2-97b6-4d7a-a97b-cb33b29230e6
 # ╟─87651747-c606-4f15-b335-649492faedd9
-# ╠═937afb55-7775-482d-8674-260c8de29614
+# ╟─937afb55-7775-482d-8674-260c8de29614
 # ╟─aad4b9e6-2fbb-46a9-9311-f9e534a17002
 # ╠═f363e7ad-ad45-4fca-83c3-7b04ffdf48eb
 # ╠═8f0f7850-c149-4735-a2d5-f58182251d34
@@ -1474,16 +1454,17 @@ tt["v"][ii + 1], tt["p"][ii + 1]
 # ╠═d4cbae79-3a44-4f1f-839e-3b652bf83a42
 # ╠═92f2f097-02e7-4c7b-a8f0-9d0be416444f
 # ╟─d7b1d3d3-4ced-47f0-918a-3c3aa8cae5ed
-# ╠═76af8821-a3ae-41ce-9859-363f5ef4711c
-# ╠═05b5e4d4-9bea-49b5-ae51-0daa2fb8478d
-# ╠═b2a050b0-2548-4a34-80ae-89f3a0bcb056
-# ╠═c995f805-fc9b-47c1-bfa9-5dbcc9400806
-# ╠═568bbecc-0726-43d2-ba8e-cc2c468c44b2
 # ╟─cf85b021-ab85-4926-86c4-16854fbbe545
-# ╟─976cb35a-2274-4378-94d7-6276d000c6d8
-# ╠═a6796796-6f4f-470f-ad47-1b655d332905
+# ╠═cb82c3f3-a4c7-435d-af89-7dc8785d4c51
+# ╠═568bbecc-0726-43d2-ba8e-cc2c468c44b2
+# ╠═2a7637b1-4a00-43e5-b601-e1f1bf7144bb
+# ╠═e4dd2de5-f959-4bcf-b67e-a12fe3c9d188
+# ╠═05b5e4d4-9bea-49b5-ae51-0daa2fb8478d
+# ╠═10782c73-e1ef-4576-b139-485b559f6ba6
+# ╠═777c1274-e8f8-441d-a79c-17248c85dd39
 # ╠═4f238ba9-035c-4046-ba45-604bf514be67
 # ╠═b097e128-a1df-44f0-8fb7-347d9317abfc
+# ╠═62a83575-a88a-4ce3-8d03-0a88a4864762
 # ╟─048a3a18-64c5-4ef3-9b25-23306e100dd2
 # ╠═9b4e88ad-2de3-4b8d-8a69-bbb8660cc293
 # ╠═1a3ebfb8-47b8-41a3-b63d-875b03187a4e
