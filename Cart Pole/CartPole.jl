@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.36
+# v0.19.40
 
 using Markdown
 using InteractiveUtils
@@ -14,27 +14,7 @@ macro bind(def, element)
     end
 end
 
-# ╔═╡ 31e40674-af05-4193-932a-f4aae9219d3a
-begin
-	using Pkg
-	Pkg.activate("..")
-	using GridShielding
-	using OrdinaryDiffEq
-end
-
-# ╔═╡ 2767663f-3ef8-44f5-81a2-8e480158266e
-md"""
-# Cart Pole Problem
-"""
-
-# ╔═╡ 3115801b-0a07-4a44-a6b3-d1ab2b9c0775
-md"""
-## Preliminaries
-"""
-
 # ╔═╡ cb6e988a-f263-11ee-1f3f-53192cebcad4
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	using Pkg
 	Pkg.activate("..")
@@ -51,13 +31,19 @@ begin
 	using Measures
 	include("../Shared Code/FlatUI.jl")
 end
-  ╠═╡ =#
+
+# ╔═╡ 2767663f-3ef8-44f5-81a2-8e480158266e
+md"""
+# Cart Pole Problem
+"""
+
+# ╔═╡ 3115801b-0a07-4a44-a6b3-d1ab2b9c0775
+md"""
+## Preliminaries
+"""
 
 # ╔═╡ cd2df9dc-af72-4b37-b1ef-ff8a0dcb9e0f
 TableOfContents()
-
-# ╔═╡ 5c808e32-0aa6-49ec-a7b1-d01e44aa48ea
-
 
 # ╔═╡ a8aff15c-255d-498f-97dd-4c9c953ec662
 begin
@@ -674,7 +660,7 @@ end
 
 # ╔═╡ 453f70e4-c22f-4c75-b786-d523c8e4bf9c
 begin
-	function is_safe(s::AlteredState)
+	function is_safe(s::Union{AlteredState, CartPoleState})
 		for (i, l) in enumerate(grid_bounds.lower)
 			if !concerned_with_position && (i == 1 || i == 2)
 				 continue
@@ -1274,75 +1260,27 @@ end
 # ╔═╡ fbaa39a7-d1d2-4ad8-a475-c712cdafe35d
 shielded_random_policy = shield_policy(random_policy)
 
-# ╔═╡ d6ee45cf-765a-41d6-8bc7-b74662ac9243
-s0_const = s0()
-
-# ╔═╡ d3f51f26-92da-4e23-9316-13a249079100
-get_allowed(s0_const)
-
-# ╔═╡ 2dbb749a-cd7e-4092-b662-519b10d9552d
-runs = 100
-
 # ╔═╡ 2e0b5605-917e-4aee-b002-2c5c853290c2
 function generate_trace()
 	trace = simulate_sequence(m, s0(), shielded_random_policy, 10)
+	trace.states, trace.actions
 end
+
+# ╔═╡ 2dbb749a-cd7e-4092-b662-519b10d9552d
+@bind checks NumberField(1:10^10, default=1000)
 
 # ╔═╡ 808c1127-1b54-4fd0-8a72-b5c3259a1213
+safety_report = evaluate_safety(generate_trace, is_safe, checks)
 
-
-# ╔═╡ 08d65223-892b-4921-9d09-af959524bb7a
-function check_safety(m::CartPoleMechanics, policy, duration; runs=1000)
-	deaths = 0
-	example_trace = nothing
-	@progress for run in 1:runs
-		trace = simulate_sequence(m, s0(), policy, duration)
-		for s in trace.states
-			if (concerned_with_position &&
-					!(cart_pole_bounds.lower[1] < s[1] < cart_pole_bounds.upper[1])
-				) ||
-				(concerned_with_angle &&
-					!(cart_pole_bounds.lower[3] < s[3] < cart_pole_bounds.upper[3])
-				)
-				
-				deaths += 1
-				example_trace = trace
-				break
-			end
-		end
-		example_trace = something(example_trace, trace)
-	end
-	deaths, example_trace
+# ╔═╡ 9fe15432-4ff8-4a58-8d59-d7a8d717c00e
+shielded_trace = let
+	states, actions = safety_report.example_trace
+	times = [i*m.τ for (i, _) in enumerate(states)]
+	CartPoleTrace(times, actions, states)
 end
-
-# ╔═╡ 84734786-a79c-484a-95a9-5de041436c2f
-cart_pole_bounds
-
-# ╔═╡ 9bad8bb4-bfa1-47a3-821c-dd3448c3f534
-deaths, shielded_trace = check_safety(m, shielded_random_policy, 10; runs)
 
 # ╔═╡ 9fda178a-0fcd-49ad-b0b8-025523995691
 animate_sequence(shielded_trace)
-
-# ╔═╡ 3d63e8c3-6218-4eec-86de-698bb61d8f96
-let
-	header = if deaths > 0
-		"""!!! danger "Shield unsafe"
-
-		"""
-	else
-		"""!!! success "Shield safe"
-
-		"""
-	end
-
-	Markdown.parse("""$header
-		Out of **$runs** runs, **$deaths** of them contained a safety violation.
-	""")
-end
-
-# ╔═╡ 65f542c6-d5f3-40e0-be5f-ab66786eaf72
-shielded_trace.states[end]
 
 # ╔═╡ 834ab28c-a08a-4d92-8ab5-5284196cc2db
 md"""
@@ -1438,10 +1376,8 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╔═╡ Cell order:
 # ╟─2767663f-3ef8-44f5-81a2-8e480158266e
 # ╟─3115801b-0a07-4a44-a6b3-d1ab2b9c0775
-# ╠═31e40674-af05-4193-932a-f4aae9219d3a
 # ╠═cb6e988a-f263-11ee-1f3f-53192cebcad4
 # ╠═cd2df9dc-af72-4b37-b1ef-ff8a0dcb9e0f
-# ╠═5c808e32-0aa6-49ec-a7b1-d01e44aa48ea
 # ╟─a8aff15c-255d-498f-97dd-4c9c953ec662
 # ╟─3fd479d1-c43a-4c6f-95f8-0c74a9ffbf18
 # ╟─319eff14-0f2e-458e-99b3-b3a64eccccee
@@ -1566,16 +1502,10 @@ get_allowed(CartPoleState(0, 0, -0.16, -0.99, 0))
 # ╠═d08f05d8-6227-4bbf-aab2-744152726107
 # ╠═e2db38df-8347-4bf4-be27-d9ad19c96823
 # ╠═fbaa39a7-d1d2-4ad8-a475-c712cdafe35d
-# ╠═d6ee45cf-765a-41d6-8bc7-b74662ac9243
-# ╠═d3f51f26-92da-4e23-9316-13a249079100
-# ╠═2dbb749a-cd7e-4092-b662-519b10d9552d
 # ╠═2e0b5605-917e-4aee-b002-2c5c853290c2
+# ╠═2dbb749a-cd7e-4092-b662-519b10d9552d
 # ╠═808c1127-1b54-4fd0-8a72-b5c3259a1213
-# ╠═08d65223-892b-4921-9d09-af959524bb7a
-# ╠═84734786-a79c-484a-95a9-5de041436c2f
-# ╠═9bad8bb4-bfa1-47a3-821c-dd3448c3f534
-# ╟─3d63e8c3-6218-4eec-86de-698bb61d8f96
-# ╠═65f542c6-d5f3-40e0-be5f-ab66786eaf72
+# ╠═9fe15432-4ff8-4a58-8d59-d7a8d717c00e
 # ╟─834ab28c-a08a-4d92-8ab5-5284196cc2db
 # ╠═15952e74-05fb-4ffe-b6b6-97e1bd5fc815
 # ╟─8f78d419-7c9d-4d92-9d66-a9696a203b07
